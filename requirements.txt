@@ -1,0 +1,11 @@
+assertpy
+cerberus
+devdeck-core==1.0.7
+emoji
+jsonschema
+pillow
+pulsectl
+pytest
+pyyaml
+requests
+streamdeck

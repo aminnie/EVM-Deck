@@ -1,0 +1,3 @@
+decks:
+  - serial_number: "AL28J2C01115"
+    name: 'devdeck.decks.single_page_deck_controller.SinglePageDeckController'
