@@ -56,6 +56,10 @@ Dev Deck ships with the following controls:
 
   `devdeck.controls.volume_mute_control.VolumeMuteControl` toggles the muting of a given output.
 
+* [MIDI Control](https://github.com/jamesridgway/devdeck/wiki/Controls#midi-control)
+
+  `devdeck.controls.midi_control.MidiControl` sends MIDI Control Change (CC) or System Exclusive (SysEx) messages when a key is pressed. Supports cross-platform MIDI functionality on Windows, Linux, macOS, and Raspberry Pi.
+
 
 ## Built-in Decks
 
@@ -110,6 +114,45 @@ Can't find support for what you want? Implement your own `DeckControl` or `DeckC
 Tests can be run by running:
 
     ./run-tests.sh
+
+## MIDI Testing
+
+### Basic MIDI Connectivity Test
+
+To test MIDI connectivity and verify your MIDI setup is working correctly, you can run the MIDI test script that plays "Ode to Joy":
+
+    .\venv\Scripts\python.exe test_midi.py
+
+Or specify a specific MIDI port:
+
+    .\venv\Scripts\python.exe test_midi.py "Your MIDI Device Name"
+
+The test script will:
+- List all available MIDI output ports
+- Open the first available port (or specified port, defaults to "MidiView 1")
+- Play a recognizable melody to verify MIDI functionality
+- Display progress and status for each note
+
+### Ketron SysEx Message Test
+
+To test Ketron SysEx message formatting and sending, you can run the Ketron SysEx test script:
+
+    .\venv\Scripts\python.exe test_ketron_sysex.py
+
+Or specify a specific MIDI port:
+
+    .\venv\Scripts\python.exe test_ketron_sysex.py "Your MIDI Device Name"
+
+The test script will:
+- Format a "Start/Stop" pedal command as SysEx ON and OFF messages
+- Display the formatted SysEx message data for both ON and OFF
+- Send both messages in succession to simulate a key press and release
+- Send to the specified MIDI port (defaults to "MidiView 1")
+- Verify successful transmission
+
+This test is useful for verifying that Ketron device SysEx messages are formatted correctly and can be sent to your Ketron EVM/Event device. The test sends both ON (0x7F) and OFF (0x00) messages to simulate a button press and release.
+
+For more information about MIDI functionality, see [MIDI_IMPLEMENTATION.md](MIDI_IMPLEMENTATION.md).
 
 ## Known Issues & Fixes
 
