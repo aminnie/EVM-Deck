@@ -1,0 +1,214 @@
+{
+  "key_mappings": [
+    {
+      "key_no": 0,
+      "key_name": " ",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 1,
+      "key_name": "Intro/End1",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "green"
+    },
+    {
+      "key_no": 2,
+      "key_name": "Intro/End2",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "green"
+    },
+    {
+      "key_no": 3,
+      "key_name": "Intro/End3",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "green"
+    },
+    {
+      "key_no": 4,
+      "key_name": "To End",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "red"
+    },
+    {
+      "key_no": 5,
+      "key_name": "Arr.A",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 6,
+      "key_name": "Arr.B",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 7,
+      "key_name": "Arr.C",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 8,
+      "key_name": "Arr.D",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 9,
+      "key_name": "Variation",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 10,
+      "key_name": " ",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 11,
+      "key_name": " ",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 12,
+      "key_name": "Fill",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "green"
+    },
+    {
+      "key_no": 13,
+      "key_name": "Break",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "orange"
+    },
+    {
+      "key_no": 14,
+      "key_name": "Start/Stop",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "red"
+    },
+    {
+      "key_no": 15,
+      "key_name": "Dial Up",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 16,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 17,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 18,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 19,
+      "key_name": " ",
+      "source_list_name": "tab_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 20,
+      "key_name": "Dial Down",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "blue"
+    },
+    {
+      "key_no": 21,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 22,
+      "key_name": " ",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 23,
+      "key_name": " ",
+      "source_list_name": "tab_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 24,
+      "key_name": " ",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 25,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 26,
+      "key_name": " ",
+      "source_list_name": "tab_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 27,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 28,
+      "key_name": " ",
+      "source_list_name": "cc_midis",
+      "text_color": "white",
+      "background_color": "black"
+    },
+    {
+      "key_no": 29,
+      "key_name": " ",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "black"
+    }
+  ]
+}

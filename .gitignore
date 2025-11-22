@@ -4,3 +4,33 @@
 __pycache__/
 htmlcov/
 venv/
+
+# Configuration files (keep templates, ignore generated)
+config/*.backup
+config/*.bak
+*.backup
+*.bak
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+devdeck.log
+
+# Temporary files
+*.tmp
+*.temp

@@ -12,21 +12,43 @@ class NavigationToggleControl(DeckControl):
         super().__init__(key_no, **kwargs)
         self._second_layer_deck = None
 
-    def initialize(self):
-        """Display the navigation icon"""
+    def _render_text(self):
+        """Render the navigation text based on current deck"""
         with self.deck_context() as context:
             with context.renderer() as r:
                 icon_path = self.settings.get('icon')
-                if icon_path:
+                if icon_path and icon_path.strip():
+                    # Use custom icon if provided
                     r.image(os.path.expanduser(icon_path)).end()
                 else:
-                    # Default: render text if no icon
-                    r.text("Page 2")\
+                    # Determine which page text to show based on current deck
+                    deck_count = context.deck_context.get_deck_count()
+                    active_deck = context.deck_context.get_active_deck()
+                    
+                    # Check if we're on the main deck (stack depth = 1) or second deck (stack depth = 2)
+                    if deck_count == 1:
+                        # On main deck, show "Page 2" to indicate going to page 2
+                        page_text = "Page 2"
+                    else:
+                        # On second deck or deeper, show "Page 1" to indicate going back to page 1
+                        page_text = "Page 1"
+                    
+                    # Get background color from settings, default to black
+                    background_color = self.settings.get('background_color', 'black')
+                    # Get text color from settings, default to white
+                    text_color = self.settings.get('text_color', self.settings.get('color', 'white'))
+                    
+                    r.background_color(background_color)
+                    r.text(page_text)\
                         .font_size(100)\
-                        .color('white')\
+                        .color(text_color)\
                         .center_vertically()\
                         .center_horizontally()\
                         .end()
+
+    def initialize(self):
+        """Display the navigation icon"""
+        self._render_text()
 
     def _get_second_layer_deck(self):
         """Lazy instantiation of the second layer deck"""
@@ -43,8 +65,8 @@ class NavigationToggleControl(DeckControl):
         return self._second_layer_deck
 
     def pressed(self):
-        """No action on press"""
-        pass
+        """Re-render on press to ensure text is up to date"""
+        self._render_text()
 
     def released(self):
         """Toggle between main layer and second layer"""
@@ -58,11 +80,15 @@ class NavigationToggleControl(DeckControl):
                 second_layer_deck = self._get_second_layer_deck()
                 if second_layer_deck:
                     context.deck_context.set_active_deck(second_layer_deck)
+                    # Re-render to update text to "Page 1"
+                    self._render_text()
                 else:
                     self.__logger.warning("Second layer deck not configured for navigation control")
             else:
                 # On second deck or deeper, navigate back
                 context.deck_context.pop_active_deck()
+                # Re-render to update text to "Page 2"
+                self._render_text()
 
     def settings_schema(self):
         return {
@@ -74,6 +100,15 @@ class NavigationToggleControl(DeckControl):
             },
             'target_deck_settings': {
                 'type': 'dict'
+            },
+            'background_color': {
+                'type': 'string'
+            },
+            'text_color': {
+                'type': 'string'
+            },
+            'color': {
+                'type': 'string'
             }
         }
 

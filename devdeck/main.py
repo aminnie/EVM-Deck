@@ -14,7 +14,7 @@ from devdeck.settings.validation_error import ValidationError
 
 
 def main():
-    os.makedirs(os.path.join(str(Path.home()), '.devdeck'), exist_ok=True)
+    os.makedirs(os.path.join(str(Path.home()), 'devdeck'), exist_ok=True)
 
     root = logging.getLogger('devdeck')
     root.setLevel(logging.DEBUG)
@@ -32,14 +32,32 @@ def main():
     error_handler.setFormatter(formatter)
     root.addHandler(error_handler)
 
-    fileHandler = RotatingFileHandler(os.path.join(str(Path.home()), '.devdeck', 'devdeck.log'), maxBytes=100000,
+    fileHandler = RotatingFileHandler(os.path.join(str(Path.home()), 'devdeck', 'devdeck.log'), maxBytes=100000,
                                       backupCount=5)
     fileHandler.setFormatter(formatter)
     root.addHandler(fileHandler)
 
     streamdecks = DeviceManager().enumerate()
 
-    settings_filename = os.path.join(str(Path.home()), '.devdeck', 'settings.yml')
+    # Get project root (parent of devdeck directory)
+    project_root = Path(__file__).parent.parent
+    settings_filename = str(project_root / 'settings.yml')
+    
+    # Migration: Check for old locations and move files if needed
+    old_home_path = os.path.join(str(Path.home()), 'devdeck', 'settings.yml')
+    old_hidden_path = os.path.join(str(Path.home()), '.devdeck', 'settings.yml')
+    
+    if not os.path.exists(settings_filename):
+        import shutil
+        # Try to migrate from home/devdeck first
+        if os.path.exists(old_home_path):
+            root.info("Migrating settings file from home/devdeck to project root")
+            shutil.move(old_home_path, settings_filename)
+        # Then try old .devdeck location
+        elif os.path.exists(old_hidden_path):
+            root.info("Migrating settings file from .devdeck to project root")
+            shutil.move(old_hidden_path, settings_filename)
+    
     if not os.path.exists(settings_filename):
         root.warning("No settings file detected!")
 
@@ -57,6 +75,9 @@ def main():
                          instructions: https://github.com/jamesridgway/devdeck/wiki/Installation""")
             exit(0)
 
+    # Update settings from key_mappings.json if it exists
+    DevDeckSettings.update_from_key_mappings(settings_filename)
+    
     try:
         settings = DevDeckSettings.load(settings_filename)
     except ValidationError as validation_error:
