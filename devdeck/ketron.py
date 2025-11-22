@@ -19,7 +19,9 @@ class SliderCC:
 class Colors:
     WHITE = 0x606060
     BLUE = 0x000020
+    KETRON_BLUE = 0x0066CC  # RGB(0, 102, 204) - Bright brand blue
     GREEN = 0x002000
+    BRIGHT_GREEN = 0x00FF00  # RGB(0, 255, 0) - Bright green
     RED = 0x200000
     ORANGE = 0x701E02
     PURPLE = 0x800080
@@ -31,7 +33,9 @@ class Colors:
 COLOR_MAP = {
     'red': Colors.RED,
     'green': Colors.GREEN,
+    'bright_green': Colors.BRIGHT_GREEN,
     'blue': Colors.BLUE,
+    'ketron_blue': Colors.KETRON_BLUE,
     'purple': Colors.PURPLE,
     'yellow': Colors.YELLOW,
     'orange': Colors.ORANGE,

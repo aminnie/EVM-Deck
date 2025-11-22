@@ -2,10 +2,10 @@
   "key_mappings": [
     {
       "key_no": 0,
-      "key_name": " ",
+      "key_name": "Ketron EVM",
       "source_list_name": "pedal_midis",
       "text_color": "white",
-      "background_color": "black"
+      "background_color": "ketron_blue"
     },
     {
       "key_no": 1,
@@ -79,10 +79,10 @@
     },
     {
       "key_no": 11,
-      "key_name": " ",
+      "key_name": "Half Bar",
       "source_list_name": "pedal_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "text_color": "black",
+      "background_color": "lightgreen"
     },
     {
       "key_no": 12,

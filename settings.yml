@@ -6,10 +6,10 @@ decks:
     - key: 0
       name: devdeck.controls.text_control.TextControl
       settings:
-        text: ''
+        text: Ketron\nEVM
         font_size: 100
         color: white
-        background_color: black
+        background_color: ketron_blue
     - key: 1
       name: devdeck.controls.text_control.TextControl
       settings:
@@ -83,10 +83,10 @@ decks:
     - key: 11
       name: devdeck.controls.text_control.TextControl
       settings:
-        text: ''
+        text: Half\nBar
         font_size: 100
-        color: white
-        background_color: black
+        color: black
+        background_color: lightgreen
     - key: 12
       name: devdeck.controls.text_control.TextControl
       settings:

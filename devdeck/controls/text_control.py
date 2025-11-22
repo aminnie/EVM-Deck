@@ -1,4 +1,5 @@
 from devdeck_core.controls.deck_control import DeckControl
+from devdeck.ketron import COLOR_MAP
 
 
 def wrap_text_to_lines(text, max_chars_per_line=6):
@@ -73,6 +74,22 @@ class TextControl(DeckControl):
                 font_size = self.settings.get('font_size', 80)
                 color = self.settings.get('color', 'white')
                 background_color = self.settings.get('background_color', 'lightblue')
+                
+                # Map only custom color names (like "ketron_blue") to hex values
+                # Standard CSS color names (blue, green, red, etc.) should pass through unchanged
+                # Only convert if it's a custom color name that's not a standard CSS color
+                standard_colors = {'blue', 'green', 'red', 'yellow', 'orange', 'purple', 'white', 'black', 'grey', 'gray', 'cyan', 'magenta', 'pink', 'brown', 'teal', 'navy', 'maroon', 'lime', 'silver', 'gold', 'lightblue', 'lightgreen', 'lightgray', 'darkblue', 'darkgreen', 'darkred'}
+                
+                if background_color.lower() not in standard_colors:
+                    # It's a custom color name, check COLOR_MAP
+                    if background_color in COLOR_MAP:
+                        # Convert hex to format renderer can use (e.g., "#0066CC")
+                        hex_value = COLOR_MAP[background_color]
+                        background_color = f"#{hex_value:06X}"
+                    elif background_color.lower() in COLOR_MAP:
+                        # Case-insensitive check
+                        hex_value = COLOR_MAP[background_color.lower()]
+                        background_color = f"#{hex_value:06X}"
                 
                 r.background_color(background_color)
                 r.text(text)\
