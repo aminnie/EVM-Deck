@@ -156,16 +156,43 @@ class DevDeckSettings:
                 
                 if lookup_key in mappings_dict:
                     mapping = mappings_dict[lookup_key]
+                    # Skip if key_name is empty or only whitespace (these should remain as NavigationToggleControl or other controls)
+                    key_name = mapping.get('key_name', '').strip()
+                    if not key_name:
+                        # Don't convert controls with empty key_name - they should remain as-is
+                        import logging
+                        logger = logging.getLogger('devdeck')
+                        logger.debug(f"Skipping conversion for key {key_no} (lookup_key: {lookup_key}) - empty key_name")
+                        continue
+                    
+                    # Never convert NavigationToggleControl - it's a special control type
+                    if 'NavigationToggleControl' in control.get('name', ''):
+                        import logging
+                        logger = logging.getLogger('devdeck')
+                        logger.debug(f"Skipping conversion for key {key_no} (lookup_key: {lookup_key}) - NavigationToggleControl")
+                        continue
+                    
                     # Ensure settings dict exists
                     if 'settings' not in control:
                         control['settings'] = {}
                     
-                    # Update text to key_name (only for TextControl)
-                    # Always update from key_mappings.json and wrap to 6 chars per line
-                    # We only update the text field, not key_name/source_list_name
+                    # Change TextControl to KetronKeyMappingControl to enable MIDI sending
+                    # KetronKeyMappingControl reads text/colors from key_mappings.json directly
                     if control.get('name', '').endswith('TextControl'):
-                        if 'settings' not in control:
-                            control['settings'] = {}
+                        import logging
+                        logger = logging.getLogger('devdeck')
+                        logger.info(f"Converting TextControl to KetronKeyMappingControl for key {key_no} (lookup_key: {lookup_key}, key_name: '{key_name}')")
+                        # Change control type to KetronKeyMappingControl
+                        control['name'] = 'devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl'
+                        # Remove TextControl-specific settings since KetronKeyMappingControl
+                        # reads text/colors from key_mappings.json directly
+                        text_control_settings = ['text', 'color', 'background_color', 'font_size']
+                        for setting in text_control_settings:
+                            if setting in control['settings']:
+                                del control['settings'][setting]
+                        updated = True
+                    # For other control types, update text/colors if they support it
+                    elif 'text' in control.get('settings', {}):
                         # Wrap text to maximum 6 characters per line
                         wrapped_text = wrap_text_to_lines(mapping['key_name'], max_chars_per_line=6)
                         control['settings']['text'] = wrapped_text
@@ -183,8 +210,12 @@ class DevDeckSettings:
                 if nested_controls:
                     # For second page controller, keys 0-14 map to mappings 15-29
                     nested_offset = 15 if key_offset == 0 else 0
+                    import logging
+                    logger = logging.getLogger('devdeck')
+                    logger.debug(f"Processing {len(nested_controls)} nested controls with offset {nested_offset}")
                     if DevDeckSettings._update_controls_from_mappings(nested_controls, mappings_dict, nested_offset):
                         updated = True
+                        logger.info(f"Updated {len(nested_controls)} nested controls with offset {nested_offset}")
         
         return updated
 
@@ -247,17 +278,40 @@ class DevDeckSettings:
             with open(settings_filename, 'r') as f:
                 settings = yaml.safe_load(f)
             
+            # Save a readable template backup before conversion
+            import shutil
+            template_filename = str(Path(settings_filename).with_suffix('.yml.template'))
+            try:
+                shutil.copy2(settings_filename, template_filename)
+                import logging
+                logger = logging.getLogger('devdeck')
+                logger.debug(f"Saved readable template to {template_filename}")
+            except Exception as e:
+                import logging
+                logger = logging.getLogger('devdeck')
+                logger.warning(f"Could not save template file: {e}")
+            
             # Update each deck's controls
             updated = False
+            import logging
+            logger = logging.getLogger('devdeck')
+            logger.info(f"Starting conversion of controls from key_mappings.json (found {len(mappings_dict)} mappings)")
             for deck in settings.get('decks', []):
                 controls = deck.get('settings', {}).get('controls', [])
+                logger.debug(f"Processing deck with {len(controls)} controls")
                 if DevDeckSettings._update_controls_from_mappings(controls, mappings_dict, key_offset=0):
                     updated = True
+                    logger.info("Deck controls updated")
             
             # Save updated settings if any changes were made
+            # Note: This converts TextControl to KetronKeyMappingControl, which removes
+            # the text/color settings since KetronKeyMappingControl reads from key_mappings.json
             if updated:
                 with open(settings_filename, 'w') as f:
                     yaml.dump(settings, f, default_flow_style=False, sort_keys=False)
+                import logging
+                logger = logging.getLogger('devdeck')
+                logger.info("Updated settings.yml from key_mappings.json - controls converted to KetronKeyMappingControl")
                 return True
             
             return False

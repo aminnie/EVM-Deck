@@ -56,6 +56,10 @@ Dev Deck ships with the following controls:
 
   `devdeck.controls.volume_mute_control.VolumeMuteControl` toggles the muting of a given output.
 
+* [MIDI Control](https://github.com/jamesridgway/devdeck/wiki/Controls#midi-control)
+
+  `devdeck.controls.midi_control.MidiControl` sends MIDI Control Change (CC) or System Exclusive (SysEx) messages when a key is pressed. Supports cross-platform MIDI functionality on Windows, Linux, macOS, and Raspberry Pi.
+
 
 ## Built-in Decks
 
@@ -110,6 +114,133 @@ Can't find support for what you want? Implement your own `DeckControl` or `DeckC
 Tests can be run by running:
 
     ./run-tests.sh
+
+## MIDI Testing
+
+### Basic MIDI Connectivity Test
+
+To test MIDI connectivity and verify your MIDI setup is working correctly, you can run the MIDI test script that plays "Ode to Joy":
+
+    .\venv\Scripts\python.exe test_midi.py
+
+Or specify a specific MIDI port:
+
+    .\venv\Scripts\python.exe test_midi.py "Your MIDI Device Name"
+
+The test script will:
+- List all available MIDI output ports
+- Open the first available port (or specified port, defaults to "MidiView 1")
+- Play a recognizable melody to verify MIDI functionality
+- Display progress and status for each note
+
+### Ketron SysEx Message Test
+
+To test Ketron SysEx message formatting and sending, you can run the Ketron SysEx test script:
+
+    .\venv\Scripts\python.exe test_ketron_sysex.py
+
+Or specify a specific MIDI port:
+
+    .\venv\Scripts\python.exe test_ketron_sysex.py "Your MIDI Device Name"
+
+The test script will:
+- Format a "Start/Stop" pedal command as SysEx ON and OFF messages
+- Display the formatted SysEx message data for both ON and OFF
+- Send both messages in succession to simulate a key press and release
+- Send to the specified MIDI port (defaults to "MidiView 1")
+- Verify successful transmission
+
+This test is useful for verifying that Ketron device SysEx messages are formatted correctly and can be sent to your Ketron EVM/Event device. The test sends both ON (0x7F) and OFF (0x00) messages to simulate a button press and release.
+
+### Verifying Ketron EVM Connection
+
+To verify that your Ketron EVM device is properly connected and recognized, you can use several methods:
+
+#### 1. List Available MIDI Ports (Quick Check)
+
+Run the script that looks for Ketron ports:
+
+```bash
+python list_midi_ports.py
+```
+
+This will:
+- Show all available MIDI output ports
+- Highlight any ports containing "ketron" and ("evm" or "event") in the name
+- Show you the exact port name to use
+
+**What to look for:**
+- If you see a port with "Ketron" and "EVM" or "Event" in the name, the device is detected
+- Note the exact port name (case-sensitive)
+
+#### 2. Test Sending a MIDI Message (Functional Test)
+
+Test that you can actually send messages to the Ketron:
+
+```bash
+python test_ketron_sysex.py
+```
+
+Or specify a port name:
+
+```bash
+python test_ketron_sysex.py "Your Ketron Port Name"
+```
+
+This will:
+- Format a "Start/Stop" SysEx message
+- Send both ON and OFF messages to simulate a button press
+- Confirm if the messages were sent successfully
+
+**What to look for:**
+- If the test succeeds, your connection is working
+- If it fails, check the port name or connection
+
+#### 3. Check What Port Your Application Is Using
+
+Run the identity check script:
+
+```bash
+python check_app_midi_identity.py
+```
+
+This shows:
+- Which port your application opened
+- How it appears in MIDI monitoring software
+- Whether it's a virtual or hardware port
+
+#### 4. Physical Verification
+
+If the Ketron EVM responds to MIDI:
+- Send a test command (like "Start/Stop") and see if the device responds
+- Use MIDI monitoring software (like MidiView) to see if messages are being sent/received
+
+#### 5. Check Windows Device Manager
+
+On Windows:
+1. Open Device Manager
+2. Look under "Sound, video and game controllers" or "Audio inputs and outputs"
+3. You should see your Ketron device listed if it's properly connected
+
+#### Troubleshooting
+
+If you don't see the Ketron port:
+1. Ensure the Ketron EVM is powered on
+2. Check USB/MIDI cable connection
+3. Verify Windows recognizes the device (Device Manager)
+4. The port name might not contain "ketron" - check all listed ports
+5. On Windows, the port may show as a generic MIDI device name
+
+#### Recommended Workflow
+
+1. First, run `list_midi_ports.py` to see all available ports
+2. Identify which port is your Ketron (may need to check device names)
+3. Test with `test_ketron_sysex.py "Port Name"` to verify functionality
+4. If successful, you're connected and can send commands
+
+The most reliable test is `test_ketron_sysex.py` because it verifies you can actually send messages, not just that a port exists.
+
+For more information about MIDI functionality, see [MIDI_IMPLEMENTATION.md](MIDI_IMPLEMENTATION.md).
 
 ## Known Issues & Fixes
 

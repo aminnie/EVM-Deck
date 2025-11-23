@@ -1,5 +1,12 @@
 # Manage Control Panel Volume Sliders via midi CC
 
+# Ketron SysEx message format constants
+KETRON_SYSEX_MANUFACTURER_ID = 0x43  # Common MIDI manufacturer ID (may need adjustment for Ketron)
+KETRON_SYSEX_DEVICE_ID = 0x00  # Device ID (0 = all devices or specific device)
+KETRON_SYSEX_ON_VALUE = 0x7F  # Value for ON state (127)
+KETRON_SYSEX_OFF_VALUE = 0x00  # Value for OFF state (0)
+
+
 class SliderCC:
     PLAYER_CC = 0x66   #CC 102
     STYLE_CC = 0x67
@@ -154,6 +161,188 @@ class KetronMidi:
             "VOICE1": SliderCC.VOICE1_CC, "VOICE2": SliderCC.VOICE2_CC, "DRAWBARS": SliderCC.DRAWBARS_CC,
             "MICRO1": SliderCC.MICRO1_CC, "VOCAL": SliderCC.VOCAL_CC
         }
+    
+    def format_pedal_sysex(self, pedal_name: str, on_state: bool = True) -> list:
+        """
+        Format a pedal command as a SysEx message.
+        
+        Args:
+            pedal_name: Name of the pedal command (e.g., "Start/Stop")
+            on_state: True for ON message, False for OFF message
+        
+        Returns:
+            List of bytes for the SysEx message (excluding 0xF0 and 0xF7)
+        
+        Raises:
+            KeyError: If pedal_name is not found in pedal_midis
+        """
+        if pedal_name not in self.pedal_midis:
+            raise KeyError(f"Pedal '{pedal_name}' not found in pedal_midis")
+        
+        pedal_value = self.pedal_midis[pedal_name]
+        state_value = KETRON_SYSEX_ON_VALUE if on_state else KETRON_SYSEX_OFF_VALUE
+        
+        # Ketron SysEx format for pedal commands:
+        # F0 43 [device_id] [command_byte] [state_value] F7
+        # state_value: 0x7F (127) for ON, 0x00 (0) for OFF
+        sysex_data = [
+            KETRON_SYSEX_MANUFACTURER_ID,
+            KETRON_SYSEX_DEVICE_ID,
+            pedal_value,
+            state_value
+        ]
+        
+        return sysex_data
+    
+    def format_tab_sysex(self, tab_name: str, on_state: bool = True) -> list:
+        """
+        Format a tab command as a SysEx message.
+        
+        Args:
+            tab_name: Name of the tab command (e.g., "START_STOP")
+            on_state: True for ON message, False for OFF message
+        
+        Returns:
+            List of bytes for the SysEx message (excluding 0xF0 and 0xF7)
+        
+        Raises:
+            KeyError: If tab_name is not found in tab_midis
+        """
+        if tab_name not in self.tab_midis:
+            raise KeyError(f"Tab '{tab_name}' not found in tab_midis")
+        
+        tab_value = self.tab_midis[tab_name]
+        state_value = KETRON_SYSEX_ON_VALUE if on_state else KETRON_SYSEX_OFF_VALUE
+        
+        # Ketron SysEx format for tab commands:
+        # F0 43 [device_id] [command_byte] [state_value] F7
+        # state_value: 0x7F (127) for ON, 0x00 (0) for OFF
+        sysex_data = [
+            KETRON_SYSEX_MANUFACTURER_ID,
+            KETRON_SYSEX_DEVICE_ID,
+            tab_value,
+            state_value
+        ]
+        
+        return sysex_data
+    
+    def send_pedal_command(self, pedal_name: str, port_name: str = None, delay: float = 0.01) -> bool:
+        """
+        Send a pedal command as SysEx ON and OFF messages via MidiManager.
+        Simulates a key press and release by sending ON followed by OFF.
+        
+        Args:
+            pedal_name: Name of the pedal command (e.g., "Start/Stop")
+            port_name: MIDI port name (optional, uses default if None)
+            delay: Delay in seconds between ON and OFF messages (default: 0.01s)
+        
+        Returns:
+            True if both messages were sent successfully, False otherwise
+        """
+        try:
+            import time
+            from devdeck.midi_manager import MidiManager
+            
+            midi = MidiManager()
+            
+            # Ensure port is open
+            if not midi.is_port_open(port_name):
+                if not midi.open_port(port_name):
+                    return False
+            
+            # Send ON message
+            sysex_on = self.format_pedal_sysex(pedal_name, on_state=True)
+            if not midi.send_sysex(sysex_on, port_name):
+                return False
+            
+            # Small delay to simulate key press duration
+            time.sleep(delay)
+            
+            # Send OFF message
+            sysex_off = self.format_pedal_sysex(pedal_name, on_state=False)
+            if not midi.send_sysex(sysex_off, port_name):
+                return False
+            
+            return True
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('devdeck')
+            logger.error(f"Error sending pedal command '{pedal_name}': {e}")
+            return False
+    
+    def send_tab_command(self, tab_name: str, port_name: str = None, delay: float = 0.01) -> bool:
+        """
+        Send a tab command as SysEx ON and OFF messages via MidiManager.
+        Simulates a key press and release by sending ON followed by OFF.
+        
+        Args:
+            tab_name: Name of the tab command (e.g., "START_STOP")
+            port_name: MIDI port name (optional, uses default if None)
+            delay: Delay in seconds between ON and OFF messages (default: 0.01s)
+        
+        Returns:
+            True if both messages were sent successfully, False otherwise
+        """
+        try:
+            import time
+            from devdeck.midi_manager import MidiManager
+            
+            midi = MidiManager()
+            
+            # Ensure port is open
+            if not midi.is_port_open(port_name):
+                if not midi.open_port(port_name):
+                    return False
+            
+            # Send ON message
+            sysex_on = self.format_tab_sysex(tab_name, on_state=True)
+            if not midi.send_sysex(sysex_on, port_name):
+                return False
+            
+            # Small delay to simulate key press duration
+            time.sleep(delay)
+            
+            # Send OFF message
+            sysex_off = self.format_tab_sysex(tab_name, on_state=False)
+            if not midi.send_sysex(sysex_off, port_name):
+                return False
+            
+            return True
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('devdeck')
+            logger.error(f"Error sending tab command '{tab_name}': {e}")
+            return False
+    
+    def test_start_stop(self, port_name: str = None) -> bool:
+        """
+        Test function to send "Start/Stop" pedal command.
+        Sends both ON and OFF messages to simulate a key press and release.
+        
+        Args:
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            True if both messages were sent successfully, False otherwise
+        """
+        print("Testing Ketron 'Start/Stop' pedal command...")
+        print(f"Port: {port_name if port_name else 'default'}")
+        
+        # Format both ON and OFF messages for display
+        sysex_on = self.format_pedal_sysex("Start/Stop", on_state=True)
+        sysex_off = self.format_pedal_sysex("Start/Stop", on_state=False)
+        
+        print(f"  ON message:  F0 {' '.join([hex(b) for b in sysex_on])} F7")
+        print(f"  OFF message: F0 {' '.join([hex(b) for b in sysex_off])} F7")
+        
+        success = self.send_pedal_command("Start/Stop", port_name)
+        
+        if success:
+            print("[OK] 'Start/Stop' SysEx ON and OFF messages sent successfully!")
+        else:
+            print("[ERROR] Failed to send 'Start/Stop' SysEx messages")
+        
+        return success
 
 
 class KeyMapping:
