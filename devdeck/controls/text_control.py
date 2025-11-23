@@ -71,7 +71,7 @@ class TextControl(DeckControl):
                 text = self.settings.get('text', '')
                 # Convert \n escape sequences to actual newlines for rendering
                 text = text.replace('\\n', '\n')
-                font_size = self.settings.get('font_size', 80)
+                font_size = self.settings.get('font_size', 100)
                 color = self.settings.get('color', 'white')
                 background_color = self.settings.get('background_color', 'lightblue')
                 

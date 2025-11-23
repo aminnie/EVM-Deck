@@ -82,7 +82,7 @@ class MidiControl(DeckControl):
                     text = "MIDI"
                 
                 r.text(text)\
-                    .font_size(80)\
+                    .font_size(100)\
                     .color('white')\
                     .center_vertically()\
                     .center_horizontally()\

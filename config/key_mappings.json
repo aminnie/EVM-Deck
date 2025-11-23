@@ -2,31 +2,31 @@
   "key_mappings": [
     {
       "key_no": 0,
-      "key_name": "Ketron EVM",
-      "source_list_name": "pedal_midis",
-      "text_color": "white",
-      "background_color": "ketron_blue"
-    },
-    {
-      "key_no": 1,
       "key_name": "Intro/End1",
       "source_list_name": "pedal_midis",
       "text_color": "white",
       "background_color": "green"
     },
     {
-      "key_no": 2,
+      "key_no": 1,
       "key_name": "Intro/End2",
       "source_list_name": "pedal_midis",
       "text_color": "white",
       "background_color": "green"
     },
     {
-      "key_no": 3,
+      "key_no": 2,
       "key_name": "Intro/End3",
       "source_list_name": "pedal_midis",
       "text_color": "white",
       "background_color": "green"
+    },
+    {
+      "key_no": 3,
+      "key_name": "Fade",
+      "source_list_name": "pedal_midis",
+      "text_color": "white",
+      "background_color": "orange"
     },
     {
       "key_no": 4,
@@ -65,10 +65,10 @@
     },
     {
       "key_no": 9,
-      "key_name": "Variation",
+      "key_name": "VAR",
       "source_list_name": "tab_midis",
       "text_color": "white",
-      "background_color": "blue"
+      "background_color": "ketron_blue"
     },
     {
       "key_no": 10,
@@ -123,19 +123,19 @@
       "key_no": 17,
       "key_name": "Voice1",
       "source_list_name": "cc_midis",
-      "text_color": "black",
+      "text_color": "white",
       "background_color": "green"
     },
     {
       "key_no": 18,
       "key_name": "Voice2",
       "source_list_name": "cc_midis",
-      "text_color": "black",
+      "text_color": "white",
       "background_color": "green"
     },
     {
       "key_no": 19,
-      "key_name": "DRAWBARS",
+      "key_name": "Draw Organ",
       "source_list_name": "cc_midis",
       "text_color": "black",
       "background_color": "offwhite"
@@ -170,7 +170,7 @@
     },
     {
       "key_no": 24,
-      "key_name": "REALCHORD",
+      "key_name": "REAL CHORD",
       "source_list_name": "cc_midis",
       "text_color": "black",
       "background_color": "lightyellow"

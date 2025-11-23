@@ -69,22 +69,26 @@ class KetronVolumeManager:
         self._midi_out_channel = 16
         
         # Track last pressed button key_name from SecondPageDeckController
-        self._last_pressed_key_name: Optional[str] = None
+        # Default to "STYLE" so Volume Up/Down always have a target
+        self._last_pressed_key_name: Optional[str] = "STYLE"
         
         # Initialize KetronMidi and MidiManager for sending CC commands
         self.ketron_midi = KetronMidi()
         self.midi_manager = MidiManager()
         
         # Mapping from cc_midis key_name to volume variable name
+        # Note: Keys should be uppercase since lookup uses key_name.upper()
         self._key_name_to_volume = {
             "LOWERS": "lower",
             "VOICE1": "voice1",
             "VOICE2": "voice2",
-            "DRAWBARS": "drawbars",
+            "DRAW ORGAN": "drawbars",  # For "Draw Organ" in cc_midis
+            "DRAWBARS": "drawbars",  # For "drawbars" in cc_midis
             "STYLE": "style",
             "DRUM": "drum",
             "CHORD": "chord",
             "REALCHORD": "realchord",
+            "REAL CHORD": "realchord",  # For "REAL CHORD" in cc_midis
             "MASTER VOLUME": "master",
             "MASTER": "master"
         }
@@ -218,7 +222,8 @@ class KetronVolumeManager:
         cc_control = self.ketron_midi.cc_midis[matched_key]
         
         # Verify the key_name maps to the correct volume
-        expected_volume_name = self._key_name_to_volume.get(matched_key)
+        # Convert to uppercase for lookup since _key_name_to_volume uses uppercase keys
+        expected_volume_name = self._key_name_to_volume.get(matched_key.upper())
         if expected_volume_name != volume_name:
             self.__logger.warning(
                 f"Key name '{matched_key}' maps to volume '{expected_volume_name}', "

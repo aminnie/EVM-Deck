@@ -159,7 +159,7 @@ class KetronKeyMappingControl(DeckControl):
                 if self.key_mapping is None:
                     # No mapping found, render error
                     r.text("NO\nMAP")\
-                        .font_size(80)\
+                        .font_size(100)\
                         .color('red')\
                         .center_vertically()\
                         .center_horizontally()\
@@ -190,7 +190,7 @@ class KetronKeyMappingControl(DeckControl):
                 
                 r.background_color(background_color)
                 r.text(wrapped_text)\
-                    .font_size(80)\
+                    .font_size(100)\
                     .color(text_color)\
                     .center_vertically()\
                     .center_horizontally()\
@@ -359,7 +359,8 @@ class KetronKeyMappingControl(DeckControl):
                 cc_control = self.ketron_midi.cc_midis[matched_key]
                 
                 # Check if this is a volume button - if so, send current volume value on channel 16
-                volume_name = self.volume_manager._key_name_to_volume.get(matched_key)
+                # Convert to uppercase for lookup since _key_name_to_volume uses uppercase keys
+                volume_name = self.volume_manager._key_name_to_volume.get(matched_key.upper())
                 if volume_name:
                     # This is a volume button - send current volume value on channel 16
                     # Use property getter to get current volume

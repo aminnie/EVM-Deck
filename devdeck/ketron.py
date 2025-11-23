@@ -33,6 +33,7 @@ class Colors:
     ORANGE = 0x701E02
     PURPLE = 0x800080
     YELLOW = 0x808000
+    LIGHTYELLOW = 0xFFFF80  # RGB(255, 255, 128) - Bright light yellow
     TEAL = 0x004040
     OFFWHITE = 0xA47474
 
@@ -45,6 +46,7 @@ COLOR_MAP = {
     'ketron_blue': Colors.KETRON_BLUE,
     'purple': Colors.PURPLE,
     'yellow': Colors.YELLOW,
+    'lightyellow': Colors.LIGHTYELLOW,
     'orange': Colors.ORANGE,
     'white': Colors.WHITE,
     'teal': Colors.TEAL,
@@ -132,7 +134,7 @@ class KetronMidi:
         
         return {
             "DIAL_DOWN": 0x0, "DIAL_UP": 0x1, "PLAYER_A": 0x2, "PLAYER_B": 0x3,
-            "ENTER": 0x4, "MENU": 0x6, "LYRIC": 0x7, "LEAD": 0x8, "VARIATION": 0x9,
+            "ENTER": 0x4, "MENU": 0x6, "LYRIC": 0x7, "LEAD": 0x8, "VAR": 0x9,
             "DRAWBARS_VIEW": 0x0a, "DRAWBARS": 0x10, "DRUMSET": 0x11, "TALK": 0x12,
             "VOICETRON": 0x13, "STYLE_BOX": 0x14, "VOICE1": 0x19, "VOICE2": 0x1a,
             "USER_VOICE": 0x1b, "XFADE": 0x1c, "INTRO1": 0x1d, "INTRO2": 0x1e,
@@ -157,8 +159,10 @@ class KetronMidi:
         return {
             "PLAYER": SliderCC.PLAYER_CC, "STYLE": SliderCC.STYLE_CC, "DRUM": SliderCC.DRUM_CC, 
             "CHORD": SliderCC.CHORD_CC, "REALCHORD": SliderCC.REALCHORD_CC, 
+            "REAL CHORD": SliderCC.REALCHORD_CC,  # Alias for REALCHORD
             "BASS": SliderCC.BASS_CC, "LOWERS": SliderCC.LOWERS_CC, "USER2": SliderCC.USER2_CC, "USER3": SliderCC.USER3_CC, 
-            "VOICE1": SliderCC.VOICE1_CC, "VOICE2": SliderCC.VOICE2_CC, "DRAWBARS": SliderCC.DRAWBARS_CC,
+            "VOICE1": SliderCC.VOICE1_CC, "VOICE2": SliderCC.VOICE2_CC, "drawbars": SliderCC.DRAWBARS_CC,
+            "Draw Organ": SliderCC.DRAWBARS_CC,  # Alias for drawbars
             "MICRO1": SliderCC.MICRO1_CC, "VOCAL": SliderCC.VOCAL_CC
         }
     
