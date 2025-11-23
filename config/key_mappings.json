@@ -66,7 +66,7 @@
     {
       "key_no": 9,
       "key_name": "Variation",
-      "source_list_name": "pedal_midis",
+      "source_list_name": "tab_midis",
       "text_color": "white",
       "background_color": "blue"
     },
@@ -184,10 +184,10 @@
     },
     {
       "key_no": 26,
-      "key_name": "Tempo",
+      "key_name": "Mute",
       "source_list_name": "tab_midis",
-      "text_color": "black",
-      "background_color": "yellow"
+      "text_color": "white",
+      "background_color": "red"
     },
     {
       "key_no": 27,
@@ -205,10 +205,10 @@
     },
     {
       "key_no": 29,
-      "key_name": "Mute",
+      "key_name": "Master Volume",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "red"
+      "background_color": "purple"
     }
   ]
 }

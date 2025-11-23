@@ -183,14 +183,28 @@ class KetronMidi:
         state_value = KETRON_SYSEX_ON_VALUE if on_state else KETRON_SYSEX_OFF_VALUE
         
         # Ketron SysEx format for pedal commands:
-        # F0 43 [device_id] [command_byte] [state_value] F7
+        # For values < 128: F0 43 [device_id] [command_byte] [state_value] F7
+        # For values >= 128: F0 43 [device_id] [high_byte] [low_byte] [state_value] F7
         # state_value: 0x7F (127) for ON, 0x00 (0) for OFF
+        # Values >= 128 are split into two 7-bit bytes (high byte and low byte)
+        
         sysex_data = [
             KETRON_SYSEX_MANUFACTURER_ID,
-            KETRON_SYSEX_DEVICE_ID,
-            pedal_value,
-            state_value
+            KETRON_SYSEX_DEVICE_ID
         ]
+        
+        if pedal_value < 128:
+            # Standard 3-byte format: manufacturer, device_id, command, state
+            sysex_data.append(pedal_value)
+            sysex_data.append(state_value)
+        else:
+            # Extended 4-byte format: manufacturer, device_id, high_byte, low_byte, state
+            # Split value into two 7-bit bytes
+            high_byte = (pedal_value >> 7) & 0x7F
+            low_byte = pedal_value & 0x7F
+            sysex_data.append(high_byte)
+            sysex_data.append(low_byte)
+            sysex_data.append(state_value)
         
         return sysex_data
     

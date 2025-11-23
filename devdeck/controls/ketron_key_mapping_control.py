@@ -256,6 +256,60 @@ class KetronKeyMappingControl(DeckControl):
             self.__logger.debug(f"Key {self.key_no} has empty key_name, skipping MIDI send")
             return
         
+        # Special handling for Volume Up, Volume Down, and Mute buttons
+        # These work regardless of source_list_name
+        if key_name.upper() == "VOLUME UP":
+            # Increment the last pressed volume
+            new_volume = self.volume_manager.increment_last_pressed_volume(port_name=port_name)
+            if new_volume is None:
+                self.__logger.warning("Volume Up pressed but no last pressed volume key set")
+                self._render_error("NO\nVOLUME\nSELECTED")
+            else:
+                self.__logger.info(f"Volume Up: incremented to {new_volume}")
+            return
+        
+        elif key_name.upper() == "VOLUME DOWN":
+            # Decrement the last pressed volume
+            new_volume = self.volume_manager.decrement_last_pressed_volume(port_name=port_name)
+            if new_volume is None:
+                self.__logger.warning("Volume Down pressed but no last pressed volume key set")
+                self._render_error("NO\nVOLUME\nSELECTED")
+            else:
+                self.__logger.info(f"Volume Down: decremented to {new_volume}")
+            return
+        
+        elif key_name.upper() == "MUTE":
+            # Toggle mute for the last pressed volume
+            new_volume = self.volume_manager.toggle_mute_last_pressed_volume(port_name=port_name)
+            if new_volume is None:
+                self.__logger.warning("Mute pressed but no last pressed volume key set")
+                self._render_error("NO\nVOLUME\nSELECTED")
+            else:
+                if new_volume == 0:
+                    self.__logger.info(f"Mute: muted volume (set to {new_volume})")
+                else:
+                    self.__logger.info(f"Mute: unmuted volume (restored to {new_volume})")
+            return
+        
+        elif key_name.upper() == "MASTER VOLUME":
+            # Track this as the last pressed volume key for volume manager
+            # This allows increment/decrement to know which volume to adjust
+            self.volume_manager.set_last_pressed_key_name("MASTER VOLUME")
+            self.__logger.debug(f"Tracked last pressed volume key: MASTER VOLUME for key {self.key_no}")
+            
+            # Send MIDI CC 0x07 (Expression) on channel 16 with current master volume value
+            master_volume = self.volume_manager.master
+            expression_cc = 0x07  # MIDI CC 7 = Expression
+            cc_channel = 15  # Channel 16 (0-indexed: 15)
+            
+            success = self.midi_manager.send_cc(expression_cc, master_volume, cc_channel, port_name)
+            if not success:
+                self.__logger.error(f"Failed to send Master Volume CC: control={expression_cc}, value={master_volume}, channel=16")
+                self._render_error("SEND\nFAILED")
+            else:
+                self.__logger.info(f"Sent Master Volume CC: control={expression_cc} (Expression), value={master_volume}, channel=16 for key {self.key_no}")
+            return
+        
         try:
             if source_list_name == 'pedal_midis':
                 # Find the matching key (case-insensitive)
@@ -290,41 +344,7 @@ class KetronKeyMappingControl(DeckControl):
                     self.__logger.info(f"Sent tab command '{matched_key}' for key {self.key_no}")
             
             elif source_list_name == 'cc_midis':
-                # Special handling for Volume Up, Volume Down, and Mute buttons
-                if key_name.upper() == "VOLUME UP":
-                    # Increment the last pressed volume
-                    new_volume = self.volume_manager.increment_last_pressed_volume(port_name=port_name)
-                    if new_volume is None:
-                        self.__logger.warning("Volume Up pressed but no last pressed volume key set")
-                        self._render_error("NO\nVOLUME\nSELECTED")
-                    else:
-                        self.__logger.info(f"Volume Up: incremented to {new_volume}")
-                    return
-                
-                elif key_name.upper() == "VOLUME DOWN":
-                    # Decrement the last pressed volume
-                    new_volume = self.volume_manager.decrement_last_pressed_volume(port_name=port_name)
-                    if new_volume is None:
-                        self.__logger.warning("Volume Down pressed but no last pressed volume key set")
-                        self._render_error("NO\nVOLUME\nSELECTED")
-                    else:
-                        self.__logger.info(f"Volume Down: decremented to {new_volume}")
-                    return
-                
-                elif key_name.upper() == "MUTE":
-                    # Toggle mute for the last pressed volume
-                    new_volume = self.volume_manager.toggle_mute_last_pressed_volume(port_name=port_name)
-                    if new_volume is None:
-                        self.__logger.warning("Mute pressed but no last pressed volume key set")
-                        self._render_error("NO\nVOLUME\nSELECTED")
-                    else:
-                        if new_volume == 0:
-                            self.__logger.info(f"Mute: muted volume (set to {new_volume})")
-                        else:
-                            self.__logger.info(f"Mute: unmuted volume (restored to {new_volume})")
-                    return
-                
-                # For other CC buttons, find the matching key (case-insensitive)
+                # For CC buttons, find the matching key (case-insensitive)
                 matched_key = self._find_key_in_dict(key_name, self.ketron_midi.cc_midis)
                 if matched_key is None:
                     self.__logger.error(f"Key name '{key_name}' not found in cc_midis for key {self.key_no}")
@@ -337,15 +357,30 @@ class KetronKeyMappingControl(DeckControl):
                 self.__logger.debug(f"Tracked last pressed volume key: {matched_key} for key {self.key_no}")
                 
                 cc_control = self.ketron_midi.cc_midis[matched_key]
-                cc_value = self.settings.get('cc_value', 64)  # Default to middle value
-                cc_channel = self.settings.get('cc_channel', 0)
+                
+                # Check if this is a volume button - if so, send current volume value on channel 16
+                volume_name = self.volume_manager._key_name_to_volume.get(matched_key)
+                if volume_name:
+                    # This is a volume button - send current volume value on channel 16
+                    # Use property getter to get current volume
+                    current_volume = getattr(self.volume_manager, volume_name)
+                    cc_value = current_volume
+                    cc_channel = 15  # Channel 16 (0-indexed: 15)
+                    self.__logger.debug(f"Volume button '{matched_key}' pressed - sending current volume {current_volume} on channel 16")
+                else:
+                    # Not a volume button - use settings or default
+                    cc_value = self.settings.get('cc_value', 64)  # Default to middle value
+                    cc_channel = self.settings.get('cc_channel', 0)
                 
                 success = self.midi_manager.send_cc(cc_control, cc_value, cc_channel, port_name)
                 if not success:
                     self.__logger.error(f"Failed to send CC message: control={cc_control}, value={cc_value}, channel={cc_channel}")
                     self._render_error("SEND\nFAILED")
                 else:
-                    self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value}, channel={cc_channel} for key {self.key_no}")
+                    if volume_name:
+                        self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value} (current {volume_name} volume), channel=16 for key {self.key_no}")
+                    else:
+                        self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value}, channel={cc_channel} for key {self.key_no}")
             
             else:
                 self.__logger.error(f"Invalid source_list_name '{source_list_name}' for key {self.key_no}")
