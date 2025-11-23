@@ -7,6 +7,7 @@ with python-rtmidi backend for cross-platform compatibility (Windows, Linux, Ras
 """
 
 import logging
+import platform
 import threading
 from typing import Optional, List
 
@@ -87,12 +88,15 @@ class MidiManager:
             self.__logger.error(f"Error listing MIDI output ports: {e}")
             return []
     
-    def open_port(self, port_name: Optional[str] = None) -> bool:
+    def open_port(self, port_name: Optional[str] = None, use_virtual: bool = True) -> bool:
         """
         Open a MIDI output port.
         
         Args:
-            port_name: Name of the MIDI port to open. If None, opens the first available port.
+            port_name: Name of the MIDI port to open. If None and use_virtual=True, creates a virtual port.
+                      If None and use_virtual=False, opens the first available hardware port.
+            use_virtual: If True and port_name is None, creates a virtual port with client name.
+                        If False or port_name is specified, opens an existing hardware port.
         
         Returns:
             True if port was opened successfully, False otherwise
@@ -104,37 +108,87 @@ class MidiManager:
         try:
             with self._port_lock:
                 # If port is already open, close it first
-                if port_name in self._output_ports:
+                if port_name and port_name in self._output_ports:
                     try:
                         self._output_ports[port_name].close()
                     except Exception:
                         pass
                 
-                # Get available ports
+                # If no port name specified and use_virtual is True, try to create a virtual port
+                # Note: Virtual ports are not supported on Windows with the default MIDI API
+                if port_name is None and use_virtual:
+                    # Check if we're on Windows - virtual ports aren't supported
+                    is_windows = platform.system() == 'Windows'
+                    
+                    if not is_windows:
+                        # Try to create a virtual port (Linux/macOS support this)
+                        virtual_port_name = "EVM Stream Deck Controller"
+                        try:
+                            port = mido.open_output(virtual_port_name, virtual=True)
+                            self._output_ports[virtual_port_name] = port
+                            self.__logger.info(f"Created virtual MIDI output port: {virtual_port_name}")
+                            self.__logger.info("Note: You may need to route this virtual port to your hardware MIDI device in your MIDI software")
+                            return True
+                        except Exception as e:
+                            self.__logger.warning(f"Could not create virtual port: {e}. Falling back to hardware port.")
+                            # Fall through to hardware port opening
+                    else:
+                        # On Windows, virtual ports aren't supported by default MIDI API
+                        # Skip the attempt and go straight to hardware port
+                        self.__logger.debug("Windows detected - virtual ports not supported, using hardware port")
+                        # Fall through to hardware port opening
+                
+                # Get available hardware ports
                 available_ports = mido.get_output_names()
                 
                 if not available_ports:
                     self.__logger.error("No MIDI output ports available")
                     return False
                 
-                # If no port name specified, use the first available
+                # If no port name specified, prefer certain ports over others
                 if port_name is None:
-                    port_name = available_ports[0]
-                    self.__logger.info(f"No port specified, using first available: {port_name}")
+                    # Preferred port names (in order of preference)
+                    preferred_ports = ['Midiview', 'midiview', 'MIDIVIEW']
+                    
+                    # Try to find a preferred port first
+                    port_name = None
+                    for preferred in preferred_ports:
+                        # Check for exact match or if port name contains preferred name
+                        for available_port in available_ports:
+                            if preferred.lower() in available_port.lower():
+                                port_name = available_port
+                                self.__logger.info(f"No port specified, using preferred port: {port_name}")
+                                break
+                        if port_name:
+                            break
+                    
+                    # If no preferred port found, use first available (but skip GS Wavetable Synth)
+                    if port_name is None:
+                        for available_port in available_ports:
+                            # Skip Microsoft GS Wavetable Synth
+                            if 'GS Wavetable Synth' not in available_port and 'gs wavetable synth' not in available_port.lower():
+                                port_name = available_port
+                                self.__logger.info(f"No port specified, using first available (excluding GS Wavetable): {port_name}")
+                                break
+                        
+                        # If only GS Wavetable Synth is available, use it as last resort
+                        if port_name is None:
+                            port_name = available_ports[0]
+                            self.__logger.warning(f"No port specified, only GS Wavetable Synth available, using: {port_name}")
                 
                 # Check if port exists
                 if port_name not in available_ports:
                     self.__logger.error(f"MIDI port '{port_name}' not found. Available ports: {available_ports}")
                     return False
                 
-                # Open the port
+                # Open the hardware port
                 try:
                     port = mido.open_output(port_name)
                     self._output_ports[port_name] = port
                     self.__logger.info(f"Opened MIDI output port: {port_name}")
                     return True
                 except Exception as e:
-                    self.__logger.error(f"Error opening MIDI port '{port_name}': {e}")
+                    self.__logger.error(f"Error opening MIDI port '{port_name}': {e}", exc_info=True)
                     return False
                     
         except Exception as e:
@@ -401,6 +455,48 @@ class MidiManager:
         except Exception as e:
             self.__logger.error(f"Error sending Note Off message: {e}")
             return False
+    
+    def get_open_ports(self) -> List[str]:
+        """
+        Get a list of all currently open MIDI port names.
+        
+        Returns:
+            List of open port names
+        """
+        with self._port_lock:
+            return list(self._output_ports.keys())
+    
+    def get_port_info(self, port_name: Optional[str] = None) -> Optional[dict]:
+        """
+        Get information about an open MIDI port.
+        
+        Args:
+            port_name: Name of the port. If None, returns info for the first open port.
+        
+        Returns:
+            Dictionary with port information, or None if port not found
+        """
+        with self._port_lock:
+            if port_name is None:
+                if not self._output_ports:
+                    return None
+                port_name = list(self._output_ports.keys())[0]
+            
+            if port_name not in self._output_ports:
+                return None
+            
+            port = self._output_ports[port_name]
+            info = {
+                'name': port_name,
+                'is_virtual': getattr(port, 'is_virtual', False),
+                'closed': getattr(port, 'closed', False),
+            }
+            
+            # Try to get additional info if available
+            if hasattr(port, 'name'):
+                info['port_name'] = port.name
+            
+            return info
     
     def is_port_open(self, port_name: Optional[str] = None) -> bool:
         """

@@ -41,21 +41,28 @@ def main():
 
     # Get project root (parent of devdeck directory)
     project_root = Path(__file__).parent.parent
-    settings_filename = str(project_root / 'settings.yml')
+    config_dir = project_root / 'config'
+    config_dir.mkdir(exist_ok=True)  # Ensure config directory exists
+    settings_filename = str(config_dir / 'settings.yml')
     
     # Migration: Check for old locations and move files if needed
+    old_project_root_path = str(project_root / 'settings.yml')
     old_home_path = os.path.join(str(Path.home()), 'devdeck', 'settings.yml')
     old_hidden_path = os.path.join(str(Path.home()), '.devdeck', 'settings.yml')
     
     if not os.path.exists(settings_filename):
         import shutil
-        # Try to migrate from home/devdeck first
-        if os.path.exists(old_home_path):
-            root.info("Migrating settings file from home/devdeck to project root")
+        # Try to migrate from project root first (most recent location)
+        if os.path.exists(old_project_root_path):
+            root.info("Migrating settings file from project root to config directory")
+            shutil.move(old_project_root_path, settings_filename)
+        # Then try home/devdeck
+        elif os.path.exists(old_home_path):
+            root.info("Migrating settings file from home/devdeck to config directory")
             shutil.move(old_home_path, settings_filename)
         # Then try old .devdeck location
         elif os.path.exists(old_hidden_path):
-            root.info("Migrating settings file from .devdeck to project root")
+            root.info("Migrating settings file from .devdeck to config directory")
             shutil.move(old_hidden_path, settings_filename)
     
     if not os.path.exists(settings_filename):

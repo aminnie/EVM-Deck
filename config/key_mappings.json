@@ -114,31 +114,31 @@
     },
     {
       "key_no": 16,
-      "key_name": " ",
+      "key_name": "Lowers",
       "source_list_name": "cc_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "text_color": "black",
+      "background_color": "lightyellow"
     },
     {
       "key_no": 17,
-      "key_name": " ",
+      "key_name": "Voice1",
       "source_list_name": "cc_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "text_color": "black",
+      "background_color": "green"
     },
     {
       "key_no": 18,
-      "key_name": " ",
+      "key_name": "Voice2",
       "source_list_name": "cc_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "text_color": "black",
+      "background_color": "green"
     },
     {
       "key_no": 19,
-      "key_name": " ",
-      "source_list_name": "tab_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "key_name": "DRAWBARS",
+      "source_list_name": "cc_midis",
+      "text_color": "black",
+      "background_color": "offwhite"
     },
     {
       "key_no": 20,
@@ -149,31 +149,31 @@
     },
     {
       "key_no": 21,
-      "key_name": " ",
+      "key_name": "STYLE",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "black"
+      "background_color": "green"
     },
     {
       "key_no": 22,
-      "key_name": " ",
-      "source_list_name": "pedal_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "key_name": "DRUM",
+      "source_list_name": "cc_midis",
+      "text_color": "black",
+      "background_color": "offwhite"
     },
     {
       "key_no": 23,
-      "key_name": " ",
-      "source_list_name": "tab_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "key_name": "CHORD",
+      "source_list_name": "cc_midis",
+      "text_color": "black",
+      "background_color": "lightyellow"
     },
     {
       "key_no": 24,
-      "key_name": " ",
-      "source_list_name": "pedal_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "key_name": "REALCHORD",
+      "source_list_name": "cc_midis",
+      "text_color": "black",
+      "background_color": "lightyellow"
     },
     {
       "key_no": 25,
@@ -184,31 +184,31 @@
     },
     {
       "key_no": 26,
-      "key_name": " ",
+      "key_name": "Tempo",
       "source_list_name": "tab_midis",
-      "text_color": "white",
-      "background_color": "black"
+      "text_color": "black",
+      "background_color": "yellow"
     },
     {
       "key_no": 27,
-      "key_name": " ",
+      "key_name": "Volume Down",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "black"
+      "background_color": "ketron_blue"
     },
     {
       "key_no": 28,
-      "key_name": " ",
+      "key_name": "Volume Up",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "black"
+      "background_color": "ketron_blue"
     },
     {
       "key_no": 29,
-      "key_name": " ",
-      "source_list_name": "pedal_midis",
+      "key_name": "Mute",
+      "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "black"
+      "background_color": "red"
     }
   ]
 }

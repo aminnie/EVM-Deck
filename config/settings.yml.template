@@ -1,0 +1,104 @@
+decks:
+- name: devdeck.decks.single_page_deck_controller.SinglePageDeckController
+  serial_number: AB3MA5152IYH
+  settings:
+    controls:
+    - key: 0
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 1
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 2
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 3
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 4
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 5
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 6
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 7
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 8
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 9
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 10
+      name: devdeck.controls.navigation_toggle_control.NavigationToggleControl
+      settings:
+        icon: ''
+        background_color: grey
+        text_color: black
+        target_deck_class: devdeck.decks.second_page_deck_controller.SecondPageDeckController
+        target_deck_settings:
+          controls:
+          - key: 0
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 1
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 2
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 3
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 4
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 5
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 6
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 7
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 8
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 9
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 10
+            name: devdeck.controls.navigation_toggle_control.NavigationToggleControl
+            settings:
+              icon: ''
+              background_color: grey
+              text_color: black
+          - key: 11
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 12
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 13
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+          - key: 14
+            name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+            settings: {}
+    - key: 11
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 12
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 13
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
+    - key: 14
+      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      settings: {}
