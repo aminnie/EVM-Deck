@@ -9,10 +9,11 @@ import logging
 import os
 
 from devdeck_core.controls.deck_control import DeckControl
+from devdeck.controls.base_control import BaseDeckControl
 from devdeck.midi import MidiManager
 
 
-class MidiControl(DeckControl):
+class MidiControl(BaseDeckControl):
     """
     Control that sends MIDI CC or SysEx messages when a key is pressed.
     
@@ -84,17 +85,6 @@ class MidiControl(DeckControl):
                 r.text(text)\
                     .font_size(100)\
                     .color('white')\
-                    .center_vertically()\
-                    .center_horizontally()\
-                    .end()
-    
-    def _render_error(self, error_text):
-        """Render an error message"""
-        with self.deck_context() as context:
-            with context.renderer() as r:
-                r.text(error_text)\
-                    .font_size(70)\
-                    .color('red')\
                     .center_vertically()\
                     .center_horizontally()\
                     .end()

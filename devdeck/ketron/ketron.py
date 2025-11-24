@@ -6,6 +6,9 @@ KETRON_SYSEX_DEVICE_ID = 0x00  # Device ID (0 = all devices or specific device)
 KETRON_SYSEX_ON_VALUE = 0x7F  # Value for ON state (127)
 KETRON_SYSEX_OFF_VALUE = 0x00  # Value for OFF state (0)
 
+# MIDI timing constants
+MIDI_MESSAGE_DELAY = 0.01  # Delay in seconds between ON and OFF messages for key press simulation
+
 
 class SliderCC:
     PLAYER_CC = 0x66   #CC 102
@@ -244,7 +247,7 @@ class KetronMidi:
         
         return sysex_data
     
-    def send_pedal_command(self, pedal_name: str, port_name: str = None, delay: float = 0.01) -> bool:
+    def send_pedal_command(self, pedal_name: str, port_name: str = None, delay: float = MIDI_MESSAGE_DELAY) -> bool:
         """
         Send a pedal command as SysEx ON and OFF messages via MidiManager.
         Simulates a key press and release by sending ON followed by OFF.
@@ -288,7 +291,7 @@ class KetronMidi:
             logger.error(f"Error sending pedal command '{pedal_name}': {e}")
             return False
     
-    def send_tab_command(self, tab_name: str, port_name: str = None, delay: float = 0.01) -> bool:
+    def send_tab_command(self, tab_name: str, port_name: str = None, delay: float = MIDI_MESSAGE_DELAY) -> bool:
         """
         Send a tab command as SysEx ON and OFF messages via MidiManager.
         Simulates a key press and release by sending ON followed by OFF.

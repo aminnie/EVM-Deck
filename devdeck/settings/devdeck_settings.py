@@ -147,7 +147,18 @@ class DevDeckSettings:
         
         Returns:
             True if any updates were made
+        
+        Raises:
+            TypeError: If controls is not a list or mappings_dict is not a dict
         """
+        # Input validation
+        if not isinstance(controls, list):
+            raise TypeError("controls must be a list")
+        if not isinstance(mappings_dict, dict):
+            raise TypeError("mappings_dict must be a dict")
+        if not isinstance(key_offset, int):
+            raise TypeError("key_offset must be an int")
+        
         updated = False
         for control in controls:
             key_no = control.get('key')

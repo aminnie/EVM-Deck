@@ -11,12 +11,13 @@ import os
 from pathlib import Path
 
 from devdeck_core.controls.deck_control import DeckControl
+from devdeck.controls.base_control import BaseDeckControl
 from devdeck.ketron import KetronMidi, COLOR_MAP, KetronVolumeManager
 from devdeck.midi import MidiManager
 from devdeck.controls.text_control import wrap_text_to_lines
 
 
-class KetronKeyMappingControl(DeckControl):
+class KetronKeyMappingControl(BaseDeckControl):
     """
     Control that sends Ketron MIDI messages based on key_mappings.json.
     
@@ -37,6 +38,7 @@ class KetronKeyMappingControl(DeckControl):
     
     _key_mappings_cache = None
     _key_mappings_file = None
+    _key_mappings_mtime = None  # File modification time for cache invalidation
     
     def __init__(self, key_no, **kwargs):
         self.__logger = logging.getLogger('devdeck')
@@ -60,7 +62,25 @@ class KetronKeyMappingControl(DeckControl):
         """
         # Use cached data if file hasn't changed
         if cls._key_mappings_cache is not None and cls._key_mappings_file == key_mappings_file:
-            return cls._key_mappings_cache
+            # Check if file was modified by comparing modification times
+            if key_mappings_file is not None:
+                key_mappings_path = Path(key_mappings_file) if isinstance(key_mappings_file, str) else key_mappings_file
+                if key_mappings_path.exists():
+                    current_mtime = key_mappings_path.stat().st_mtime
+                    if cls._key_mappings_mtime is not None and current_mtime == cls._key_mappings_mtime:
+                        return cls._key_mappings_cache
+                    # File was modified, clear cache
+                    cls._key_mappings_cache = None
+                    cls._key_mappings_mtime = None
+                else:
+                    # File no longer exists, clear cache
+                    cls._key_mappings_cache = None
+                    cls._key_mappings_file = None
+                    cls._key_mappings_mtime = None
+                    return None
+            else:
+                # No file specified, return cached data if available
+                return cls._key_mappings_cache
         
         if key_mappings_file is None:
             # Try to find key_mappings.json in config directory (preferred location)
@@ -77,7 +97,24 @@ class KetronKeyMappingControl(DeckControl):
         if isinstance(key_mappings_file, str):
             key_mappings_file = Path(key_mappings_file)
         
-        if not key_mappings_file.exists():
+        # Validate path to prevent directory traversal attacks
+        if key_mappings_file is not None:
+            try:
+                # Resolve path to prevent directory traversal
+                key_mappings_file = key_mappings_file.resolve()
+                # Check if path exists
+                if not key_mappings_file.exists():
+                    return None
+                # Additional validation: ensure it's a file (not a directory)
+                if not key_mappings_file.is_file():
+                    logger = logging.getLogger('devdeck')
+                    logger.error("Key mappings path is not a file: %s", key_mappings_file)
+                    return None
+            except (OSError, ValueError) as e:
+                logger = logging.getLogger('devdeck')
+                logger.error("Invalid key mappings file path %s: %s", key_mappings_file, e)
+                return None
+        else:
             return None
         
         try:
@@ -105,9 +142,10 @@ class KetronKeyMappingControl(DeckControl):
             # Create a dictionary for quick lookup: key_no -> mapping
             mappings_dict = {mapping['key_no']: mapping for mapping in key_mappings}
             
-            # Cache the result
+            # Cache the result along with file modification time
             cls._key_mappings_cache = mappings_dict
             cls._key_mappings_file = key_mappings_file
+            cls._key_mappings_mtime = key_mappings_file.stat().st_mtime
             
             return mappings_dict
             
@@ -193,17 +231,6 @@ class KetronKeyMappingControl(DeckControl):
                 r.text(wrapped_text)\
                     .font_size(100)\
                     .color(text_color)\
-                    .center_vertically()\
-                    .center_horizontally()\
-                    .end()
-    
-    def _render_error(self, error_text):
-        """Render an error message"""
-        with self.deck_context() as context:
-            with context.renderer() as r:
-                r.text(error_text)\
-                    .font_size(70)\
-                    .color('red')\
                     .center_vertically()\
                     .center_horizontally()\
                     .end()

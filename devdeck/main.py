@@ -10,6 +10,7 @@ from StreamDeck.DeviceManager import DeviceManager
 from devdeck.deck_manager import DeckManager
 from devdeck.filters import InfoFilter
 from devdeck.settings.devdeck_settings import DevDeckSettings
+from devdeck.settings.migration import SettingsMigrator
 from devdeck.settings.validation_error import ValidationError
 
 
@@ -44,28 +45,10 @@ def main() -> None:
     # Get project root (parent of devdeck directory)
     project_root = Path(__file__).parent.parent
     config_dir = project_root / 'config'
-    config_dir.mkdir(exist_ok=True)  # Ensure config directory exists
     settings_filename = config_dir / 'settings.yml'
     
-    # Migration: Check for old locations and move files if needed
-    old_project_root_path = project_root / 'settings.yml'
-    old_home_path = Path.home() / 'devdeck' / 'settings.yml'
-    old_hidden_path = Path.home() / '.devdeck' / 'settings.yml'
-    
-    if not settings_filename.exists():
-        import shutil
-        # Try to migrate from project root first (most recent location)
-        if old_project_root_path.exists():
-            root.info("Migrating settings file from project root to config directory")
-            shutil.move(str(old_project_root_path), str(settings_filename))
-        # Then try home/devdeck
-        elif old_home_path.exists():
-            root.info("Migrating settings file from home/devdeck to config directory")
-            shutil.move(str(old_home_path), str(settings_filename))
-        # Then try old .devdeck location
-        elif old_hidden_path.exists():
-            root.info("Migrating settings file from .devdeck to config directory")
-            shutil.move(str(old_hidden_path), str(settings_filename))
+    # Migrate settings from old locations if needed
+    SettingsMigrator.migrate_settings(project_root, config_dir, settings_filename)
     
     if not settings_filename.exists():
         root.warning("No settings file detected!")

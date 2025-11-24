@@ -8,6 +8,11 @@ from typing import Optional, Any
 
 from devdeck_core.controls.deck_control import DeckControl
 
+# Constants
+THREAD_JOIN_TIMEOUT = 5.0  # Timeout in seconds for thread join operations
+THREAD_DISPOSE_TIMEOUT = 2.0  # Timeout in seconds for thread cleanup on dispose
+DISPLAY_UPDATE_INTERVAL = 1.0  # Interval in seconds for display updates
+
 
 class TimerControl(DeckControl):
 
@@ -31,10 +36,11 @@ class TimerControl(DeckControl):
             self.thread.start()
         elif self.end_time is None:
             self.end_time = datetime.datetime.now()
-            self.thread.join(timeout=5.0)
-            if self.thread.is_alive():
-                logger = logging.getLogger('devdeck')
-                logger.warning("Timer thread did not terminate within timeout")
+            if self.thread is not None:
+                self.thread.join(timeout=THREAD_JOIN_TIMEOUT)
+                if self.thread.is_alive():
+                    logger = logging.getLogger('devdeck')
+                    logger.warning("Timer thread did not terminate within timeout")
             with self.deck_context() as context:
                 with context.renderer() as r:
                     r.text(TimerControl.time_diff_to_str(self.end_time - self.start_time))\
@@ -61,7 +67,17 @@ class TimerControl(DeckControl):
                     r.text(TimerControl.time_diff_to_str(cutoff - self.start_time)) \
                         .font_size(120) \
                         .center_vertically().center_horizontally().end()
-            sleep(1)
+            sleep(DISPLAY_UPDATE_INTERVAL)
+
+    def dispose(self) -> None:
+        """Clean up resources, ensuring thread is properly terminated"""
+        if self.thread is not None and self.thread.is_alive():
+            self.end_time = datetime.datetime.now()  # Signal thread to stop
+            self.thread.join(timeout=THREAD_DISPOSE_TIMEOUT)
+            if self.thread.is_alive():
+                logger = logging.getLogger('devdeck')
+                logger.warning("Timer thread did not terminate during dispose")
+        super().dispose()
 
     @staticmethod
     def time_diff_to_str(diff: datetime.timedelta) -> str:
