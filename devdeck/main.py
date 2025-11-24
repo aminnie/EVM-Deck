@@ -88,7 +88,9 @@ def main():
     try:
         settings = DevDeckSettings.load(settings_filename)
     except ValidationError as validation_error:
+        root.error("Settings validation failed: %s", validation_error)
         print(validation_error)
+        sys.exit(1)
 
     for index, deck in enumerate(streamdecks):
         deck.open()

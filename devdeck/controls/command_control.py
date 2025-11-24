@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 from subprocess import Popen, DEVNULL
 
 from devdeck_core.controls.deck_control import DeckControl
@@ -18,5 +19,9 @@ class CommandControl(DeckControl):
     def pressed(self):
         try:
             Popen(self.settings['command'], stdout=DEVNULL, stderr=DEVNULL)
-        except Exception as ex:
+        except (FileNotFoundError, PermissionError) as ex:
             self.__logger.error("Error executing command %s: %s", self.settings['command'], str(ex))
+        except subprocess.SubprocessError as ex:
+            self.__logger.error("Subprocess error executing command %s: %s", self.settings['command'], str(ex))
+        except (ValueError, TypeError) as ex:
+            self.__logger.error("Invalid command format %s: %s", self.settings['command'], str(ex))

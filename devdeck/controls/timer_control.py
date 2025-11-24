@@ -26,7 +26,11 @@ class TimerControl(DeckControl):
             self.thread.start()
         elif self.end_time is None:
             self.end_time = datetime.datetime.now()
-            self.thread.join()
+            self.thread.join(timeout=5.0)
+            if self.thread.is_alive():
+                import logging
+                logger = logging.getLogger('devdeck')
+                logger.warning("Timer thread did not terminate within timeout")
             with self.deck_context() as context:
                 with context.renderer() as r:
                     r.text(TimerControl.time_diff_to_str(self.end_time - self.start_time))\
