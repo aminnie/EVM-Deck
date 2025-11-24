@@ -8,10 +8,12 @@ Usage:
 """
 
 import sys
+import os
 from pathlib import Path
 
-# Add devdeck to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path (two levels up from scripts/list/)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 from devdeck.midi import MidiManager
 

@@ -8,8 +8,9 @@ it appears in MIDI monitoring software on Windows.
 import sys
 import os
 
-# Add the project root to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the project root to the path (two levels up from scripts/check/)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 try:
     from devdeck.midi import MidiManager

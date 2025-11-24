@@ -3,12 +3,13 @@ import os
 import yaml
 from cerberus import Validator
 from pathlib import Path
+from typing import List, Dict, Optional, Any
 
 from devdeck.settings.deck_settings import DeckSettings
 from devdeck.settings.validation_error import ValidationError
 
 
-def wrap_text_to_lines(text, max_chars_per_line=6):
+def wrap_text_to_lines(text: str, max_chars_per_line: int = 6) -> str:
     """
     Wrap text into multiple lines with a maximum number of characters per line.
     
@@ -90,21 +91,21 @@ schema = {
 
 
 class DevDeckSettings:
-    def __init__(self, settings):
+    def __init__(self, settings: Dict[str, Any]) -> None:
         self.settings = settings
 
-    def deck(self, serial_number):
+    def deck(self, serial_number: str) -> Optional[DeckSettings]:
         settings_for_deck = [deck_setting for deck_setting in self.decks() if
                              deck_setting.serial_number() == serial_number[0:12]]
         if settings_for_deck:
             return settings_for_deck[0]
         return None
 
-    def decks(self):
+    def decks(self) -> List[DeckSettings]:
         return [DeckSettings(deck_setting) for deck_setting in self.settings['decks']]
 
     @staticmethod
-    def load(filename):
+    def load(filename: str) -> 'DevDeckSettings':
         with open(filename, 'r') as stream:
             settings = yaml.safe_load(stream)
 
@@ -115,7 +116,7 @@ class DevDeckSettings:
             raise ValidationError(validator.errors)
 
     @staticmethod
-    def generate_default(filename, serial_numbers):
+    def generate_default(filename: str, serial_numbers: List[str]) -> None:
         default_configs = []
         for serial_number in serial_numbers:
             deck_config = {
@@ -135,7 +136,7 @@ class DevDeckSettings:
             yaml.dump({'decks': default_configs}, f)
 
     @staticmethod
-    def _update_controls_from_mappings(controls, mappings_dict, key_offset=0):
+    def _update_controls_from_mappings(controls: List[Dict[str, Any]], mappings_dict: Dict[int, Dict[str, Any]], key_offset: int = 0) -> bool:
         """
         Recursively update controls from key mappings
         
@@ -146,7 +147,18 @@ class DevDeckSettings:
         
         Returns:
             True if any updates were made
+        
+        Raises:
+            TypeError: If controls is not a list or mappings_dict is not a dict
         """
+        # Input validation
+        if not isinstance(controls, list):
+            raise TypeError("controls must be a list")
+        if not isinstance(mappings_dict, dict):
+            raise TypeError("mappings_dict must be a dict")
+        if not isinstance(key_offset, int):
+            raise TypeError("key_offset must be an int")
+        
         updated = False
         for control in controls:
             key_no = control.get('key')
@@ -220,7 +232,7 @@ class DevDeckSettings:
         return updated
 
     @staticmethod
-    def update_from_key_mappings(settings_filename, key_mappings_filename=None):
+    def update_from_key_mappings(settings_filename: str, key_mappings_filename: Optional[str] = None) -> bool:
         """
         Update settings.yml with key mappings from key_mappings.json
         
@@ -242,17 +254,23 @@ class DevDeckSettings:
                 settings_dir = Path(settings_filename).parent
                 key_mappings_filename = settings_dir / 'key_mappings.json'
         
+        # Convert to Path if it's a string
+        if isinstance(key_mappings_filename, str):
+            key_mappings_path = Path(key_mappings_filename)
+        else:
+            key_mappings_path = key_mappings_filename
+        
         # Check if key_mappings.json exists and is not empty
-        if not os.path.exists(key_mappings_filename) or os.path.getsize(key_mappings_filename) == 0:
+        if not key_mappings_path.exists() or key_mappings_path.stat().st_size == 0:
             return False
         
         try:
             # Load key mappings - try UTF-16 first (Windows default), then UTF-8
             try:
-                with open(key_mappings_filename, 'r', encoding='utf-16') as f:
+                with open(key_mappings_path, 'r', encoding='utf-16') as f:
                     content = f.read().strip()
             except (UnicodeDecodeError, UnicodeError):
-                with open(key_mappings_filename, 'r', encoding='utf-8') as f:
+                with open(key_mappings_path, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
             
             if not content:
@@ -320,11 +338,11 @@ class DevDeckSettings:
             # Log JSON parsing error with file path
             import logging
             logger = logging.getLogger('devdeck')
-            logger.warning(f"Failed to parse key mappings JSON from {key_mappings_filename}: {e}")
+            logger.warning(f"Failed to parse key mappings JSON from {key_mappings_path}: {e}")
             return False
         except Exception as e:
             # Log error but don't fail startup
             import logging
             logger = logging.getLogger('devdeck')
-            logger.warning(f"Failed to update settings from key mappings ({key_mappings_filename}): {e}")
+            logger.warning(f"Failed to update settings from key mappings ({key_mappings_path}): {e}")
             return False

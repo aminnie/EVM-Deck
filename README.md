@@ -1,264 +1,531 @@
-# Dev Deck
-![CI](https://github.com/jamesridgway/devdeck/workflows/CI/badge.svg?branch=main)
+# DevDeck
 
-Stream Deck control software for software developer's.
+**Stream Deck control software for software developers with MIDI and Ketron EVM integration**
 
-[![DevDeck Demo](https://files.jamesridgway.co.uk/images/streamdeck-yt-thumbnail.png)](https://www.youtube.com/watch?v=4ZvrVFW562w)
+[![CI](https://github.com/jamesridgway/devdeck/workflows/CI/badge.svg?branch=main)](https://github.com/jamesridgway/devdeck/actions)
 
-## Getting Started
+DevDeck is a Python-based control system for Elgato Stream Deck devices that enables developers to create custom button layouts and controls. The project extends the original devdeck with specialized MIDI support and Ketron EVM/Event device integration, making it ideal for musicians and audio professionals who need to control MIDI devices from their Stream Deck.
 
-If this is your fist time using a StreamDeck make sure to follow the [Pre-requisite: LibUSB HIDAPI Backend](https://github.com/jamesridgway/devdeck/wiki/Installation#pre-requisite-libusb-hidapi-backend) steps documented in the wiki
+## Table of Contents
 
-Install DevDeck
+- [Overview](#overview)
+- [Technical Architecture](#technical-architecture)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Built-in Controls](#built-in-controls)
+- [MIDI Support](#midi-support)
+- [Ketron Integration](#ketron-integration)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Testing](#testing)
+- [Known Issues](#known-issues)
+- [Documentation](#documentation)
 
-    pip install devdeck
+## Overview
 
+DevDeck provides a flexible framework for controlling Stream Deck hardware through a YAML-based configuration system. The application supports multiple Stream Deck devices simultaneously, each with its own configuration. The architecture is modular, allowing for easy extension with custom controls and deck layouts.
 
-You should then be able to run DevDeck by running:
+### Core Capabilities
 
-    devdeck
+- **Multi-Device Support**: Manage multiple Stream Deck devices with independent configurations
+- **MIDI Integration**: Send MIDI Control Change (CC) and System Exclusive (SysEx) messages
+- **Ketron EVM Control**: Specialized integration for Ketron EVM/Event devices
+- **Extensible Architecture**: Plugin-based control system for custom functionality
+- **Cross-Platform**: Works on Windows, Linux, macOS, and Raspberry Pi
 
-The first time that DevDeck is run, it will generate a basic `~/.devdeck/settings.yml` populated with the clock control for any Stream Decks that are connected.
+## Technical Architecture
 
+### System Components
+
+```
+┌─────────────────┐
+│   main.py       │  Entry point, device enumeration, settings loading
+└────────┬────────┘
+         │
+         ├──► DeckManager ───► DeckController ───► Controls
+         │         │                  │                │
+         │         │                  │                ├── ClockControl
+         │         │                  │                ├── CommandControl
+         │         │                  │                ├── MidiControl
+         │         │                  │                ├── VolumeControl
+         │         │                  │                └── KetronKeyMappingControl
+         │         │                  │
+         │         └──► Settings Management (YAML)
+         │
+         └──► MIDI Manager (Singleton)
+                    │
+                    └──► MIDI Port Management
+                         ├── CC Messages
+                         └── SysEx Messages
+```
+
+### Key Architectural Patterns
+
+1. **Deck Manager Pattern**: Centralized management of Stream Deck devices and their active deck controllers
+2. **Control Inheritance**: All controls inherit from `BaseDeckControl` which extends `devdeck-core`'s `DeckControl`
+3. **Singleton MIDI Manager**: Thread-safe MIDI port management with automatic connection handling
+4. **Settings Validation**: YAML configuration validated using Cerberus schema validation
+5. **Deck Stack**: Navigation between decks using a stack-based approach
+
+### Technology Stack
+
+- **Python 3.12+**: Core runtime
+- **devdeck-core 1.0.7**: Base Stream Deck library
+- **mido + python-rtmidi**: Cross-platform MIDI support
+- **PyYAML**: Configuration file parsing
+- **Cerberus**: Settings validation
+- **Pillow**: Image rendering for deck keys
+- **pulsectl**: Linux audio control (volume management)
+
+## Key Features
+
+### 1. Multi-Deck Support
+- Simultaneous control of multiple Stream Deck devices
+- Per-device configuration using serial numbers
+- Independent deck layouts per device
+
+### 2. MIDI Integration
+- **Control Change (CC) Messages**: Standard MIDI CC support (0-127)
+- **System Exclusive (SysEx) Messages**: Custom MIDI commands for specialized devices
+- **Cross-Platform MIDI**: Works on Windows, Linux, macOS, and Raspberry Pi
+- **Port Management**: Automatic or manual MIDI port selection
+- **Thread-Safe**: Safe concurrent MIDI message sending
+
+### 3. Ketron EVM Integration
+- Pre-configured SysEx message formatting for Ketron devices
+- Key mapping system for Stream Deck keys to Ketron functions
+- Volume slider control via MIDI CC
+- Color-coded button states
+
+### 4. Configuration System
+- YAML-based settings with schema validation
+- Automatic settings migration from legacy formats
+- Key mapping import from JSON files
+- Default configuration generation for new devices
+
+### 5. Extensible Control System
+- Plugin architecture for custom controls
+- Base control class with common functionality
+- Deck controller system for multi-page layouts
+- Navigation controls for deck switching
+
+## Installation
+
+### Prerequisites
+
+**Windows:**
+- Python 3.12 or higher
+- LibUSB HIDAPI backend (hidapi.dll)
+- Visual C++ Redistributable (if using pre-built packages)
+
+**Linux/macOS:**
+- Python 3.12 or higher
+- ALSA/JACK MIDI support (for MIDI functionality)
+- libusb development libraries
+
+**Raspberry Pi:**
+- Python 3.12 or higher
+- ALSA MIDI support (built-in)
+
+### Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd devdeck-main
+   ```
+
+2. **Create virtual environment:**
+   ```bash
+   python -m venv venv
+   ```
+
+3. **Activate virtual environment:**
+   - Windows: `venv\Scripts\activate`
+   - Linux/macOS: `source venv/bin/activate`
+
+4. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Run setup script:**
+   ```bash
+   ./setup.sh  # Linux/macOS
+   # or
+   .\setup.sh  # Windows (Git Bash)
+   ```
+
+### First Run
+
+On first run, DevDeck will:
+1. Detect connected Stream Deck devices
+2. Generate a default `config/settings.yml` file
+3. Populate it with basic clock controls for each device
+
+**Note**: Ensure the official Stream Deck application is closed before running DevDeck, as only one application can control a Stream Deck at a time.
+
+## Configuration
+
+### Settings File Location
+
+The main settings file is located at:
+- **Project-based**: `config/settings.yml` (for development)
+- **User-based**: `~/.devdeck/settings.yml` (for installed packages)
+
+### Settings Structure
+
+```yaml
+decks:
+  - name: devdeck.decks.single_page_deck_controller.SinglePageDeckController
+    serial_number: YOUR_SERIAL_NUMBER
+    settings:
+      controls:
+        - key: 0
+          name: devdeck.controls.clock_control.ClockControl
+          settings: {}
+        - key: 1
+          name: devdeck.midi.controls.midi_control.MidiControl
+          settings:
+            type: cc
+            control: 102
+            value: 64
+            channel: 0
+            port: "MIDI Device"
+```
+
+### Key Mappings
+
+Ketron key mappings can be imported from `config/key_mappings.json`:
+- Maps Stream Deck key numbers to Ketron functions
+- Supports SysEx commands for Ketron EVM/Event devices
+- Automatically loaded on startup if present
 
 ## Built-in Controls
-Dev Deck ships with the following controls:
 
-* [Clock Control](https://github.com/jamesridgway/devdeck/wiki/Controls#clock-control)
-  
-  `devdeck.controls.clock_control.ClockControl` is a clock widget for displaying the date and time
+### General Controls
 
-* [Command Execution](https://github.com/jamesridgway/devdeck/wiki/Controls#command-control)
-  
-  `devdeck.controls.command_control.CommandControl` is a control for executing commands on your computer. You can
-   specify any command and icon for the given action.
+- **ClockControl** (`devdeck.controls.clock_control.ClockControl`)
+  - Displays current date and time on deck keys
+  - Auto-updates every second
 
-* [Microphone Mute Toggle](https://github.com/jamesridgway/devdeck/wiki/Controls#mic-mute-control)
+- **CommandControl** (`devdeck.controls.command_control.CommandControl`)
+  - Executes system commands on key press
+  - Supports custom icons and command arguments
 
-  `devdeck.controls.mic_mute_control.MicMuteControl` toggles the mute on a given microphone input.
+- **MicMuteControl** (`devdeck.controls.mic_mute_control.MicMuteControl`)
+  - Toggles microphone mute state
+  - Visual feedback for mute status
 
-* [Name List](https://github.com/jamesridgway/devdeck/wiki/Controls#name-list-control)
+- **NameListControl** (`devdeck.controls.name_list_control.NameListControl`)
+  - Cycles through a list of names/initials
+  - Useful for stand-ups and team rotations
 
-  `devdeck.controls.name_list_control.NameListControl` cycles through initials from a list of names. Useful for things
-  like stand-ups were you need to rotate through a team and make sure you cover everyone.
-  
-* [Timer](https://github.com/jamesridgway/devdeck/wiki/Controls#timer-control)
-  
-  `devdeck.controls.timer_control.TimerControl` a basic stopwatch timer that can be used to start/stop/reset timing.
+- **TimerControl** (`devdeck.controls.timer_control.TimerControl`)
+  - Stopwatch functionality
+  - Start/stop/reset operations
 
-* [Volume Control](https://github.com/jamesridgway/devdeck/wiki/Controls#volume-level-control)
+- **VolumeLevelControl** (`devdeck.controls.volume_level_control.VolumeLevelControl`)
+  - Sets audio output volume to specific level
+  - Platform-specific implementation (Windows/Linux)
 
-  `devdeck.controls.volume_level_control.VolumeLevelControl` sets the volume for a given output to a specified volume 
-  level.
+- **VolumeMuteControl** (`devdeck.controls.volume_mute_control.VolumeMuteControl`)
+  - Toggles audio output mute
+  - Visual state indication
 
+- **TextControl** (`devdeck.controls.text_control.TextControl`)
+  - Displays custom text on keys
+  - Configurable colors and fonts
 
-* [Volume Mute Control](https://github.com/jamesridgway/devdeck/wiki/Controls#volume-mute-control)
+- **NavigationToggleControl** (`devdeck.controls.navigation_toggle_control.NavigationToggleControl`)
+  - Navigates between deck pages
+  - Returns to previous deck
 
-  `devdeck.controls.volume_mute_control.VolumeMuteControl` toggles the muting of a given output.
+### MIDI Controls
 
-* [MIDI Control](https://github.com/jamesridgway/devdeck/wiki/Controls#midi-control)
+- **MidiControl** (`devdeck.midi.controls.midi_control.MidiControl`)
+  - Sends MIDI CC or SysEx messages
+  - Configurable port, channel, and message data
+  - See [MIDI Support](#midi-support) for details
 
-  `devdeck.midi.controls.midi_control.MidiControl` sends MIDI Control Change (CC) or System Exclusive (SysEx) messages when a key is pressed. Supports cross-platform MIDI functionality on Windows, Linux, macOS, and Raspberry Pi.
+### Ketron Controls
 
+- **KetronKeyMappingControl** (`devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl`)
+  - Maps Stream Deck keys to Ketron functions
+  - Reads mappings from `config/key_mappings.json`
+  - Sends Ketron-specific SysEx messages
 
-## Built-in Decks
+## MIDI Support
 
-* [Single Page Deck](https://github.com/jamesridgway/devdeck/wiki/Decks#singlepagedeckcontroller)
+### Overview
 
-  `devdeck.decks.single_page_deck_controller.SinglePageDeckController` provides a basic single page deck for
-  controls to be arranged on.
+DevDeck includes comprehensive MIDI support through the `MidiManager` singleton and `MidiControl` class. The implementation uses `mido` with `python-rtmidi` backend for cross-platform compatibility.
 
-* [Volume Deck](https://github.com/jamesridgway/devdeck/wiki/Decks#volumedeck)
+### MIDI Manager
 
-  `devdeck.decks.volume_deck.VolumeDeck` is a pre-built volume deck which will show volume toggles between 0% and 100%
-  at 10% increments.
+The `MidiManager` provides:
+- Thread-safe MIDI port management
+- Automatic port connection/disconnection
+- Support for multiple MIDI ports
+- CC and SysEx message sending
 
-## Plugins
-There are a few controls that are provided as plugins. You can always write your own plugin if you can't find the
-functionality that you're after:
+### Usage Examples
 
-* [devdeck-slack](https://github.com/jamesridgway/devdeck-slack)
+#### Control Change (CC) Message
+```yaml
+- key: 0
+  name: devdeck.midi.controls.midi_control.MidiControl
+  settings:
+    type: cc
+    control: 102  # CC number (0-127)
+    value: 64     # CC value (0-127)
+    channel: 0    # MIDI channel (0-15)
+    port: "MIDI Device"  # Optional: specific port name
+```
 
-  Controls and decks for Slack. Toggle presence, change status, snooze notifications, etc.
+#### System Exclusive (SysEx) Message
+```yaml
+- key: 1
+  name: devdeck.midi.controls.midi_control.MidiControl
+  settings:
+    type: sysex
+    data: [0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00]  # SysEx data
+    port: "MIDI Device"  # Optional
+```
 
-* [devdeck-home-assistant](https://github.com/jamesridgway/devdeck-home-assistant)
+### MIDI Testing
 
-  Controls and decks for Home Assistant. Toggle lights, switches, etc.
+See the [Testing](#testing) section for MIDI connectivity and functionality tests.
 
-* [devdeck-key-light](https://github.com/jamesridgway/devdeck-key-light)
+For detailed MIDI implementation information, see [docs/MIDI_IMPLEMENTATION.md](docs/MIDI_IMPLEMENTATION.md).
 
-  Controls and decks for controlling an Elgato Key Light.
+## Ketron Integration
 
-## Implementing Custom Controls
-Can't find support for what you want? Implement your own `DeckControl` or `DeckController`·
+### Overview
 
-* `DeckControl`
-  
-  A `DeckControl` is an individual button that can be placed on a deck.
-  
-* `DeckController`
+The Ketron integration provides specialized support for Ketron EVM and Event devices, including:
+- Pre-formatted SysEx messages for Ketron commands
+- Key mapping system for Stream Deck to Ketron function mapping
+- Volume slider control via MIDI CC
+- Color-coded button states matching Ketron UI
 
-  A `DeckController` is fronted by a button, pressing the button will take you to a deck screen tailored for the
-  given functionality.
-  
-  For example: Slack is implemented as a DeckController. Pressing the slack button will then present you with buttons
-  for specific statuses.
- 
- ## Developing for DevDeck
- Pull requests and contributions to this project are welcome.
- 
- You can get setup with a virtual environment and all necessary dependencies by running:
- 
-    ./setup.sh
-    
-Tests can be run by running:
+### Key Components
 
-    ./run-tests.sh
+1. **KetronMidi** (`devdeck.ketron.ketron.py`)
+   - SysEx message format constants
+   - MIDI CC definitions for volume sliders
+   - Color definitions for button states
 
-## MIDI Testing
+2. **KetronVolumeManager** (`devdeck.ketron.ketron_volume_manager.py`)
+   - Manages volume slider states
+   - Sends MIDI CC messages for volume control
 
-### Basic MIDI Connectivity Test
+3. **KetronKeyMappingControl** (`devdeck.ketron.controls.ketron_key_mapping_control.py`)
+   - Reads key mappings from JSON configuration
+   - Sends appropriate Ketron SysEx or CC messages
+   - Provides visual feedback on Stream Deck keys
 
-To test MIDI connectivity and verify your MIDI setup is working correctly, you can run the MIDI test script that plays "Ode to Joy":
+### Configuration
 
-    .\venv\Scripts\python.exe tests\devdeck\test_midi.py
+Ketron key mappings are defined in `config/key_mappings.json`:
+```json
+{
+  "0": {
+    "name": "Start/Stop",
+    "sysex_command": "start_stop",
+    "color": "green"
+  },
+  "1": {
+    "name": "Intro",
+    "sysex_command": "intro",
+    "color": "blue"
+  }
+}
+```
 
-Or specify a specific MIDI port:
+## Project Structure
 
-    .\venv\Scripts\python.exe tests\devdeck\test_midi.py "Your MIDI Device Name"
+```
+devdeck-main/
+├── config/                 # Configuration files
+│   ├── key_mappings.json   # Ketron key mappings
+│   └── settings.yml         # Main settings file
+│
+├── devdeck/                # Main package
+│   ├── controls/           # General controls
+│   ├── decks/              # Deck controllers
+│   ├── ketron/             # Ketron integration
+│   ├── midi/               # MIDI infrastructure
+│   ├── settings/           # Settings management
+│   └── main.py             # Entry point
+│
+├── docs/                   # Documentation
+│   ├── MIDI_IMPLEMENTATION.md
+│   ├── PROJECT_STRUCTURE.md
+│   └── USER_GUIDE.md
+│
+├── scripts/                # Utility scripts
+│   ├── check/              # Verification scripts
+│   ├── generate/           # Code generation
+│   ├── list/               # Listing utilities
+│   └── run/                # Run scripts
+│
+└── tests/                  # Test suite
+    └── devdeck/            # Package tests
+```
 
-The test script will:
-- List all available MIDI output ports
-- Open the first available port (or specified port, defaults to "MidiView 1")
-- Play a recognizable melody to verify MIDI functionality
-- Display progress and status for each note
+For detailed structure information, see [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 
-### Ketron SysEx Message Test
+## Development
 
-To test Ketron SysEx message formatting and sending, you can run the Ketron SysEx test script:
+### Setup Development Environment
 
-    .\venv\Scripts\python.exe tests\devdeck\test_ketron_sysex.py
+1. **Clone and setup:**
+   ```bash
+   git clone <repository-url>
+   cd devdeck-main
+   ./setup.sh
+   ```
 
-Or specify a specific MIDI port:
+2. **Activate virtual environment:**
+   ```bash
+   source venv/bin/activate  # Linux/macOS
+   # or
+   venv\Scripts\activate     # Windows
+   ```
 
-    .\venv\Scripts\python.exe tests\devdeck\test_ketron_sysex.py "Your MIDI Device Name"
+3. **Install development dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-The test script will:
-- Format a "Start/Stop" pedal command as SysEx ON and OFF messages
-- Display the formatted SysEx message data for both ON and OFF
-- Send both messages in succession to simulate a key press and release
-- Send to the specified MIDI port (defaults to "MidiView 1")
-- Verify successful transmission
+### Running the Application
 
-This test is useful for verifying that Ketron device SysEx messages are formatted correctly and can be sent to your Ketron EVM/Event device. The test sends both ON (0x7F) and OFF (0x00) messages to simulate a button press and release.
+**Development mode:**
+```bash
+python -m devdeck.main
+```
 
-### Verifying Ketron EVM Connection
+**Using run scripts:**
+```bash
+./scripts/run/run-devdeck.sh  # Linux/macOS
+.\scripts\run\run-devdeck.ps1  # Windows PowerShell
+.\scripts\run\run-devdeck.bat  # Windows CMD
+```
 
-To verify that your Ketron EVM device is properly connected and recognized, you can use several methods:
+### Code Organization
 
-#### 1. List Available MIDI Ports (Quick Check)
+- **Controls**: Inherit from `BaseDeckControl` (which extends `devdeck-core.DeckControl`)
+- **Decks**: Implement `DeckController` interface from `devdeck-core`
+- **Settings**: Use `DevDeckSettings` class for loading and validation
+- **MIDI**: Use `MidiManager` singleton for all MIDI operations
 
-Run the script that looks for Ketron ports:
+### Adding New Controls
 
+1. Create a new control class in `devdeck/controls/`:
+   ```python
+   from devdeck.controls.base_control import BaseDeckControl
+   
+   class MyControl(BaseDeckControl):
+       def __init__(self, key_no, **kwargs):
+           super().__init__(key_no, **kwargs)
+           # Initialize your control
+       
+       def render(self):
+           # Render your control
+           pass
+       
+       def pressed(self):
+           # Handle key press
+           pass
+   ```
+
+2. Register in settings.yml:
+   ```yaml
+   - key: 0
+     name: devdeck.controls.my_control.MyControl
+     settings: {}
+   ```
+
+## Testing
+
+### Running Tests
+
+```bash
+./run-tests.sh  # Linux/macOS
+# or
+python -m pytest tests/
+```
+
+### MIDI Testing
+
+#### List MIDI Ports
 ```bash
 python scripts/list/list_midi_ports.py
 ```
 
-This will:
-- Show all available MIDI output ports
-- Highlight any ports containing "ketron" and ("evm" or "event") in the name
-- Show you the exact port name to use
+#### Test MIDI Connectivity
+```bash
+python tests/devdeck/midi/test_midi.py
+# or with specific port:
+python tests/devdeck/midi/test_midi.py "MIDI Device Name"
+```
 
-**What to look for:**
-- If you see a port with "Ketron" and "EVM" or "Event" in the name, the device is detected
-- Note the exact port name (case-sensitive)
-
-#### 2. Test Sending a MIDI Message (Functional Test)
-
-Test that you can actually send messages to the Ketron:
-
+#### Test Ketron SysEx
 ```bash
 python tests/devdeck/ketron/test_ketron_sysex.py
+# or with specific port:
+python tests/devdeck/ketron/test_ketron_sysex.py "Ketron Port Name"
 ```
 
-Or specify a port name:
-
-```bash
-python tests/devdeck/ketron/test_ketron_sysex.py "Your Ketron Port Name"
-```
-
-This will:
-- Format a "Start/Stop" SysEx message
-- Send both ON and OFF messages to simulate a button press
-- Confirm if the messages were sent successfully
-
-**What to look for:**
-- If the test succeeds, your connection is working
-- If it fails, check the port name or connection
-
-#### 3. Check What Port Your Application Is Using
-
-Run the identity check script:
-
+#### Check MIDI Identity
 ```bash
 python scripts/check/check_app_midi_identity.py
 ```
 
-This shows:
-- Which port your application opened
-- How it appears in MIDI monitoring software
-- Whether it's a virtual or hardware port
+### Test Coverage
 
-#### 4. Physical Verification
+The test suite includes:
+- Control functionality tests
+- MIDI connectivity and message formatting tests
+- Ketron SysEx message tests
+- Settings validation tests
+- Deck manager tests
 
-If the Ketron EVM responds to MIDI:
-- Send a test command (like "Start/Stop") and see if the device responds
-- Use MIDI monitoring software (like MidiView) to see if messages are being sent/received
-
-#### 5. Check Windows Device Manager
-
-On Windows:
-1. Open Device Manager
-2. Look under "Sound, video and game controllers" or "Audio inputs and outputs"
-3. You should see your Ketron device listed if it's properly connected
-
-#### Troubleshooting
-
-If you don't see the Ketron port:
-1. Ensure the Ketron EVM is powered on
-2. Check USB/MIDI cable connection
-3. Verify Windows recognizes the device (Device Manager)
-4. The port name might not contain "ketron" - check all listed ports
-5. On Windows, the port may show as a generic MIDI device name
-
-#### Recommended Workflow
-
-1. First, run `scripts/list/list_midi_ports.py` to see all available ports
-2. Identify which port is your Ketron (may need to check device names)
-3. Test with `tests/devdeck/ketron/test_ketron_sysex.py "Port Name"` to verify functionality
-4. If successful, you're connected and can send commands
-
-The most reliable test is `tests/devdeck/ketron/test_ketron_sysex.py` because it verifies you can actually send messages, not just that a port exists.
-
-For more information about MIDI functionality, see [MIDI_IMPLEMENTATION.md](MIDI_IMPLEMENTATION.md).
-
-## Known Issues & Fixes
+## Known Issues
 
 ### Clock Control Compatibility with Pillow 10.0.0+
 
-**Issue**: The clock control may fail with `AttributeError: 'ImageDraw' object has no attribute 'textsize'` when using Pillow 10.0.0 or later.
+**Issue**: Clock control may fail with `AttributeError: 'ImageDraw' object has no attribute 'textsize'` when using Pillow 10.0.0 or later.
 
-**Cause**: The `devdeck-core` package uses the deprecated `textsize()` method which was removed in Pillow 10.0.0.
+**Fix**: Update `text_renderer.py` in the installed `devdeck-core` package to use `textbbox()` instead of `textsize()`.
 
-**Fix**: Update `text_renderer.py` in the installed `devdeck-core` package to use `textbbox()` instead of `textsize()`. The fix is located at:
-- `venv\Lib\site-packages\devdeck_core\rendering\text_renderer.py`
+**Windows Instructions**:
+```powershell
+# Find the file
+Get-ChildItem -Path "venv\Lib\site-packages\devdeck_core\rendering\text_renderer.py" -Recurse
 
-Replace:
+# Edit the file (replace python3.13 with your Python version if different)
+notepad venv\Lib\site-packages\devdeck_core\rendering\text_renderer.py
+```
+
+**Linux/Raspberry Pi Instructions**:
+```bash
+# Find the file
+find venv -name "text_renderer.py" -path "*/devdeck_core/*"
+
+# Edit the file (replace python3.13 with your Python version)
+nano venv/lib/python3.13/site-packages/devdeck_core/rendering/text_renderer.py
+```
+
+**Fix to Apply**:
+Find this line (around line 258):
 ```python
 label_w, label_h = draw.textsize('%s' % self.text, font=font)
 ```
 
-With:
+Replace it with:
 ```python
 # textsize() was deprecated and removed in Pillow 10.0.0, use textbbox() instead
 bbox = draw.textbbox((0, 0), '%s' % self.text, font=font)
@@ -268,43 +535,52 @@ label_h = bbox[3] - bbox[1]  # bottom - top
 
 **Note**: This fix is applied to your local virtual environment. If you recreate the venv or reinstall `devdeck-core`, you'll need to reapply this fix. Consider submitting a patch to the `devdeck-core` project for a permanent solution.
 
-### Python 3.10+ Deprecation Warning
-
-**Issue**: A deprecation warning about `threading.currentThread()` when running on Python 3.10+.
-
-**Fix**: Updated `devdeck/main.py` to use `threading.current_thread()` instead of the deprecated `threading.currentThread()`.
-
 ### Windows: HIDAPI DLL Not Found
 
-**Issue**: On Windows, you may encounter `ProbeError: No suitable LibUSB HIDAPI library found on this system. Is the 'hidapi.dll' library installed?` even when `hidapi.dll` is in your PATH.
+**Issue**: `ProbeError: No suitable LibUSB HIDAPI library found` even when `hidapi.dll` is in PATH.
 
-**Cause**: Python's ctypes library looks for DLLs in specific locations, and the StreamDeck library may not find `hidapi.dll` even if it's in the system PATH.
-
-**Fix**: Copy `hidapi.dll` to your Python Scripts directory (where `python.exe` is located). For a virtual environment:
-
+**Fix**: Copy `hidapi.dll` to your Python Scripts directory:
 ```powershell
 Copy-Item "C:\hidapi-win\x64\hidapi.dll" -Destination "venv\Scripts\hidapi.dll" -Force
 ```
 
-Or if using a system Python installation:
-
-```powershell
-Copy-Item "C:\hidapi-win\x64\hidapi.dll" -Destination "$env:USERPROFILE\AppData\Local\Programs\Python\Python313\Scripts\hidapi.dll" -Force
-```
-
-**Alternative**: Ensure `C:\hidapi-win\x64` (or wherever your `hidapi.dll` is located) is permanently added to your system PATH environment variable, then restart your terminal/IDE.
-
 ### Stream Deck Application Conflict
 
-**Issue**: Factory default images appear on keys, factory actions are triggered when pressing keys, or devdeck controls don't work as expected.
+**Issue**: Factory default images appear or devdeck controls don't work.
 
-**Cause**: The official Stream Deck application is still running in the background and controlling the device. The Stream Deck can only be controlled by one application at a time.
+**Fix**: Close the official Stream Deck application completely before running devdeck. Only one application can control a Stream Deck at a time.
 
-**Fix**: Close the official Stream Deck application completely before running devdeck:
+## Documentation
 
-1. **Close the Stream Deck application**: Exit the Stream Deck app from the system tray or taskbar
-2. **Check for background processes**: Ensure no Stream Deck processes are running in the background
-3. **Restart devdeck**: After closing the official app, restart devdeck
+- **[USER_GUIDE.md](docs/USER_GUIDE.md)**: User documentation and usage examples
+- **[MIDI_IMPLEMENTATION.md](docs/MIDI_IMPLEMENTATION.md)**: Detailed MIDI implementation guide
+- **[PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)**: Project organization and file structure
+- **[RASPBERRY_PI_DEPLOYMENT.md](docs/RASPBERRY_PI_DEPLOYMENT.md)**: Deployment guide for Raspberry Pi
 
-**Note**: You cannot use both the official Stream Deck application and devdeck simultaneously. Only one application can control the Stream Deck at a time.
+## Contributing
 
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with appropriate tests
+4. Ensure all tests pass
+5. Submit a pull request
+
+### Development Guidelines
+
+- Follow existing code style and patterns
+- Add tests for new functionality
+- Update documentation as needed
+- Use type hints where appropriate
+- Follow the existing logging patterns
+
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built on [devdeck-core](https://github.com/jamesridgway/devdeck-core) by James Ridgway
+- MIDI support via [mido](https://github.com/mido/mido) and [python-rtmidi](https://github.com/SpotlightKid/python-rtmidi)
+- Stream Deck hardware support via [python-elgato-streamdeck](https://github.com/abcminiuser/python-elgato-streamdeck)

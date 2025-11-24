@@ -137,13 +137,19 @@ sudo apt install -y build-essential python3-dev python3-pip python3-venv
 sudo apt install -y libasound2-dev libjack-dev libjack0
 
 # Install USB libraries (for Stream Deck)
-sudo apt install -y libusb-1.0-0-dev
+sudo apt install -y libusb-1.0-0-dev libhidapi-libusb0 libhidapi-dev
 
 # Install additional dependencies
 sudo apt install -y git curl wget
 
 # Install ALSA utilities (for MIDI testing)
 sudo apt install -y alsa-utils
+
+# Install fonts (for text rendering on Stream Deck buttons)
+sudo apt install -y fonts-dejavu fonts-liberation
+
+# Install Pillow build dependencies (required for building from source)
+sudo apt install -y libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev liblcms2-dev libwebp-dev libopenjp2-7-dev libimagequant-dev libraqm-dev
 
 # Clean up
 sudo apt autoremove -y
@@ -216,12 +222,33 @@ pip list
 ### Expected Dependencies
 
 You should see these packages installed:
+- `streamdeck` - Elgato Stream Deck library (imported as `StreamDeck`)
 - `mido` - MIDI library
 - `python-rtmidi` - MIDI backend
 - `devdeck-core` - Core Stream Deck library
 - `pillow` - Image processing
 - `pyyaml` - YAML configuration
 - And others from requirements.txt
+
+### Step 5: Verify StreamDeck Installation
+
+After installing dependencies, verify that the StreamDeck library is properly installed:
+
+```bash
+# Ensure virtual environment is activated
+source venv/bin/activate
+
+# Test StreamDeck import (correct syntax)
+python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('✓ StreamDeck library OK')"
+
+# Test device enumeration (if Stream Deck is connected)
+python3 -c "from StreamDeck.DeviceManager import DeviceManager; dm = DeviceManager(); decks = dm.enumerate(); print(f'Found {len(decks)} Stream Deck(s)')"
+```
+
+**Note**: The package name is `streamdeck` (lowercase) but Python imports it as `StreamDeck` (capitalized). If you get `ModuleNotFoundError`, ensure:
+- Virtual environment is activated
+- Dependencies are installed: `pip install -r requirements.txt`
+- System USB libraries are installed: `sudo apt install -y libusb-1.0-0-dev`
 
 ---
 
@@ -480,11 +507,28 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006d", MODE="0666"
 ### Step 3: Add User to plugdev Group
 
 ```bash
-# Add your user to plugdev group
+# Check if plugdev group exists (it should on Raspberry Pi OS)
+getent group plugdev
+
+# If group doesn't exist, create it
+sudo groupadd plugdev
+
+# Add your user to plugdev group (for USB access)
 sudo usermod -a -G plugdev $USER
 
-# Apply changes (log out and back in, or use newgrp)
+# Add your user to audio group (for ALSA MIDI access)
+sudo usermod -a -G audio $USER
+
+# Verify you're in the groups
+groups $USER
+# Should show 'plugdev' and 'audio' in the list
+
+# Apply changes - IMPORTANT: You must log out and log back in for this to take effect
+# For the current session only, you can use:
 newgrp plugdev
+newgrp audio
+
+# But for permanent effect, log out and log back in
 ```
 
 ### Step 4: Reload udev Rules
@@ -494,8 +538,14 @@ newgrp plugdev
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-# Unplug and replug Stream Deck
+# IMPORTANT: Unplug and replug Stream Deck USB cable
+# This is required for the new udev rules to take effect
 ```
+
+**Note**: After modifying udev rules or changing group membership, you must:
+1. Reload udev rules (as above)
+2. Unplug and replug the Stream Deck
+3. Log out and log back in (if you added yourself to plugdev group)
 
 ### Step 5: Verify USB Access
 
@@ -505,7 +555,7 @@ lsusb | grep -i elgato
 
 # Test with Python (in virtual environment)
 source venv/bin/activate
-python3 -c "from streamdeck import StreamDeck; print('Stream Deck library OK')"
+python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Stream Deck library OK')"
 ```
 
 ---
@@ -533,10 +583,13 @@ python3 -c "from streamdeck import StreamDeck; print('Stream Deck library OK')"
 ### Step 2: Test MIDI Communication
 
 ```bash
+# Navigate to project root directory
+cd ~/devdeck
+
 # Activate virtual environment
 source venv/bin/activate
 
-# Test MIDI port listing
+# Test MIDI port listing (must be run from project root)
 python3 scripts/list/list_midi_ports.py
 
 # Test MIDI communication
@@ -546,7 +599,13 @@ python3 tests/devdeck/ketron/test_ketron_sysex.py
 ### Step 3: Identify MIDI Port Name
 
 ```bash
-# Run MIDI port listing script
+# Ensure you're in project root directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run MIDI port listing script (must be run from project root)
 python3 scripts/list/list_midi_ports.py
 
 # Note the exact port name for your Ketron device
@@ -576,7 +635,7 @@ Find your Stream Deck serial number:
 source venv/bin/activate
 
 # Run a test to find serial number
-python3 -c "from streamdeck import StreamDeck; decks = StreamDeck.DeviceManager().enumerate(); print([d.get_serial_number() for d in decks])"
+python3 -c "from StreamDeck.DeviceManager import DeviceManager; decks = DeviceManager().enumerate(); print([d.get_serial_number() for d in decks])"
 ```
 
 Update `settings.yml`:
@@ -744,10 +803,13 @@ aconnect -l
 ### Step 2: Test MIDI Communication
 
 ```bash
+# Navigate to project root directory
+cd ~/devdeck
+
 # Activate virtual environment
 source venv/bin/activate
 
-# List MIDI ports
+# List MIDI ports (must be run from project root)
 python3 scripts/list/list_midi_ports.py
 
 # Test Ketron SysEx
@@ -784,12 +846,26 @@ sudo journalctl -u devdeck.service -n 100
 
 ## Troubleshooting
 
-### Stream Deck Not Detected
+### Stream Deck Not Detected / ProbeError
 
-**Problem**: Application can't find Stream Deck
+**Problem**: `ProbeError: Probe failed to find any functional HID backend` or `No suitable LibUSB HIDAPI library found`
 
 **Solutions**:
 ```bash
+# Install required HIDAPI libraries
+sudo apt update
+sudo apt install -y libhidapi-libusb0 libhidapi-dev libusb-1.0-0-dev
+
+# Verify libraries are installed
+ldconfig -p | grep hidapi
+
+# If libraries are installed but still not found, try:
+sudo ldconfig
+
+# Reinstall Python streamdeck package
+source venv/bin/activate
+pip install --force-reinstall streamdeck
+
 # Check USB connection
 lsusb | grep -i elgato
 
@@ -805,7 +881,70 @@ sudo chmod 666 /dev/bus/usb/*/*
 # Restart udev
 sudo udevadm control --reload-rules
 sudo udevadm trigger
+
+# Reboot if necessary
+sudo reboot
 ```
+
+**Note**: The `libhidapi-libusb0` package provides the `libhidapi-libusb.so` library that the Stream Deck Python library requires. This is a runtime dependency that must be installed at the system level.
+
+### Could Not Open HID Device
+
+**Problem**: `TransportError: Could not open HID device.` - The library can find the device but cannot open it due to permissions.
+
+**Solutions**:
+```bash
+# Step 1: Verify Stream Deck is connected
+lsusb | grep -i elgato
+# Should show something like: Bus 001 Device 003: ID 0fd9:0060 Elgato Systems GmbH
+
+# Step 2: Check if udev rules file exists
+ls -la /etc/udev/rules.d/50-streamdeck.rules
+
+# Step 3: If file doesn't exist, create it (see USB Permissions Configuration section above)
+sudo nano /etc/udev/rules.d/50-streamdeck.rules
+# Add the udev rules for your Stream Deck model
+
+# Step 4: Verify your user is in the plugdev group
+groups $USER
+# Should include 'plugdev' in the output
+
+# Step 5: If not in plugdev group, add yourself
+sudo usermod -a -G plugdev $USER
+
+# Step 6: Apply group changes (choose one method):
+# Option A: Log out and log back in (recommended)
+# Option B: Use newgrp (temporary, for current session)
+newgrp plugdev
+
+# Step 7: Reload udev rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+# Step 8: Unplug and replug Stream Deck USB cable
+# This ensures the new permissions are applied
+
+# Step 9: Verify permissions on USB device
+# Find the device path
+ls -la /dev/bus/usb/*/* | grep -i elgato
+# Or check all USB devices
+ls -la /dev/bus/usb/*/*
+
+# Step 10: Test again
+cd ~/devdeck
+source venv/bin/activate
+python3 -m devdeck.main
+```
+
+**Important Notes**:
+- After adding yourself to the `plugdev` group, you **must log out and log back in** for the change to take effect (or use `newgrp plugdev` for the current session)
+- The udev rules must match your Stream Deck model's vendor/product IDs (check with `lsusb`)
+- After creating/modifying udev rules, you must unplug and replug the Stream Deck for the rules to apply
+- If still having issues, try running with `sudo` temporarily to verify it's a permissions issue:
+  ```bash
+  sudo -E env "PATH=$PATH" python3 -m devdeck.main
+  ```
+  (If this works, it confirms a permissions issue - don't run as root permanently)
 
 ### MIDI Port Not Found
 
@@ -869,13 +1008,206 @@ sudo usermod -a -G plugdev $USER
 newgrp plugdev
 ```
 
+### Script Import Errors
+
+**Problem**: `ModuleNotFoundError: No module named 'devdeck'` when running scripts
+
+**Solutions**:
+```bash
+# Ensure you're in the project root directory
+cd ~/devdeck
+
+# Verify you're in the right place (should see devdeck/ directory)
+ls -la
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Verify Python can find the module
+python3 -c "import sys; sys.path.insert(0, '.'); from devdeck.midi import MidiManager; print('✓ Module import OK')"
+
+# Now run scripts from project root
+python3 scripts/list/list_midi_ports.py
+```
+
+**Important**: All scripts must be run from the project root directory (`~/devdeck`) with the virtual environment activated. The scripts add the project root to Python's path, but they assume you're running from that directory.
+
+### StreamDeck Module Not Found
+
+**Problem**: `ModuleNotFoundError: No module named 'streamdeck'` or `ModuleNotFoundError: No module named 'StreamDeck'`
+
+**Solutions**:
+```bash
+# Ensure virtual environment is activated
+source venv/bin/activate
+
+# Verify activation (should show venv path)
+which python3
+
+# Reinstall dependencies
+pip install -r requirements.txt
+
+# Install streamdeck specifically
+pip install streamdeck
+
+# Verify installation
+pip list | grep streamdeck
+
+# Test with correct import syntax
+python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('✓ StreamDeck OK')"
+
+# If still failing, install system USB libraries
+sudo apt install -y libusb-1.0-0-dev libhidapi-libusb0 libhidapi-dev
+sudo ldconfig
+pip install --force-reinstall streamdeck
+```
+
+**Note**: The package name is `streamdeck` (lowercase) but you import it as `StreamDeck` (capitalized). Always use `from StreamDeck.DeviceManager import DeviceManager`, not `from streamdeck import StreamDeck`.
+
+### Text Not Showing on Buttons / textsize() Error
+
+**Problem**: Button colors display correctly, but text labels are not visible. Error in logs: `'ImageDraw' object has no attribute 'textsize'`
+
+**Root Cause**: The `devdeck-core` package uses the deprecated `textsize()` method which was removed in Pillow 10.0.0+.
+
+**Solutions**:
+
+**Step 1: Check Pillow Version**
+```bash
+source venv/bin/activate
+pip show pillow
+# If version is 10.0.0 or higher, you need to fix devdeck-core
+```
+
+**Step 2: Fix devdeck-core text_renderer.py**
+```bash
+# Find the text_renderer.py file in devdeck-core
+find ~/devdeck/venv -name "text_renderer.py" -path "*/devdeck_core/*"
+
+# The file should be at:
+# ~/devdeck/venv/lib/python3.*/site-packages/devdeck_core/rendering/text_renderer.py
+
+# Edit the file
+nano ~/devdeck/venv/lib/python3.*/site-packages/devdeck_core/rendering/text_renderer.py
+```
+
+**Step 3: Replace textsize() with textbbox()**
+
+Find this line (around line 258):
+```python
+label_w, label_h = draw.textsize('%s' % self.text, font=font)
+```
+
+Replace it with:
+```python
+# textsize() was deprecated and removed in Pillow 10.0.0, use textbbox() instead
+bbox = draw.textbbox((0, 0), '%s' % self.text, font=font)
+label_w = bbox[2] - bbox[0]  # right - left
+label_h = bbox[3] - bbox[1]  # bottom - top
+```
+
+**Step 4: Save and Restart**
+```bash
+# Save the file (Ctrl+O, Enter, Ctrl+X in nano)
+# Restart the application
+python3 -m devdeck.main
+```
+
+**Alternative: Downgrade Pillow (Not Recommended)**
+```bash
+# Only if you can't edit devdeck-core
+source venv/bin/activate
+pip install "pillow<10.0.0"
+```
+
+**Note**: This fix is applied to your local virtual environment. If you recreate the venv or reinstall `devdeck-core`, you'll need to reapply this fix. Consider submitting a patch to the `devdeck-core` project for a permanent solution.
+
+**Common Causes**:
+- Pillow 10.0.0+ installed (textsize() method removed)
+- devdeck-core package not updated for Pillow 10.0.0+
+
+### Button Actions Not Triggering
+
+**Problem**: Buttons display correctly but pressing them doesn't trigger actions (MIDI messages not sent, commands not executed).
+
+**Solutions**:
+```bash
+# Step 1: Check if button events are being received
+# Look for log messages when pressing buttons
+tail -f ~/devdeck/devdeck.log | grep -i "pressed\|key"
+
+# Step 2: Verify MIDI port is open (for MIDI actions)
+cd ~/devdeck
+source venv/bin/activate
+python3 -c "
+from devdeck.midi import MidiManager
+m = MidiManager()
+print('Open ports:', list(m._output_ports.keys()))
+print('Available ports:', m.list_output_ports())
+"
+
+# Step 3: Check MIDI port permissions
+# ALSA MIDI ports may require user to be in 'audio' group
+groups $USER
+# Should include 'audio' if using ALSA MIDI
+
+# If not in audio group:
+sudo usermod -a -G audio $USER
+# Log out and log back in for this to take effect
+
+# Step 4: Test MIDI port access directly
+python3 -c "
+from devdeck.midi import MidiManager
+m = MidiManager()
+ports = m.list_output_ports()
+if ports:
+    print(f'Opening port: {ports[0]}')
+    if m.open_port(ports[0]):
+        print('Port opened successfully')
+        if m.send_cc(102, 64, 0, ports[0]):
+            print('MIDI message sent successfully')
+        else:
+            print('Failed to send MIDI message')
+    else:
+        print('Failed to open port')
+else:
+    print('No MIDI ports available')
+"
+
+# Step 5: Check for MIDI port access errors in logs
+tail -f ~/devdeck/devdeck.log | grep -i "midi\|port\|error\|permission"
+
+# Step 6: Verify key_mappings.json is being loaded
+cat ~/devdeck/config/key_mappings.json | python3 -m json.tool | head -20
+
+# Step 7: Check if controls are being initialized
+# Look for initialization messages in logs
+grep -i "initialize\|ketron\|mapping" ~/devdeck/devdeck.log | tail -20
+```
+
+**Common Causes**:
+- MIDI port not opened (check logs for "Failed to open MIDI port")
+- User not in 'audio' group (required for ALSA MIDI on Linux)
+- MIDI port permissions issue
+- Key mappings not loaded correctly
+- Button event callbacks not registered
+
+**Debugging Tips**:
+- Enable debug logging by checking log level in main.py
+- Press buttons and watch logs in real-time: `tail -f ~/devdeck/devdeck.log`
+- Verify MIDI device is connected: `aconnect -l` and `amidi -l`
+
 ### MIDI Messages Not Sending
 
 **Problem**: Keys pressed but Ketron doesn't respond
 
 **Solutions**:
 ```bash
-# Verify MIDI port name
+# Navigate to project root
+cd ~/devdeck
+source venv/bin/activate
+
+# Verify MIDI port name (must be run from project root)
 python3 scripts/list/list_midi_ports.py
 
 # Test MIDI directly
@@ -1275,7 +1607,7 @@ sudo journalctl -u devdeck.service -f
 # MIDI testing
 aconnect -l
 amidi -l
-python3 scripts/list/list_midi_ports.py
+cd ~/devdeck && source venv/bin/activate && python3 scripts/list/list_midi_ports.py
 
 # USB debugging
 lsusb
