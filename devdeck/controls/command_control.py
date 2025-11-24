@@ -1,22 +1,25 @@
 import logging
 import os
 import subprocess
+from pathlib import Path
 from subprocess import Popen, DEVNULL
+from typing import Any
 
 from devdeck_core.controls.deck_control import DeckControl
 
 
 class CommandControl(DeckControl):
-    def __init__(self, key_no, **kwargs):
+    def __init__(self, key_no: int, **kwargs: Any) -> None:
         self.__logger = logging.getLogger('devdeck')
         super().__init__(key_no, **kwargs)
 
-    def initialize(self):
+    def initialize(self) -> None:
         with self.deck_context() as context:
             with context.renderer() as r:
-                r.image(os.path.expanduser(self.settings['icon'])).end()
+                icon_path = Path(self.settings['icon']).expanduser()
+                r.image(str(icon_path)).end()
 
-    def pressed(self):
+    def pressed(self) -> None:
         try:
             Popen(self.settings['command'], stdout=DEVNULL, stderr=DEVNULL)
         except (FileNotFoundError, PermissionError) as ex:

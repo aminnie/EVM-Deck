@@ -13,8 +13,10 @@ from devdeck.settings.devdeck_settings import DevDeckSettings
 from devdeck.settings.validation_error import ValidationError
 
 
-def main():
-    os.makedirs(os.path.join(str(Path.home()), 'devdeck'), exist_ok=True)
+def main() -> None:
+    # Use pathlib consistently for path handling
+    devdeck_dir = Path.home() / 'devdeck'
+    devdeck_dir.mkdir(exist_ok=True)
 
     root = logging.getLogger('devdeck')
     root.setLevel(logging.DEBUG)
@@ -32,8 +34,8 @@ def main():
     error_handler.setFormatter(formatter)
     root.addHandler(error_handler)
 
-    fileHandler = RotatingFileHandler(os.path.join(str(Path.home()), 'devdeck', 'devdeck.log'), maxBytes=100000,
-                                      backupCount=5)
+    log_file = devdeck_dir / 'devdeck.log'
+    fileHandler = RotatingFileHandler(str(log_file), maxBytes=100000, backupCount=5)
     fileHandler.setFormatter(formatter)
     root.addHandler(fileHandler)
 
@@ -43,29 +45,29 @@ def main():
     project_root = Path(__file__).parent.parent
     config_dir = project_root / 'config'
     config_dir.mkdir(exist_ok=True)  # Ensure config directory exists
-    settings_filename = str(config_dir / 'settings.yml')
+    settings_filename = config_dir / 'settings.yml'
     
     # Migration: Check for old locations and move files if needed
-    old_project_root_path = str(project_root / 'settings.yml')
-    old_home_path = os.path.join(str(Path.home()), 'devdeck', 'settings.yml')
-    old_hidden_path = os.path.join(str(Path.home()), '.devdeck', 'settings.yml')
+    old_project_root_path = project_root / 'settings.yml'
+    old_home_path = Path.home() / 'devdeck' / 'settings.yml'
+    old_hidden_path = Path.home() / '.devdeck' / 'settings.yml'
     
-    if not os.path.exists(settings_filename):
+    if not settings_filename.exists():
         import shutil
         # Try to migrate from project root first (most recent location)
-        if os.path.exists(old_project_root_path):
+        if old_project_root_path.exists():
             root.info("Migrating settings file from project root to config directory")
-            shutil.move(old_project_root_path, settings_filename)
+            shutil.move(str(old_project_root_path), str(settings_filename))
         # Then try home/devdeck
-        elif os.path.exists(old_home_path):
+        elif old_home_path.exists():
             root.info("Migrating settings file from home/devdeck to config directory")
-            shutil.move(old_home_path, settings_filename)
+            shutil.move(str(old_home_path), str(settings_filename))
         # Then try old .devdeck location
-        elif os.path.exists(old_hidden_path):
+        elif old_hidden_path.exists():
             root.info("Migrating settings file from .devdeck to config directory")
-            shutil.move(old_hidden_path, settings_filename)
+            shutil.move(str(old_hidden_path), str(settings_filename))
     
-    if not os.path.exists(settings_filename):
+    if not settings_filename.exists():
         root.warning("No settings file detected!")
 
         serial_numbers = []
@@ -75,7 +77,7 @@ def main():
             deck.close()
         if len(serial_numbers) > 0:
             root.info("Generating a setting file as none exist: %s", settings_filename)
-            DevDeckSettings.generate_default(settings_filename, serial_numbers)
+            DevDeckSettings.generate_default(str(settings_filename), serial_numbers)
         else:
             root.info("""No stream deck connected. Please connect a stream deck to generate an initial config file. \n
                          If you are having difficulty detecting your stream deck please follow the installation
@@ -83,10 +85,10 @@ def main():
             exit(0)
 
     # Update settings from key_mappings.json if it exists
-    DevDeckSettings.update_from_key_mappings(settings_filename)
+    DevDeckSettings.update_from_key_mappings(str(settings_filename))
     
     try:
-        settings = DevDeckSettings.load(settings_filename)
+        settings = DevDeckSettings.load(str(settings_filename))
     except ValidationError as validation_error:
         root.error("Settings validation failed: %s", validation_error)
         print(validation_error)

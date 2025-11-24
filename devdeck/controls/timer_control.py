@@ -1,25 +1,30 @@
 import datetime
+import logging
 import os
 import threading
+from pathlib import Path
 from time import sleep
+from typing import Optional, Any
 
 from devdeck_core.controls.deck_control import DeckControl
 
 
 class TimerControl(DeckControl):
 
-    def __init__(self, key_no, **kwargs):
-        self.start_time = None
-        self.end_time = None
-        self.thread = None
+    def __init__(self, key_no: int, **kwargs: Any) -> None:
+        self.start_time: Optional[datetime.datetime] = None
+        self.end_time: Optional[datetime.datetime] = None
+        self.thread: Optional[threading.Thread] = None
         super().__init__(key_no, **kwargs)
 
-    def initialize(self):
+    def initialize(self) -> None:
         with self.deck_context() as context:
             with context.renderer() as r:
-                r.image(os.path.join(os.path.dirname(__file__), "../assets/font-awesome", 'stopwatch.png')).end()
+                # Use pathlib for path handling
+                icon_path = Path(__file__).parent.parent / 'assets' / 'font-awesome' / 'stopwatch.png'
+                r.image(str(icon_path)).end()
 
-    def pressed(self):
+    def pressed(self) -> None:
         if self.start_time is None:
             self.start_time = datetime.datetime.now()
             self.thread = threading.Thread(target=self._update_display)
@@ -28,7 +33,6 @@ class TimerControl(DeckControl):
             self.end_time = datetime.datetime.now()
             self.thread.join(timeout=5.0)
             if self.thread.is_alive():
-                import logging
                 logger = logging.getLogger('devdeck')
                 logger.warning("Timer thread did not terminate within timeout")
             with self.deck_context() as context:
@@ -42,10 +46,11 @@ class TimerControl(DeckControl):
             self.end_time = None
             with self.deck_context() as context:
                 with context.renderer() as r:
-                    r.image(os.path.join(
-                        os.path.join(os.path.dirname(__file__), "../assets/font-awesome", 'stopwatch.png'))).end()
+                    # Use pathlib for path handling
+                    icon_path = Path(__file__).parent.parent / 'assets' / 'font-awesome' / 'stopwatch.png'
+                    r.image(str(icon_path)).end()
 
-    def _update_display(self):
+    def _update_display(self) -> None:
         while self.end_time is None:
             if self.start_time is None:
                 sleep(1)
@@ -59,7 +64,7 @@ class TimerControl(DeckControl):
             sleep(1)
 
     @staticmethod
-    def time_diff_to_str(diff):
+    def time_diff_to_str(diff: datetime.timedelta) -> str:
         seconds = diff.total_seconds()
         minutes, seconds = divmod(seconds, 60)
         hours, minutes = divmod(minutes, 60)

@@ -1,5 +1,7 @@
 import logging
 import os
+from pathlib import Path
+from typing import Optional, Any
 
 from pulsectl import pulsectl
 
@@ -8,24 +10,25 @@ from devdeck_core.controls.deck_control import DeckControl
 
 class MicMuteControl(DeckControl):
 
-    def __init__(self, key_no, **kwargs):
-        self.pulse = None
+    def __init__(self, key_no: int, **kwargs: Any) -> None:
+        self.pulse: Optional[pulsectl.Pulse] = None
         self.__logger = logging.getLogger('devdeck')
         super().__init__(key_no, **kwargs)
 
-    def initialize(self):
+    def initialize(self) -> None:
         if self.pulse is None:
             self.pulse = pulsectl.Pulse('MicMuteControl')
         self.__render_icon()
 
-    def pressed(self):
+    def pressed(self) -> None:
         mic = self.__get_mic()
         if mic is None:
             return
-        self.pulse.source_mute(mic.index, mute=(not mic.mute))
+        if self.pulse is not None:
+            self.pulse.source_mute(mic.index, mute=(not mic.mute))
         self.__render_icon()
 
-    def __get_mic(self):
+    def __get_mic(self) -> Optional[Any]:
         sources = self.pulse.source_list()
 
         selected_mic = [mic for mic in sources if mic.description == self.settings['microphone']]
@@ -37,7 +40,7 @@ class MicMuteControl(DeckControl):
             return None
         return selected_mic[0]
 
-    def __render_icon(self):
+    def __render_icon(self) -> None:
         with self.deck_context() as context:
             mic = self.__get_mic()
             if mic is None:
@@ -51,14 +54,16 @@ class MicMuteControl(DeckControl):
                         .text_align('center') \
                         .end()
                 return
+            # Use pathlib for path handling
+            assets_dir = Path(__file__).parent.parent / 'assets' / 'font-awesome'
             if mic.mute == 0:
                 with context.renderer() as r:
-                    r.image(os.path.join(os.path.dirname(__file__), "../assets/font-awesome", 'microphone.png')).end()
+                    r.image(str(assets_dir / 'microphone.png')).end()
             else:
                 with context.renderer() as r:
-                    r.image(os.path.join(os.path.dirname(__file__), "../assets/font-awesome", 'microphone-mute.png')).end()
+                    r.image(str(assets_dir / 'microphone-mute.png')).end()
 
-    def settings_schema(self):
+    def settings_schema(self) -> dict:
         return {
             'microphone': {
                 'type': 'string'
