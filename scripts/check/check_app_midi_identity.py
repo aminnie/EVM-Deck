@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from devdeck.midi_manager import MidiManager
+    from devdeck.midi import MidiManager
 except ImportError as e:
     print(f"ERROR: Could not import MidiManager: {e}")
     print("Make sure you're running this from the project root directory")

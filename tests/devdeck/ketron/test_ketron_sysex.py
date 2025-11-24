@@ -5,14 +5,16 @@ This script tests the Ketron SysEx message formatting for pedal commands,
 specifically testing the "Start/Stop" command.
 
 Usage:
-    python test_ketron_sysex.py [port_name]
+    python tests/devdeck/ketron/test_ketron_sysex.py [port_name]
 """
 
 import sys
 from pathlib import Path
 
-# Add devdeck to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path to allow imports
+# Path is now: tests/devdeck/ketron/test_ketron_sysex.py
+# Need to go up 4 levels to get to project root
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from devdeck.ketron import KetronMidi
 

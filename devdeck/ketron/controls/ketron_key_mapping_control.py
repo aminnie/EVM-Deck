@@ -11,9 +11,8 @@ import os
 from pathlib import Path
 
 from devdeck_core.controls.deck_control import DeckControl
-from devdeck.ketron import KetronMidi, COLOR_MAP
-from devdeck.midi_manager import MidiManager
-from devdeck.ketron_volume_manager import KetronVolumeManager
+from devdeck.ketron import KetronMidi, COLOR_MAP, KetronVolumeManager
+from devdeck.midi import MidiManager
 from devdeck.controls.text_control import wrap_text_to_lines
 
 
@@ -65,7 +64,9 @@ class KetronKeyMappingControl(DeckControl):
         
         if key_mappings_file is None:
             # Try to find key_mappings.json in config directory (preferred location)
-            project_root = Path(__file__).parent.parent.parent
+            # Path is now: devdeck/ketron/controls/ketron_key_mapping_control.py
+            # Need to go up 4 levels to get to project root
+            project_root = Path(__file__).parent.parent.parent.parent
             key_mappings_file = project_root / 'config' / 'key_mappings.json'
             
             # Fallback to project root

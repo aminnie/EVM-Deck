@@ -12,7 +12,7 @@ import threading
 from typing import Optional
 
 from devdeck.ketron import KetronMidi
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 
 class KetronVolumeManager:

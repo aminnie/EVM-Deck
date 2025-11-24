@@ -183,7 +183,7 @@ class DevDeckSettings:
                         logger = logging.getLogger('devdeck')
                         logger.info(f"Converting TextControl to KetronKeyMappingControl for key {key_no} (lookup_key: {lookup_key}, key_name: '{key_name}')")
                         # Change control type to KetronKeyMappingControl
-                        control['name'] = 'devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl'
+                        control['name'] = 'devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl'
                         # Remove TextControl-specific settings since KetronKeyMappingControl
                         # reads text/colors from key_mappings.json directly
                         text_control_settings = ['text', 'color', 'background_color', 'font_size']

@@ -39,7 +39,7 @@ The `mido` library with `python-rtmidi` backend automatically detects and uses t
 
 ```yaml
 - key: 0
-  name: devdeck.controls.midi_control.MidiControl
+  name: devdeck.midi.controls.midi_control.MidiControl
   settings:
     type: cc
     control: 102  # CC number (0-127)
@@ -53,7 +53,7 @@ The `mido` library with `python-rtmidi` backend automatically detects and uses t
 
 ```yaml
 - key: 1
-  name: devdeck.controls.midi_control.MidiControl
+  name: devdeck.midi.controls.midi_control.MidiControl
   settings:
     type: sysex
     data: [0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00]  # SysEx data (0xF0 and 0xF7 added automatically)
@@ -64,7 +64,7 @@ The `mido` library with `python-rtmidi` backend automatically detects and uses t
 
 ```yaml
 - key: 2
-  name: devdeck.controls.midi_control.MidiControl
+  name: devdeck.midi.controls.midi_control.MidiControl
   settings:
     type: sysex
     raw_data: [0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7]  # Raw SysEx including 0xF0 and 0xF7
@@ -76,7 +76,7 @@ The `mido` library with `python-rtmidi` backend automatically detects and uses t
 You can also use the MidiManager directly in your code:
 
 ```python
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 # Get the singleton MIDI manager
 midi = MidiManager()
@@ -164,7 +164,7 @@ To test on Raspberry Pi 5:
 
 3. List available MIDI ports:
    ```python
-   from devdeck.midi_manager import MidiManager
+   from devdeck.midi import MidiManager
    midi = MidiManager()
    print(midi.list_output_ports())
    ```

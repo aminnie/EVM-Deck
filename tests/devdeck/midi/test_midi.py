@@ -5,7 +5,7 @@ This script tests the MIDI subsystem by playing a recognizable melody.
 It can be run anytime to verify MIDI functionality.
 
 Usage:
-    python test_midi.py [port_name]
+    python tests/devdeck/midi/test_midi.py [port_name]
     
     If port_name is not specified, uses the first available MIDI port.
 """
@@ -14,10 +14,12 @@ import time
 import sys
 from pathlib import Path
 
-# Add devdeck to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path to allow imports
+# Path is now: tests/devdeck/midi/test_midi.py
+# Need to go up 4 levels to get to project root
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 
 def test_connectivity(port_name=None):

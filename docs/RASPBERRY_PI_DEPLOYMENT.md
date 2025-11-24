@@ -421,7 +421,7 @@ sudo chown -R $USER:$USER ~/devdeck
 
 # Make scripts executable
 chmod +x ~/devdeck/setup.sh
-chmod +x ~/devdeck/run-devdeck.sh
+chmod +x ~/devdeck/scripts/run/run-devdeck.sh
 ```
 
 ### Step 3: Test Application Import
@@ -430,7 +430,7 @@ chmod +x ~/devdeck/run-devdeck.sh
 # Note: Virtual environment not created yet - that's next step
 # But we can verify Python can find the module structure
 cd ~/devdeck
-python3 -c "import sys; sys.path.insert(0, '.'); from devdeck.midi_manager import MidiManager; print('MIDI Manager OK')"
+python3 -c "import sys; sys.path.insert(0, '.'); from devdeck.midi import MidiManager; print('MIDI Manager OK')"
 python3 -c "import sys; sys.path.insert(0, '.'); from devdeck.ketron import KetronMidi; print('Ketron MIDI OK')"
 ```
 
@@ -537,17 +537,17 @@ python3 -c "from streamdeck import StreamDeck; print('Stream Deck library OK')"
 source venv/bin/activate
 
 # Test MIDI port listing
-python3 list_midi_ports.py
+python3 scripts/list/list_midi_ports.py
 
 # Test MIDI communication
-python3 test_ketron_sysex.py
+python3 tests/devdeck/ketron/test_ketron_sysex.py
 ```
 
 ### Step 3: Identify MIDI Port Name
 
 ```bash
 # Run MIDI port listing script
-python3 list_midi_ports.py
+python3 scripts/list/list_midi_ports.py
 
 # Note the exact port name for your Ketron device
 # Example: "MidiView 1" or "Ketron EVM MIDI 1"
@@ -748,10 +748,10 @@ aconnect -l
 source venv/bin/activate
 
 # List MIDI ports
-python3 list_midi_ports.py
+python3 scripts/list/list_midi_ports.py
 
 # Test Ketron SysEx
-python3 test_ketron_sysex.py "Your MIDI Port Name"
+python3 tests/devdeck/ketron/test_ketron_sysex.py "Your MIDI Port Name"
 ```
 
 ### Step 3: Test Application
@@ -876,13 +876,13 @@ newgrp plugdev
 **Solutions**:
 ```bash
 # Verify MIDI port name
-python3 list_midi_ports.py
+python3 scripts/list/list_midi_ports.py
 
 # Test MIDI directly
-python3 test_ketron_sysex.py "Port Name"
+python3 tests/devdeck/ketron/test_ketron_sysex.py "Port Name"
 
 # Check if port is open
-python3 -c "from devdeck.midi_manager import MidiManager; m = MidiManager(); print(m.list_output_ports())"
+python3 -c "from devdeck.midi import MidiManager; m = MidiManager(); print(m.list_output_ports())"
 
 # Check application logs
 sudo journalctl -u devdeck.service -f
@@ -1275,7 +1275,7 @@ sudo journalctl -u devdeck.service -f
 # MIDI testing
 aconnect -l
 amidi -l
-python3 list_midi_ports.py
+python3 scripts/list/list_midi_ports.py
 
 # USB debugging
 lsusb
@@ -1291,7 +1291,7 @@ dmesg | tail
 ### Getting Help
 
 1. Check application logs: `sudo journalctl -u devdeck.service`
-2. Test MIDI connectivity: `python3 test_ketron_sysex.py`
+2. Test MIDI connectivity: `python3 tests/devdeck/ketron/test_ketron_sysex.py`
 3. Verify hardware connections: `lsusb`, `aconnect -l`
 4. Check service status: `sudo systemctl status devdeck.service`
 

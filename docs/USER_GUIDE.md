@@ -51,8 +51,8 @@ The Ketron EVM Stream Deck Controller is a custom Stream Deck application design
    - Ensure MIDI libraries are installed (mido, python-rtmidi)
 
 3. **Verify MIDI Connection**
-   - Run `python list_midi_ports.py` to see available MIDI ports
-   - Run `python test_ketron_sysex.py` to test MIDI communication
+   - Run `python scripts/list/list_midi_ports.py` to see available MIDI ports
+   - Run `python tests/devdeck/ketron/test_ketron_sysex.py` to test MIDI communication
 
 4. **Run the Application**
    - Execute `python -m devdeck.main` or use the provided run scripts
@@ -156,7 +156,7 @@ decks:
   settings:
     controls:
     - key: 0
-      name: devdeck.controls.ketron_key_mapping_control.KetronKeyMappingControl
+      name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
       settings: {}
 ```
 
@@ -345,8 +345,8 @@ The second page uses an offset of 15, meaning:
 **Problem**: Pressing keys doesn't trigger Ketron functions.
 
 **Solutions**:
-1. Run `python list_midi_ports.py` to verify MIDI ports
-2. Run `python test_ketron_sysex.py` to test MIDI communication
+1. Run `python scripts/list/list_midi_ports.py` to verify MIDI ports
+2. Run `python tests/devdeck/ketron/test_ketron_sysex.py` to test MIDI communication
 3. Check that your Ketron device is powered on and connected
 4. Verify the MIDI port name in logs matches your device
 5. Check Windows Device Manager for MIDI device recognition
@@ -417,7 +417,7 @@ You can create custom key mappings by:
 The `KetronVolumeManager` provides programmatic access to volume control:
 
 ```python
-from devdeck.ketron_volume_manager import KetronVolumeManager
+from devdeck.ketron import KetronVolumeManager
 
 volume_manager = KetronVolumeManager()
 
@@ -448,22 +448,22 @@ Use the provided test scripts:
 
 1. **List MIDI Ports**
    ```bash
-   python list_midi_ports.py
+   python scripts/list/list_midi_ports.py
    ```
 
 2. **Test Basic MIDI**
    ```bash
-   python test_midi.py
+   python tests/devdeck/midi/test_midi.py
    ```
 
 3. **Test Ketron SysEx**
    ```bash
-   python test_ketron_sysex.py "Your MIDI Port Name"
+   python tests/devdeck/ketron/test_ketron_sysex.py "Your MIDI Port Name"
    ```
 
 4. **Check Application MIDI Identity**
    ```bash
-   python check_app_midi_identity.py
+   python scripts/check/check_app_midi_identity.py
    ```
 
 ---
@@ -478,10 +478,10 @@ Use the provided test scripts:
 
 ### Scripts and Utilities
 
-- **list_midi_ports.py**: List available MIDI ports
-- **test_midi.py**: Test basic MIDI connectivity
-- **test_ketron_sysex.py**: Test Ketron SysEx messages
-- **check_app_midi_identity.py**: Check application MIDI port identity
+- **scripts/list/list_midi_ports.py**: List available MIDI ports
+- **tests/devdeck/midi/test_midi.py**: Test basic MIDI connectivity
+- **tests/devdeck/ketron/test_ketron_sysex.py**: Test Ketron SysEx messages
+- **scripts/check/check_app_midi_identity.py**: Check application MIDI port identity
 
 ### Support
 

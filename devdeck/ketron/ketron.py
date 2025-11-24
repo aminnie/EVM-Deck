@@ -259,7 +259,7 @@ class KetronMidi:
         """
         try:
             import time
-            from devdeck.midi_manager import MidiManager
+            from devdeck.midi import MidiManager
             
             midi = MidiManager()
             
@@ -303,7 +303,7 @@ class KetronMidi:
         """
         try:
             import time
-            from devdeck.midi_manager import MidiManager
+            from devdeck.midi import MidiManager
             
             midi = MidiManager()
             

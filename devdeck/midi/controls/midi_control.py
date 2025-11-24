@@ -9,7 +9,7 @@ import logging
 import os
 
 from devdeck_core.controls.deck_control import DeckControl
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 
 class MidiControl(DeckControl):

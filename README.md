@@ -58,7 +58,7 @@ Dev Deck ships with the following controls:
 
 * [MIDI Control](https://github.com/jamesridgway/devdeck/wiki/Controls#midi-control)
 
-  `devdeck.controls.midi_control.MidiControl` sends MIDI Control Change (CC) or System Exclusive (SysEx) messages when a key is pressed. Supports cross-platform MIDI functionality on Windows, Linux, macOS, and Raspberry Pi.
+  `devdeck.midi.controls.midi_control.MidiControl` sends MIDI Control Change (CC) or System Exclusive (SysEx) messages when a key is pressed. Supports cross-platform MIDI functionality on Windows, Linux, macOS, and Raspberry Pi.
 
 
 ## Built-in Decks
@@ -121,11 +121,11 @@ Tests can be run by running:
 
 To test MIDI connectivity and verify your MIDI setup is working correctly, you can run the MIDI test script that plays "Ode to Joy":
 
-    .\venv\Scripts\python.exe test_midi.py
+    .\venv\Scripts\python.exe tests\devdeck\test_midi.py
 
 Or specify a specific MIDI port:
 
-    .\venv\Scripts\python.exe test_midi.py "Your MIDI Device Name"
+    .\venv\Scripts\python.exe tests\devdeck\test_midi.py "Your MIDI Device Name"
 
 The test script will:
 - List all available MIDI output ports
@@ -137,11 +137,11 @@ The test script will:
 
 To test Ketron SysEx message formatting and sending, you can run the Ketron SysEx test script:
 
-    .\venv\Scripts\python.exe test_ketron_sysex.py
+    .\venv\Scripts\python.exe tests\devdeck\test_ketron_sysex.py
 
 Or specify a specific MIDI port:
 
-    .\venv\Scripts\python.exe test_ketron_sysex.py "Your MIDI Device Name"
+    .\venv\Scripts\python.exe tests\devdeck\test_ketron_sysex.py "Your MIDI Device Name"
 
 The test script will:
 - Format a "Start/Stop" pedal command as SysEx ON and OFF messages
@@ -161,7 +161,7 @@ To verify that your Ketron EVM device is properly connected and recognized, you 
 Run the script that looks for Ketron ports:
 
 ```bash
-python list_midi_ports.py
+python scripts/list/list_midi_ports.py
 ```
 
 This will:
@@ -178,13 +178,13 @@ This will:
 Test that you can actually send messages to the Ketron:
 
 ```bash
-python test_ketron_sysex.py
+python tests/devdeck/ketron/test_ketron_sysex.py
 ```
 
 Or specify a port name:
 
 ```bash
-python test_ketron_sysex.py "Your Ketron Port Name"
+python tests/devdeck/ketron/test_ketron_sysex.py "Your Ketron Port Name"
 ```
 
 This will:
@@ -201,7 +201,7 @@ This will:
 Run the identity check script:
 
 ```bash
-python check_app_midi_identity.py
+python scripts/check/check_app_midi_identity.py
 ```
 
 This shows:
@@ -233,12 +233,12 @@ If you don't see the Ketron port:
 
 #### Recommended Workflow
 
-1. First, run `list_midi_ports.py` to see all available ports
+1. First, run `scripts/list/list_midi_ports.py` to see all available ports
 2. Identify which port is your Ketron (may need to check device names)
-3. Test with `test_ketron_sysex.py "Port Name"` to verify functionality
+3. Test with `tests/devdeck/ketron/test_ketron_sysex.py "Port Name"` to verify functionality
 4. If successful, you're connected and can send commands
 
-The most reliable test is `test_ketron_sysex.py` because it verifies you can actually send messages, not just that a port exists.
+The most reliable test is `tests/devdeck/ketron/test_ketron_sysex.py` because it verifies you can actually send messages, not just that a port exists.
 
 For more information about MIDI functionality, see [MIDI_IMPLEMENTATION.md](MIDI_IMPLEMENTATION.md).
 
