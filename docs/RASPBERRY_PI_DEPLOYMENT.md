@@ -148,6 +148,9 @@ sudo apt install -y alsa-utils
 # Install fonts (for text rendering on Stream Deck buttons)
 sudo apt install -y fonts-dejavu fonts-liberation
 
+# Install Pillow build dependencies (required for building from source)
+sudo apt install -y libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev liblcms2-dev libwebp-dev libopenjp2-7-dev libimagequant-dev libraqm-dev
+
 # Clean up
 sudo apt autoremove -y
 sudo apt autoclean
