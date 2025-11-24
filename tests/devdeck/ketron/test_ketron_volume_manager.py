@@ -7,17 +7,18 @@ This script tests the KetronVolumeManager functionality:
 3. Verifying MIDI CC commands are sent correctly
 
 Usage:
-    python test_ketron_volume_manager.py
+    python tests/devdeck/ketron/test_ketron_volume_manager.py
 """
 
 import sys
 from pathlib import Path
 
-# Add devdeck to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path to allow imports
+# Path is now: tests/devdeck/ketron/test_ketron_volume_manager.py
+# Need to go up 4 levels to get to project root
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from devdeck.ketron_volume_manager import KetronVolumeManager
-from devdeck.ketron import KetronMidi
+from devdeck.ketron import KetronMidi, KetronVolumeManager
 
 
 def print_section(title):
@@ -105,17 +106,23 @@ def test_key_press_and_increment():
     
     # Test case 3: DRAWBARS key press + increment
     print("\n--- Test Case 3: DRAWBARS key press + increment_drawbars(3) ---")
-    
+
     volume_manager.set_volume("drawbars", 100)
     initial_volume = volume_manager.drawbars
     print(f"Initial drawbars volume: {initial_volume}")
-    
+
     volume_manager.set_last_pressed_key_name("DRAWBARS")
     print(f"Last pressed key_name: {volume_manager.last_pressed_key_name}")
-    
-    cc_control = ketron_midi.cc_midis.get("DRAWBARS")
-    print(f"CC control for 'DRAWBARS': {cc_control} (0x{cc_control:02X})")
-    
+
+    # DRAWBARS maps to drawbars (lowercase) in cc_midis
+    cc_control = ketron_midi.cc_midis.get("drawbars")
+    if cc_control is None:
+        cc_control = ketron_midi.cc_midis.get("Draw Organ")
+    if cc_control:
+        print(f"CC control for 'drawbars': {cc_control} (0x{cc_control:02X})")
+    else:
+        print("CC control for 'drawbars': Not found")
+
     new_volume = volume_manager.increment_drawbars(3)
     print(f"New drawbars volume after increment_drawbars(3): {new_volume}")
     

@@ -9,7 +9,7 @@ Generates a random JSON structure containing key mappings for all 30 keys (0-29)
 ### Usage
 
 ```bash
-python scripts/generate_key_mappings.py
+python scripts/generate/generate_key_mappings.py
 ```
 
 The script will generate `config/key_mappings.json` with random mappings for all keys.

@@ -8,7 +8,7 @@ This example shows how to configure MIDI controls in your settings.yml file.
 
 EXAMPLE_CC_CONTROL = """
 - key: 0
-  name: devdeck.controls.midi_control.MidiControl
+  name: devdeck.midi.controls.midi_control.MidiControl
   settings:
     type: cc
     control: 102  # CC number (0-127)
@@ -20,7 +20,7 @@ EXAMPLE_CC_CONTROL = """
 
 EXAMPLE_SYSEX_CONTROL = """
 - key: 1
-  name: devdeck.controls.midi_control.MidiControl
+  name: devdeck.midi.controls.midi_control.MidiControl
   settings:
     type: sysex
     data: [0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00]  # SysEx data (0xF0 and 0xF7 added automatically)
@@ -30,7 +30,7 @@ EXAMPLE_SYSEX_CONTROL = """
 
 EXAMPLE_SYSEX_RAW_CONTROL = """
 - key: 2
-  name: devdeck.controls.midi_control.MidiControl
+  name: devdeck.midi.controls.midi_control.MidiControl
   settings:
     type: sysex
     raw_data: [0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7]  # Raw SysEx including 0xF0 and 0xF7
@@ -39,7 +39,7 @@ EXAMPLE_SYSEX_RAW_CONTROL = """
 
 # Example: Using MidiManager programmatically
 """
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 # Get the singleton MIDI manager
 midi = MidiManager()

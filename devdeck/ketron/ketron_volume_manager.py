@@ -12,7 +12,7 @@ import threading
 from typing import Optional
 
 from devdeck.ketron import KetronMidi
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 
 class KetronVolumeManager:
@@ -63,27 +63,34 @@ class KetronVolumeManager:
         self._drum = 64
         self._chord = 64
         self._realchord = 64
+        self._master = 64  # Master volume
         
         # Initialize MIDI output channel (1-16, default: 16)
         self._midi_out_channel = 16
         
         # Track last pressed button key_name from SecondPageDeckController
-        self._last_pressed_key_name: Optional[str] = None
+        # Default to "STYLE" so Volume Up/Down always have a target
+        self._last_pressed_key_name: Optional[str] = "STYLE"
         
         # Initialize KetronMidi and MidiManager for sending CC commands
         self.ketron_midi = KetronMidi()
         self.midi_manager = MidiManager()
         
         # Mapping from cc_midis key_name to volume variable name
+        # Note: Keys should be uppercase since lookup uses key_name.upper()
         self._key_name_to_volume = {
             "LOWERS": "lower",
             "VOICE1": "voice1",
             "VOICE2": "voice2",
-            "DRAWBARS": "drawbars",
+            "DRAW ORGAN": "drawbars",  # For "Draw Organ" in cc_midis
+            "DRAWBARS": "drawbars",  # For "drawbars" in cc_midis
             "STYLE": "style",
             "DRUM": "drum",
             "CHORD": "chord",
-            "REALCHORD": "realchord"
+            "REALCHORD": "realchord",
+            "REAL CHORD": "realchord",  # For "REAL CHORD" in cc_midis
+            "MASTER VOLUME": "master",
+            "MASTER": "master"
         }
         
         self._initialized = True
@@ -167,6 +174,12 @@ class KetronVolumeManager:
         with self._volume_lock:
             return self._realchord
     
+    @property
+    def master(self) -> int:
+        """Get the master volume (0-127)"""
+        with self._volume_lock:
+            return self._master
+    
     def _clamp_volume(self, value: int) -> int:
         """Clamp volume value to valid range (0-127)"""
         return max(self._MIN_VOLUME, min(self._MAX_VOLUME, value))
@@ -209,15 +222,17 @@ class KetronVolumeManager:
         cc_control = self.ketron_midi.cc_midis[matched_key]
         
         # Verify the key_name maps to the correct volume
-        expected_volume_name = self._key_name_to_volume.get(matched_key)
+        # Convert to uppercase for lookup since _key_name_to_volume uses uppercase keys
+        expected_volume_name = self._key_name_to_volume.get(matched_key.upper())
         if expected_volume_name != volume_name:
             self.__logger.warning(
                 f"Key name '{matched_key}' maps to volume '{expected_volume_name}', "
                 f"but trying to update '{volume_name}'. MIDI CC may be incorrect."
             )
         
-        # Convert MIDI channel from 1-16 to 0-15 for MidiManager
-        midi_channel = self.midi_out_channel - 1
+        # All MIDI CC volume commands are sent on channel 16 (global channel)
+        # Convert from 1-16 to 0-15 for MidiManager (channel 16 = index 15)
+        midi_channel = 15  # Channel 16 (0-indexed: 15)
         
         # Send the MIDI CC command
         success = self.midi_manager.send_cc(cc_control, volume_value, midi_channel, port_name)
@@ -225,7 +240,7 @@ class KetronVolumeManager:
         if success:
             self.__logger.info(
                 f"Sent MIDI CC: control={cc_control} (0x{cc_control:02X}), "
-                f"value={volume_value}, channel={midi_channel} (out_channel={self.midi_out_channel}) "
+                f"value={volume_value}, channel=16 (global) "
                 f"for key_name='{matched_key}' -> volume='{volume_name}'"
             )
         else:
@@ -240,13 +255,13 @@ class KetronVolumeManager:
                 # mido not installed - this is expected in test environments, use debug level
                 self.__logger.debug(
                     f"MIDI CC not sent (mido library not available): control={cc_control}, "
-                    f"value={volume_value}, channel={midi_channel} for key_name='{matched_key}'"
+                    f"value={volume_value}, channel=16 (global) for key_name='{matched_key}'"
                 )
             else:
                 # mido is available but send failed - this is a real error
                 self.__logger.error(
                     f"Failed to send MIDI CC: control={cc_control}, value={volume_value}, "
-                    f"channel={midi_channel} for key_name='{matched_key}'"
+                    f"channel=16 (global) for key_name='{matched_key}'"
                 )
         
         return success
@@ -655,6 +670,100 @@ class KetronVolumeManager:
         self._send_midi_cc_for_volume("realchord", 0, port_name)
         return 0
     
+    # Master volume methods
+    def increment_master(self, amount: int = 1, port_name: Optional[str] = None) -> int:
+        """
+        Increment the master volume and send MIDI CC Expression (0x07) command.
+        
+        Args:
+            amount: Amount to increment by (default: 1)
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            New volume value (0-127)
+        """
+        current = self._get_volume("master")
+        new_value = self._clamp_volume(current + amount)
+        self._set_volume("master", new_value)
+        self._send_master_expression_cc(new_value, port_name)
+        return new_value
+    
+    def decrement_master(self, amount: int = 1, port_name: Optional[str] = None) -> int:
+        """
+        Decrement the master volume and send MIDI CC Expression (0x07) command.
+        
+        Args:
+            amount: Amount to decrement by (default: 1)
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            New volume value (0-127)
+        """
+        current = self._get_volume("master")
+        new_value = self._clamp_volume(current - amount)
+        self._set_volume("master", new_value)
+        self._send_master_expression_cc(new_value, port_name)
+        return new_value
+    
+    def mute_master(self, port_name: Optional[str] = None) -> int:
+        """
+        Mute the master volume (set to 0) and send MIDI CC Expression (0x07) command.
+        
+        Args:
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            New volume value (0)
+        """
+        self._set_volume("master", 0)
+        self._send_master_expression_cc(0, port_name)
+        return 0
+    
+    def _send_master_expression_cc(self, volume_value: int, port_name: Optional[str] = None) -> bool:
+        """
+        Send MIDI CC Expression (0x07) command for master volume.
+        
+        Args:
+            volume_value: The master volume value (0-127)
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            True if CC was sent successfully, False otherwise
+        """
+        expression_cc = 0x07  # MIDI CC 7 = Expression
+        midi_channel = 15  # Channel 16 (0-indexed: 15)
+        
+        # Send the MIDI CC command
+        success = self.midi_manager.send_cc(expression_cc, volume_value, midi_channel, port_name)
+        
+        if success:
+            self.__logger.info(
+                f"Sent Master Volume Expression CC: control={expression_cc} (0x{expression_cc:02X}), "
+                f"value={volume_value}, channel=16 (global)"
+            )
+        else:
+            # Check if mido is available - if not, this is expected in test environments
+            try:
+                import mido
+                mido_available = mido is not None
+            except ImportError:
+                mido_available = False
+            
+            if not mido_available:
+                # mido not installed - this is expected in test environments, use debug level
+                self.__logger.debug(
+                    f"Master Volume Expression CC not sent (mido library not available): control={expression_cc}, "
+                    f"value={volume_value}, channel=16 (global)"
+                )
+            else:
+                # mido is available but send failed - this is a real error
+                self.__logger.error(
+                    f"Failed to send Master Volume Expression CC: control={expression_cc}, value={volume_value}, "
+                    f"channel=16 (global)"
+                )
+        
+        return success
+    
     def get_all_volumes(self) -> dict:
         """
         Get all volume levels as a dictionary.
@@ -670,7 +779,8 @@ class KetronVolumeManager:
             'style': self.style,
             'drum': self.drum,
             'chord': self.chord,
-            'realchord': self.realchord
+            'realchord': self.realchord,
+            'master': self.master
         }
     
     def set_volume(self, volume_name: str, value: int) -> int:
@@ -688,7 +798,7 @@ class KetronVolumeManager:
         Raises:
             ValueError: If volume_name is not recognized
         """
-        valid_names = ['lower', 'voice1', 'voice2', 'drawbars', 'style', 'drum', 'chord', 'realchord']
+        valid_names = ['lower', 'voice1', 'voice2', 'drawbars', 'style', 'drum', 'chord', 'realchord', 'master']
         if volume_name not in valid_names:
             raise ValueError(f"Invalid volume name: {volume_name}. Must be one of {valid_names}")
         
@@ -733,7 +843,11 @@ class KetronVolumeManager:
             self.__logger.warning(f"Key name '{key_name}' does not map to a volume variable")
             return None
         
-        # Call the appropriate increment method
+        # Special handling for master volume (uses Expression CC instead of regular CC)
+        if volume_name == "master":
+            return self.increment_master(amount, port_name)
+        
+        # Call the appropriate increment method for other volumes
         method_name = f"increment_{volume_name}"
         if hasattr(self, method_name):
             method = getattr(self, method_name)
@@ -764,7 +878,11 @@ class KetronVolumeManager:
             self.__logger.warning(f"Key name '{key_name}' does not map to a volume variable")
             return None
         
-        # Call the appropriate decrement method
+        # Special handling for master volume (uses Expression CC instead of regular CC)
+        if volume_name == "master":
+            return self.decrement_master(amount, port_name)
+        
+        # Call the appropriate decrement method for other volumes
         method_name = f"decrement_{volume_name}"
         if hasattr(self, method_name):
             method = getattr(self, method_name)
@@ -804,13 +922,21 @@ class KetronVolumeManager:
             # Restore to 64
             new_volume = 64
             self._set_volume(volume_name, new_volume)
-            self._send_midi_cc_for_volume(volume_name, new_volume, port_name)
+            # Special handling for master volume (uses Expression CC)
+            if volume_name == "master":
+                self._send_master_expression_cc(new_volume, port_name)
+            else:
+                self._send_midi_cc_for_volume(volume_name, new_volume, port_name)
             self.__logger.info(f"Unmuted {volume_name} (restored to {new_volume})")
         else:
             # Mute (set to 0)
             new_volume = 0
             self._set_volume(volume_name, new_volume)
-            self._send_midi_cc_for_volume(volume_name, new_volume, port_name)
+            # Special handling for master volume (uses Expression CC)
+            if volume_name == "master":
+                self._send_master_expression_cc(new_volume, port_name)
+            else:
+                self._send_midi_cc_for_volume(volume_name, new_volume, port_name)
             self.__logger.info(f"Muted {volume_name} (set to {new_volume})")
         
         return new_volume

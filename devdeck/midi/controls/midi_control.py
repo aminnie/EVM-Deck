@@ -9,7 +9,7 @@ import logging
 import os
 
 from devdeck_core.controls.deck_control import DeckControl
-from devdeck.midi_manager import MidiManager
+from devdeck.midi import MidiManager
 
 
 class MidiControl(DeckControl):
@@ -82,7 +82,7 @@ class MidiControl(DeckControl):
                     text = "MIDI"
                 
                 r.text(text)\
-                    .font_size(80)\
+                    .font_size(100)\
                     .color('white')\
                     .center_vertically()\
                     .center_horizontally()\

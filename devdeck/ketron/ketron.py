@@ -33,6 +33,7 @@ class Colors:
     ORANGE = 0x701E02
     PURPLE = 0x800080
     YELLOW = 0x808000
+    LIGHTYELLOW = 0xFFFF80  # RGB(255, 255, 128) - Bright light yellow
     TEAL = 0x004040
     OFFWHITE = 0xA47474
 
@@ -45,6 +46,7 @@ COLOR_MAP = {
     'ketron_blue': Colors.KETRON_BLUE,
     'purple': Colors.PURPLE,
     'yellow': Colors.YELLOW,
+    'lightyellow': Colors.LIGHTYELLOW,
     'orange': Colors.ORANGE,
     'white': Colors.WHITE,
     'teal': Colors.TEAL,
@@ -132,7 +134,7 @@ class KetronMidi:
         
         return {
             "DIAL_DOWN": 0x0, "DIAL_UP": 0x1, "PLAYER_A": 0x2, "PLAYER_B": 0x3,
-            "ENTER": 0x4, "MENU": 0x6, "LYRIC": 0x7, "LEAD": 0x8, "VARIATION": 0x9,
+            "ENTER": 0x4, "MENU": 0x6, "LYRIC": 0x7, "LEAD": 0x8, "VAR": 0x9,
             "DRAWBARS_VIEW": 0x0a, "DRAWBARS": 0x10, "DRUMSET": 0x11, "TALK": 0x12,
             "VOICETRON": 0x13, "STYLE_BOX": 0x14, "VOICE1": 0x19, "VOICE2": 0x1a,
             "USER_VOICE": 0x1b, "XFADE": 0x1c, "INTRO1": 0x1d, "INTRO2": 0x1e,
@@ -157,8 +159,10 @@ class KetronMidi:
         return {
             "PLAYER": SliderCC.PLAYER_CC, "STYLE": SliderCC.STYLE_CC, "DRUM": SliderCC.DRUM_CC, 
             "CHORD": SliderCC.CHORD_CC, "REALCHORD": SliderCC.REALCHORD_CC, 
+            "REAL CHORD": SliderCC.REALCHORD_CC,  # Alias for REALCHORD
             "BASS": SliderCC.BASS_CC, "LOWERS": SliderCC.LOWERS_CC, "USER2": SliderCC.USER2_CC, "USER3": SliderCC.USER3_CC, 
-            "VOICE1": SliderCC.VOICE1_CC, "VOICE2": SliderCC.VOICE2_CC, "DRAWBARS": SliderCC.DRAWBARS_CC,
+            "VOICE1": SliderCC.VOICE1_CC, "VOICE2": SliderCC.VOICE2_CC, "drawbars": SliderCC.DRAWBARS_CC,
+            "Draw Organ": SliderCC.DRAWBARS_CC,  # Alias for drawbars
             "MICRO1": SliderCC.MICRO1_CC, "VOCAL": SliderCC.VOCAL_CC
         }
     
@@ -183,14 +187,28 @@ class KetronMidi:
         state_value = KETRON_SYSEX_ON_VALUE if on_state else KETRON_SYSEX_OFF_VALUE
         
         # Ketron SysEx format for pedal commands:
-        # F0 43 [device_id] [command_byte] [state_value] F7
+        # For values < 128: F0 43 [device_id] [command_byte] [state_value] F7
+        # For values >= 128: F0 43 [device_id] [high_byte] [low_byte] [state_value] F7
         # state_value: 0x7F (127) for ON, 0x00 (0) for OFF
+        # Values >= 128 are split into two 7-bit bytes (high byte and low byte)
+        
         sysex_data = [
             KETRON_SYSEX_MANUFACTURER_ID,
-            KETRON_SYSEX_DEVICE_ID,
-            pedal_value,
-            state_value
+            KETRON_SYSEX_DEVICE_ID
         ]
+        
+        if pedal_value < 128:
+            # Standard 3-byte format: manufacturer, device_id, command, state
+            sysex_data.append(pedal_value)
+            sysex_data.append(state_value)
+        else:
+            # Extended 4-byte format: manufacturer, device_id, high_byte, low_byte, state
+            # Split value into two 7-bit bytes
+            high_byte = (pedal_value >> 7) & 0x7F
+            low_byte = pedal_value & 0x7F
+            sysex_data.append(high_byte)
+            sysex_data.append(low_byte)
+            sysex_data.append(state_value)
         
         return sysex_data
     
@@ -241,7 +259,7 @@ class KetronMidi:
         """
         try:
             import time
-            from devdeck.midi_manager import MidiManager
+            from devdeck.midi import MidiManager
             
             midi = MidiManager()
             
@@ -285,7 +303,7 @@ class KetronMidi:
         """
         try:
             import time
-            from devdeck.midi_manager import MidiManager
+            from devdeck.midi import MidiManager
             
             midi = MidiManager()
             
