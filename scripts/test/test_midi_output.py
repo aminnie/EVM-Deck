@@ -137,18 +137,33 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 3: Send MIDI SysEx message
-        print("Test 3: Sending MIDI SysEx Message")
+        # Test 3: Send MIDI SysEx message (Ketron Start/Stop command)
+        print("Test 3: Sending MIDI SysEx Message (Ketron Start/Stop)")
         print("-" * 70)
-        # Simple SysEx message (Universal Identity Request)
-        # Note: send_sysex() expects data WITHOUT 0xF0 and 0xF7 (they're added automatically)
-        # For values >= 128, we need to split into two 7-bit bytes
-        sysex_data = [0x7E, 0x7F, 0x06, 0x01]  # Exclude 0xF0 and 0xF7
-        print(f"Sending SysEx message: F0 {' '.join([hex(b) for b in sysex_data])} F7")
-        if midi.send_sysex(sysex_data, port_name):
-            print("  ✓ SysEx message sent successfully")
+        # Ketron SysEx format for Start/Stop pedal command:
+        # Format: F0 43 [device_id] [command_byte] [state_value] F7
+        # Start/Stop pedal value: 0x12 (18)
+        # ON state: 0x7F (127), OFF state: 0x00 (0)
+        # Manufacturer ID: 0x43, Device ID: 0x00
+        
+        # Send Start/Stop ON message
+        sysex_on = [0x43, 0x00, 0x12, 0x7F]  # Manufacturer, Device, Start/Stop, ON
+        print(f"Sending Start/Stop ON: F0 {' '.join([hex(b) for b in sysex_on])} F7")
+        if midi.send_sysex(sysex_on, port_name):
+            print("  ✓ Start/Stop ON message sent successfully")
         else:
-            print("  ✗ Failed to send SysEx message")
+            print("  ✗ Failed to send Start/Stop ON message")
+            return False
+        
+        time.sleep(0.5)  # Delay between ON and OFF (simulates key press duration)
+        
+        # Send Start/Stop OFF message
+        sysex_off = [0x43, 0x00, 0x12, 0x00]  # Manufacturer, Device, Start/Stop, OFF
+        print(f"Sending Start/Stop OFF: F0 {' '.join([hex(b) for b in sysex_off])} F7")
+        if midi.send_sysex(sysex_off, port_name):
+            print("  ✓ Start/Stop OFF message sent successfully")
+        else:
+            print("  ✗ Failed to send Start/Stop OFF message")
             return False
         
         print()
