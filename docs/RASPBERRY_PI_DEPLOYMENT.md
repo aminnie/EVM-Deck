@@ -553,20 +553,136 @@ python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Stream De
 ### Step 1: Connect MIDI Device
 
 1. **USB MIDI Connection**:
-   - Connect Ketron device via USB
+   - Connect Ketron EVM device via USB cable
    - OR connect USB MIDI interface
 
 2. **Verify MIDI Device Detection**:
-   ```bash
-   # List MIDI devices
-   aconnect -l
-   
-   # List ALSA MIDI ports
-   amidi -l
-   
-   # Check USB devices
-   lsusb | grep -i midi
-   ```
+
+**Quick Check - Is the Device Connected?**
+
+Run these commands in order to verify your Ketron EVM is detected:
+
+```bash
+# 1. Check if USB device is detected
+lsusb | grep -i midi
+# Should show your MIDI device (e.g., "Ketron" or "USB MIDI")
+
+# If nothing shows, try:
+lsusb
+# Look for any device that might be your Ketron EVM
+
+# 2. Check ALSA MIDI clients (most important for MIDI)
+aconnect -l
+# Should list MIDI clients including your Ketron device
+# Look for entries like:
+#   client X: 'Ketron EVM' [type=kernel]
+#   client X: 'USB MIDI Device' [type=kernel]
+
+# 3. List ALSA MIDI ports
+amidi -l
+# Should show MIDI ports like:
+#   hw:1,0,0  USB MIDI Device MIDI 1
+
+# 4. Check if device appears in /dev
+ls -la /dev/snd/
+# Should show MIDI devices (if using ALSA)
+```
+
+**What to Look For:**
+
+- **USB Detection**: `lsusb` should show your device
+- **ALSA MIDI Client**: `aconnect -l` should show a client for your Ketron
+- **MIDI Ports**: `amidi -l` should list available MIDI ports
+
+**If Device is Not Detected:**
+
+```bash
+# Check USB connection
+dmesg | tail -20
+# Look for USB device connection/disconnection messages
+
+# Check if USB device is powered
+lsusb -v | grep -i "ketron\|midi"
+# Shows detailed USB device information
+
+# Verify USB cable is working (try different USB port)
+# Some USB ports on Raspberry Pi may not provide enough power
+```
+
+**Using Python to List MIDI Ports (Application Method):**
+
+```bash
+# Navigate to project directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# List all available MIDI ports
+python3 scripts/list/list_midi_ports.py
+
+# This will show output like:
+# Available MIDI output ports:
+#   0: MidiView 1
+#   1: USB MIDI Device MIDI 1
+#   2: Ketron EVM MIDI 1
+```
+
+**Test MIDI Communication:**
+
+Once the device is detected, test if you can communicate with it:
+
+```bash
+# Navigate to project directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Test MIDI communication (replace with your actual port name)
+python3 tests/devdeck/ketron/test_ketron_sysex.py "USB MIDI Device MIDI 1"
+# Or try:
+python3 tests/devdeck/ketron/test_ketron_sysex.py "Ketron EVM MIDI 1"
+```
+
+**Detect Ketron Event Using MIDI Identity Request:**
+
+The Ketron Event can be detected by sending a MIDI Universal System Exclusive (SysEx) Identity Request. This is the most reliable way to verify the device is connected and responding:
+
+```bash
+# Navigate to project directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run identity detection test
+python3 tests/devdeck/ketron/test_ketron_identity.py
+
+# Or specify a port name:
+python3 tests/devdeck/ketron/test_ketron_identity.py "USB MIDI Device MIDI 1"
+```
+
+This test:
+1. Sends a MIDI Universal Identity Request (F0 7E 7F 06 01 F7) to all devices
+2. Listens for identity responses
+3. Parses the responses to identify connected devices
+4. Checks port names for "Ketron" or "Event" indicators
+5. Reports if a Ketron Event is detected
+
+**What the Identity Request Does:**
+
+- **Sends**: Universal MIDI Identity Request message (standard MIDI protocol)
+- **Receives**: Device identity response with manufacturer ID and device information
+- **Identifies**: Ketron devices by their response and/or port name
+
+This is the standard way MIDI devices identify themselves and is more reliable than just checking port names.
+
+**Common Issues:**
+
+- **Device not showing in `aconnect -l`**: USB MIDI driver may not be loaded, try: `sudo modprobe snd-usb-audio`
+- **Permission denied**: User may not be in `audio` group: `sudo usermod -a -G audio $USER` (then log out and back in)
+- **Device appears but can't connect**: Check port name matches exactly (case-sensitive)
 
 ### Step 2: Test MIDI Communication
 
@@ -605,6 +721,57 @@ python3 scripts/list/list_midi_ports.py
 - USB MIDI devices often appear as: `"USB MIDI Device"` or device-specific names
 - ALSA MIDI ports: `"MidiView 1"`, `"MidiView 2"`, etc.
 - Check with `aconnect -l` for ALSA client names
+
+### Quick Reference: Verifying Ketron EVM MIDI Connection
+
+**Run these commands in order to check if your Ketron EVM is connected:**
+
+```bash
+# 1. Check USB connection (quickest check)
+lsusb | grep -i midi
+# OR just:
+lsusb
+# Look for your Ketron device in the list
+
+# 2. Check ALSA MIDI clients (most reliable for MIDI)
+aconnect -l
+# Should show your Ketron device as a MIDI client
+# Example output:
+#   client 20: 'USB MIDI Device' [type=kernel,card=1]
+#   client 20: 'Ketron EVM' [type=kernel,card=1]
+
+# 3. List MIDI ports
+amidi -l
+# Should show available MIDI ports
+
+# 4. Use Python to list ports (application method)
+cd ~/devdeck
+source venv/bin/activate
+python3 scripts/list/list_midi_ports.py
+# Shows ports in the format your application uses
+
+# 5. Detect Ketron Event using MIDI Identity Request (most reliable)
+cd ~/devdeck
+source venv/bin/activate
+python3 tests/devdeck/ketron/test_ketron_identity.py
+# Sends MIDI Universal Identity Request and listens for responses
+# This is the standard way MIDI devices identify themselves
+```
+
+**Expected Output When Connected:**
+
+- `lsusb`: Shows USB device (may or may not say "MIDI" explicitly)
+- `aconnect -l`: Shows MIDI client (e.g., "USB MIDI Device" or "Ketron EVM")
+- `amidi -l`: Shows MIDI ports (e.g., "hw:1,0,0 USB MIDI Device MIDI 1")
+- Python script: Shows port names your application can use
+
+**If Nothing Shows:**
+
+1. Check USB cable is securely connected
+2. Try a different USB port on the Raspberry Pi
+3. Check if device needs external power
+4. Verify USB cable is data-capable (not charge-only)
+5. Check dmesg for connection errors: `dmesg | tail -30`
 
 ---
 
