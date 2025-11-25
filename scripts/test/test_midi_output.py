@@ -107,21 +107,33 @@ def test_midi_output(port_name=None):
         # Test 2: Send MIDI Note messages
         print("Test 2: Sending MIDI Note Messages")
         print("-" * 70)
-        print("Sending Note On (C4, velocity 100) on channel 0...")
-        if midi.send_note_on(60, velocity=100, channel=0, port_name=port_name):
-            print("  ✓ Note On message sent successfully")
-        else:
-            print("  ✗ Failed to send Note On message")
-            return False
+        # Send 10 different notes (C major scale: C, D, E, F, G, A, B, C, D, E)
+        # MIDI note numbers: C4=60, D4=62, E4=64, F4=65, G4=67, A4=69, B4=71, C5=72, D5=74, E5=76
+        notes = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76]
+        note_names = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5']
+        
+        print(f"Sending {len(notes)} different notes...")
+        for i, (note, note_name) in enumerate(zip(notes, note_names), 1):
+            print(f"  [{i:2d}/{len(notes)}] Sending Note On ({note_name}, note {note}, velocity 100)...", end='', flush=True)
+            if midi.send_note_on(note, velocity=100, channel=0, port_name=port_name):
+                print(" ✓", flush=True)
+            else:
+                print(" ✗", flush=True)
+                return False
+            
+            time.sleep(0.2)  # Short delay between notes
         
         time.sleep(0.5)
         
-        print("Sending Note Off (C4) on channel 0...")
-        if midi.send_note_off(60, velocity=0, channel=0, port_name=port_name):
-            print("  ✓ Note Off message sent successfully")
-        else:
-            print("  ✗ Failed to send Note Off message")
-            return False
+        print(f"Sending Note Off for all {len(notes)} notes...")
+        for i, (note, note_name) in enumerate(zip(notes, note_names), 1):
+            print(f"  [{i:2d}/{len(notes)}] Sending Note Off ({note_name}, note {note})...", end='', flush=True)
+            if midi.send_note_off(note, velocity=0, channel=0, port_name=port_name):
+                print(" ✓", flush=True)
+            else:
+                print(" ✗", flush=True)
+                return False
+            time.sleep(0.1)  # Short delay between note offs
         
         print()
         
@@ -129,8 +141,10 @@ def test_midi_output(port_name=None):
         print("Test 3: Sending MIDI SysEx Message")
         print("-" * 70)
         # Simple SysEx message (Universal Identity Request)
-        sysex_data = [0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]
-        print(f"Sending SysEx message: {[hex(b) for b in sysex_data]}")
+        # Note: send_sysex() expects data WITHOUT 0xF0 and 0xF7 (they're added automatically)
+        # For values >= 128, we need to split into two 7-bit bytes
+        sysex_data = [0x7E, 0x7F, 0x06, 0x01]  # Exclude 0xF0 and 0xF7
+        print(f"Sending SysEx message: F0 {' '.join([hex(b) for b in sysex_data])} F7")
         if midi.send_sysex(sysex_data, port_name):
             print("  ✓ SysEx message sent successfully")
         else:
