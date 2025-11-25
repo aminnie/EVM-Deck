@@ -2669,6 +2669,190 @@ python3 scripts/list/list_midi_ports.py
 python3 tests/devdeck/ketron/test_ketron_sysex.py "Your MIDI Port Name"
 ```
 
+### Step 2a: Test MIDI Output (Verify MIDI Traffic Leaves Raspberry Pi)
+
+**Problem**: You want to verify that MIDI messages are actually leaving the Raspberry Pi through the USB MIDI interface.
+
+**Method 1: Use Python Test Script (Recommended)**
+
+```bash
+# Navigate to project root directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run MIDI output test script
+python3 scripts/test/test_midi_output.py
+
+# Or specify a port name:
+python3 scripts/test/test_midi_output.py "USB MIDI Interface MIDI 1"
+```
+
+This script will:
+- List all available MIDI ports
+- Open the specified port
+- Send test MIDI CC, Note, and SysEx messages
+- Report success/failure for each message type
+
+**Method 2: Use Command-Line MIDI Tools**
+
+```bash
+# Install ALSA MIDI utilities (if not already installed)
+sudo apt install -y alsa-utils
+
+# List MIDI ports
+amidi -l
+
+# Send a MIDI CC message using amidi
+# Format: amidi -p <port> -S <hex bytes>
+# Example: Send CC 102, value 64 on channel 0
+# CC message format: 0xBn 0x66 0x40 (B=channel 0, 66=CC 102, 40=value 64)
+amidi -p hw:1,0,0 -S "B0 66 40"
+
+# Send a Note On message
+# Format: 0x9n <note> <velocity> (9=Note On, n=channel)
+# Example: Note C4 (60) with velocity 100 on channel 0
+amidi -p hw:1,0,0 -S "90 3C 64"
+
+# Send Note Off
+amidi -p hw:1,0,0 -S "80 3C 00"
+```
+
+**Method 3: Monitor MIDI Traffic with aseqdump**
+
+```bash
+# Install ALSA sequencer utilities
+sudo apt install -y alsa-utils
+
+# Monitor all MIDI traffic on a specific port
+# First, find your port name:
+aconnect -l
+
+# Then monitor it (replace with your actual port/client number):
+aseqdump -p 20:0
+
+# Or monitor all MIDI traffic:
+aseqdump -l
+```
+
+**Method 4: Test with MIDI Monitor on Another Device**
+
+1. **Connect USB MIDI Interface to Windows Computer**:
+   - Connect the USB MIDI interface to your Windows laptop
+   - Open MidiView or another MIDI monitor
+   - The interface should appear in MidiView
+
+2. **On Raspberry Pi, Send Test Messages**:
+   ```bash
+   cd ~/devdeck
+   source venv/bin/activate
+   python3 scripts/test/test_midi_output.py "USB MIDI Interface MIDI 1"
+   ```
+
+3. **Watch MidiView on Windows**:
+   - You should see MIDI messages appearing in real-time
+   - If messages appear, MIDI is successfully leaving the Raspberry Pi
+
+**Method 5: Test with Physical MIDI Device**
+
+1. **Connect MIDI Device to USB MIDI Interface**:
+   - Connect MIDI device's MIDI IN to USB MIDI interface's MIDI OUT
+   - Power on the MIDI device
+
+2. **Send Test Messages from Raspberry Pi**:
+   ```bash
+   cd ~/devdeck
+   source venv/bin/activate
+   python3 scripts/test/test_midi_output.py "USB MIDI Interface MIDI 1"
+   ```
+
+3. **Check if Device Responds**:
+   - If the device has LEDs or displays, check if they respond
+   - If it's a synthesizer, check if notes play
+   - If it's a controller, check if it receives the commands
+
+**Method 6: Use aplaymidi (Play MIDI File)**
+
+```bash
+# Create a simple MIDI test file or download one
+# Then play it through the MIDI interface:
+aplaymidi -p hw:1,0,0 test.mid
+
+# Or use a MIDI file from the system:
+# (if available)
+```
+
+**Troubleshooting: No MIDI Traffic Detected**
+
+If MIDI messages aren't leaving the Raspberry Pi:
+
+1. **Verify USB MIDI Interface is Detected**:
+   ```bash
+   lsusb | grep -i midi
+   aconnect -l
+   amidi -l
+   ```
+
+2. **Check Port Name is Correct**:
+   ```bash
+   # List all ports
+   python3 scripts/list/list_midi_ports.py
+   
+   # Use the exact port name (case-sensitive)
+   python3 scripts/test/test_midi_output.py "Exact Port Name"
+   ```
+
+3. **Check Permissions**:
+   ```bash
+   # Ensure user is in audio group
+   groups | grep audio
+   
+   # If not, add user:
+   sudo usermod -a -G audio $USER
+   # Then log out and log back in
+   ```
+
+4. **Test Port Opening**:
+   ```bash
+   cd ~/devdeck
+   source venv/bin/activate
+   python3 -c "
+   from devdeck.midi import MidiManager
+   m = MidiManager()
+   ports = m.list_output_ports()
+   print('Available ports:', ports)
+   if ports:
+       print(f'Opening port: {ports[0]}')
+       if m.open_port(ports[0]):
+           print('Port opened successfully!')
+           m.close_port(ports[0])
+       else:
+           print('Failed to open port')
+   "
+   ```
+
+5. **Check for Errors in Logs**:
+   ```bash
+   # If running as service:
+   sudo journalctl -u devdeck.service -f
+   
+   # Or check system logs:
+   dmesg | grep -i midi
+   ```
+
+**Expected Results**:
+
+- ✅ **Success**: Test script reports all messages sent successfully, and MIDI monitor shows traffic
+- ❌ **Failure**: Test script reports errors, or no MIDI traffic appears in monitor
+
+**Quick Test Command**:
+
+```bash
+# Quick one-liner test:
+cd ~/devdeck && source venv/bin/activate && python3 scripts/test/test_midi_output.py
+```
+
 ### Step 3: Test Application
 
 ```bash
@@ -2799,7 +2983,190 @@ python3 -m devdeck.main
   ```
   (If this works, it confirms a permissions issue - don't run as root permanently)
 
-### MIDI Port Not Found
+### MIDI Port Not Found / Ketron EVM Not Detected
+
+**Problem**: Ketron EVM connected via USB but not appearing in MIDI port list
+
+**Symptoms**:
+- `lsusb` shows no Ketron device
+- `aconnect -l` shows no Ketron MIDI client
+- `amidi -l` shows no MIDI devices
+- Only "Midi Through" port appears in `python3 scripts/list/list_midi_ports.py`
+
+**Diagnostic Steps**:
+
+1. **Check USB Connection**:
+```bash
+# Check if device appears in USB listing
+lsusb
+
+# Check detailed USB information
+lsusb -v | grep -i "ketron\|midi\|audio" -A 5 -B 5
+
+# Monitor USB connections in real-time
+sudo dmesg -w
+# Then unplug and replug the Ketron EVM - watch for connection messages
+```
+
+2. **Check USB MIDI Driver**:
+```bash
+# Check if USB MIDI driver is loaded
+lsmod | grep snd_usb
+
+# If not loaded, load it
+sudo modprobe snd-usb-audio
+
+# Make it persistent
+echo "snd-usb-audio" | sudo tee -a /etc/modules
+
+# Check dmesg for driver messages
+dmesg | grep -i "midi\|usb\|audio" | tail -20
+```
+
+3. **Check ALSA Sound Cards**:
+```bash
+# Check if device appears as sound card
+cat /proc/asound/cards
+
+# Check ALSA MIDI ports
+aconnect -l
+amidi -l
+
+# Restart ALSA if needed
+sudo alsa force-reload
+```
+
+4. **Check Device Permissions**:
+```bash
+# Check USB device permissions
+ls -la /dev/bus/usb/*/* | grep -i ketron
+
+# Check if user is in audio group (required for MIDI)
+groups | grep audio
+
+# If not in audio group, add user:
+sudo usermod -a -G audio $USER
+# Then log out and log back in
+```
+
+**Common Solutions**:
+
+1. **USB MIDI Driver Not Loaded**:
+   - Load the driver: `sudo modprobe snd-usb-audio`
+   - Make it persistent: `echo "snd-usb-audio" | sudo tee -a /etc/modules`
+
+2. **Device Not in USB MIDI Mode**:
+   - Some devices have multiple USB modes (storage, MIDI, etc.)
+   - Check Ketron EVM settings/menu for USB mode selection
+   - Try unplugging and replugging the USB cable
+   - Power cycle the Ketron EVM
+
+3. **Device Not Recognized**:
+   - Try different USB cable
+   - Try different USB port on Raspberry Pi
+   - Check if device works on Windows to verify USB functionality
+
+4. **ALSA Not Recognizing Device**:
+   - Restart ALSA: `sudo alsa force-reload`
+   - Restart audio system: `sudo systemctl restart alsa-state`
+   - Check kernel messages: `dmesg | tail -30`
+
+5. **Using Virtual MIDI Port Instead**:
+   - If hardware device cannot be detected, the application will create a virtual MIDI port
+   - You'll need to use MIDI routing software (like `aconnect` or `qjackctl`) to connect the virtual port to the hardware device
+   - Or configure the application to use a specific hardware port name if it becomes available
+
+**Important Discovery: Ketron EVM Uses Non-Standard USB MIDI Protocol**
+
+Based on testing, the Ketron EVM does **not** use standard USB MIDI protocol that Linux/Windows recognizes. Instead:
+
+- ✅ **Works with CircuitPython's `usb_midi` library** (firmware-level implementation on RP2040/MacroPad)
+- ❌ **Does NOT work as standard USB MIDI device** (won't appear in `lsusb`, `aconnect -l`, or `amidi -l`)
+- ❌ **Does NOT work on Windows** (even with standard MIDI drivers)
+- ❌ **No USB mode setting** (device doesn't have configurable USB modes)
+
+**Why This Happens**:
+- The Ketron EVM uses a proprietary or non-standard USB MIDI protocol
+- CircuitPython's `usb_midi` implements USB MIDI at the firmware level, not as a standard OS device
+- Standard Linux/Windows USB MIDI drivers cannot recognize this protocol
+- The device will never appear in standard MIDI port listings
+
+**Solutions**:
+
+**Solution 1: Use MacroPad as MIDI Bridge (Recommended)**
+
+If you have an Adafruit MacroPad (or other CircuitPython device) that can communicate with the Ketron EVM:
+
+1. **Connect MacroPad to Raspberry Pi via USB**:
+   - The MacroPad should appear as a standard USB MIDI device
+   - Check with: `lsusb`, `aconnect -l`, `python3 scripts/list/list_midi_ports.py`
+
+2. **Configure Application to Use MacroPad Port**:
+   - The MacroPad will forward MIDI messages to the Ketron EVM
+   - Add the MacroPad's MIDI port name to `settings.yml`:
+     ```yaml
+     settings:
+       port: "MacroPad MIDI 1"  # Or whatever port name appears
+     ```
+
+3. **Verify MacroPad Detection**:
+   ```bash
+   # With MacroPad connected to Raspberry Pi
+   lsusb | grep -i "adafruit\|rp2040\|circuitpython"
+   aconnect -l
+   python3 scripts/list/list_midi_ports.py
+   ```
+
+**Solution 2: Use USB MIDI Interface**
+
+If you have a standard USB MIDI interface (e.g., Roland UM-ONE, M-Audio Uno):
+
+1. **Connect Ketron EVM to Interface via 5-Pin MIDI Cables**:
+   - Use traditional MIDI DIN cables (5-pin)
+   - Connect Ketron EVM MIDI OUT to Interface MIDI IN
+
+2. **Connect Interface to Raspberry Pi via USB**:
+   - The interface should appear as a standard USB MIDI device
+   - Check with: `lsusb`, `aconnect -l`, `python3 scripts/list/list_midi_ports.py`
+
+3. **Configure Application to Use Interface Port**:
+   - Add the interface's MIDI port name to `settings.yml`
+
+**Solution 3: Network MIDI (If Supported)**
+
+Some devices support network MIDI. Check if the Ketron EVM has network MIDI capabilities:
+- Requires network MIDI software on Raspberry Pi
+- More complex setup, not recommended unless necessary
+
+**Solution 4: Use Virtual MIDI Port with Routing**
+
+If no hardware bridge is available:
+
+1. **Application Creates Virtual MIDI Port**:
+   - The application will create "EVM Stream Deck Controller" virtual port
+   - This port appears in `aconnect -l` and `python3 scripts/list/list_midi_ports.py`
+
+2. **Use MIDI Routing Software**:
+   - Install `qjackctl` or similar MIDI routing tool
+   - Connect virtual port to hardware device (if available)
+   - Or use `aconnect` to route MIDI between ports
+
+**Testing MacroPad as Bridge**:
+
+```bash
+# Connect MacroPad to Raspberry Pi
+# Then check if it appears:
+
+lsusb | grep -i "adafruit\|rp2040"
+aconnect -l
+python3 scripts/list/list_midi_ports.py
+
+# If MacroPad appears, note the port name and add it to settings.yml
+```
+
+**Note**: The Ketron EVM's USB MIDI protocol is proprietary and only works with CircuitPython's firmware-level USB MIDI implementation. Standard OS-level USB MIDI drivers cannot communicate with it directly.
+
+### MIDI Port Not Found (Generic)
 
 **Problem**: MIDI device not detected
 
