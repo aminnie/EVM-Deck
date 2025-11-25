@@ -11,12 +11,13 @@
 7. [USB Permissions Configuration](#usb-permissions-configuration)
 8. [MIDI Setup](#midi-setup)
 9. [Application Configuration](#application-configuration)
-10. [Running as a Service](#running-as-a-service)
-11. [Auto-Start Configuration](#auto-start-configuration)
-12. [Testing and Verification](#testing-and-verification)
-13. [Troubleshooting](#troubleshooting)
-14. [Maintenance](#maintenance)
-15. [Development on Raspberry Pi 5](#development-on-raspberry-pi-5)
+10. [Samba Configuration (Windows Network Access)](#samba-configuration-windows-network-access)
+11. [Running as a Service](#running-as-a-service)
+12. [Auto-Start Configuration](#auto-start-configuration)
+13. [Testing and Verification](#testing-and-verification)
+14. [Troubleshooting](#troubleshooting)
+15. [Maintenance](#maintenance)
+16. [Development on Raspberry Pi 5](#development-on-raspberry-pi-5)
 
 ---
 
@@ -338,48 +339,35 @@ sudo umount /mnt/usb
 
 #### Method 4: Using Shared Network Folder (Samba)
 
-Set up a shared folder on Raspberry Pi and access it from Windows:
+Set up Samba to share the `~/devdeck` directory directly on your network. This allows you to access and edit files from Windows without copying them.
 
-**On Raspberry Pi:**
-```bash
-# Install Samba
-sudo apt install -y samba samba-common-bin
+**For detailed Samba configuration instructions, see the [Samba Configuration section](#samba-configuration-windows-network-access).**
 
-# Create shared directory
-sudo mkdir -p /home/pi/shared
-sudo chmod 777 /home/pi/shared
+**Quick Setup Summary:**
 
-# Configure Samba
-sudo nano /etc/samba/smb.conf
-```
-
-Add to the end of the file:
-```ini
-[devdeck]
-path = /home/pi/shared
-writeable = yes
-guest ok = yes
-create mask = 0777
-directory mask = 0777
-```
-
-```bash
-# Restart Samba
-sudo systemctl restart smbd
-
-# Set Samba password for user pi
-sudo smbpasswd -a pi
-```
-
-**On Windows:**
-1. Open File Explorer
-2. Navigate to: `\\raspberry-pi-ip\devdeck` (replace with Pi's IP)
-3. Copy files from your development machine
-4. Files will appear in `/home/pi/shared` on Raspberry Pi
-5. Move to application directory:
+1. **On Raspberry Pi:**
    ```bash
-   mv ~/shared/* ~/devdeck/
+   # Install Samba
+   sudo apt install -y samba samba-common-bin
+   
+   # Configure Samba (see detailed section for full instructions)
+   sudo nano /etc/samba/smb.conf
+   # Add devdeck share configuration
+   
+   # Set Samba password
+   sudo smbpasswd -a pi
+   
+   # Restart Samba
+   sudo systemctl restart smbd
    ```
+
+2. **On Windows:**
+   - Open File Explorer
+   - Navigate to: `\\raspberry-pi-ip\devdeck` (replace with Pi's IP)
+   - Enter credentials when prompted
+   - You can now directly edit files in `~/devdeck` from Windows
+
+**Note**: The detailed Samba configuration section provides secure setup options, troubleshooting tips, and performance optimizations.
 
 #### Method 5: Using WinSCP (Windows GUI Tool)
 
@@ -565,20 +553,136 @@ python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Stream De
 ### Step 1: Connect MIDI Device
 
 1. **USB MIDI Connection**:
-   - Connect Ketron device via USB
+   - Connect Ketron EVM device via USB cable
    - OR connect USB MIDI interface
 
 2. **Verify MIDI Device Detection**:
-   ```bash
-   # List MIDI devices
-   aconnect -l
-   
-   # List ALSA MIDI ports
-   amidi -l
-   
-   # Check USB devices
-   lsusb | grep -i midi
-   ```
+
+**Quick Check - Is the Device Connected?**
+
+Run these commands in order to verify your Ketron EVM is detected:
+
+```bash
+# 1. Check if USB device is detected
+lsusb | grep -i midi
+# Should show your MIDI device (e.g., "Ketron" or "USB MIDI")
+
+# If nothing shows, try:
+lsusb
+# Look for any device that might be your Ketron EVM
+
+# 2. Check ALSA MIDI clients (most important for MIDI)
+aconnect -l
+# Should list MIDI clients including your Ketron device
+# Look for entries like:
+#   client X: 'Ketron EVM' [type=kernel]
+#   client X: 'USB MIDI Device' [type=kernel]
+
+# 3. List ALSA MIDI ports
+amidi -l
+# Should show MIDI ports like:
+#   hw:1,0,0  USB MIDI Device MIDI 1
+
+# 4. Check if device appears in /dev
+ls -la /dev/snd/
+# Should show MIDI devices (if using ALSA)
+```
+
+**What to Look For:**
+
+- **USB Detection**: `lsusb` should show your device
+- **ALSA MIDI Client**: `aconnect -l` should show a client for your Ketron
+- **MIDI Ports**: `amidi -l` should list available MIDI ports
+
+**If Device is Not Detected:**
+
+```bash
+# Check USB connection
+dmesg | tail -20
+# Look for USB device connection/disconnection messages
+
+# Check if USB device is powered
+lsusb -v | grep -i "ketron\|midi"
+# Shows detailed USB device information
+
+# Verify USB cable is working (try different USB port)
+# Some USB ports on Raspberry Pi may not provide enough power
+```
+
+**Using Python to List MIDI Ports (Application Method):**
+
+```bash
+# Navigate to project directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# List all available MIDI ports
+python3 scripts/list/list_midi_ports.py
+
+# This will show output like:
+# Available MIDI output ports:
+#   0: MidiView 1
+#   1: USB MIDI Device MIDI 1
+#   2: Ketron EVM MIDI 1
+```
+
+**Test MIDI Communication:**
+
+Once the device is detected, test if you can communicate with it:
+
+```bash
+# Navigate to project directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Test MIDI communication (replace with your actual port name)
+python3 tests/devdeck/ketron/test_ketron_sysex.py "USB MIDI Device MIDI 1"
+# Or try:
+python3 tests/devdeck/ketron/test_ketron_sysex.py "Ketron EVM MIDI 1"
+```
+
+**Detect Ketron Event Using MIDI Identity Request:**
+
+The Ketron Event can be detected by sending a MIDI Universal System Exclusive (SysEx) Identity Request. This is the most reliable way to verify the device is connected and responding:
+
+```bash
+# Navigate to project directory
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run identity detection test
+python3 tests/devdeck/ketron/test_ketron_identity.py
+
+# Or specify a port name:
+python3 tests/devdeck/ketron/test_ketron_identity.py "USB MIDI Device MIDI 1"
+```
+
+This test:
+1. Sends a MIDI Universal Identity Request (F0 7E 7F 06 01 F7) to all devices
+2. Listens for identity responses
+3. Parses the responses to identify connected devices
+4. Checks port names for "Ketron" or "Event" indicators
+5. Reports if a Ketron Event is detected
+
+**What the Identity Request Does:**
+
+- **Sends**: Universal MIDI Identity Request message (standard MIDI protocol)
+- **Receives**: Device identity response with manufacturer ID and device information
+- **Identifies**: Ketron devices by their response and/or port name
+
+This is the standard way MIDI devices identify themselves and is more reliable than just checking port names.
+
+**Common Issues:**
+
+- **Device not showing in `aconnect -l`**: USB MIDI driver may not be loaded, try: `sudo modprobe snd-usb-audio`
+- **Permission denied**: User may not be in `audio` group: `sudo usermod -a -G audio $USER` (then log out and back in)
+- **Device appears but can't connect**: Check port name matches exactly (case-sensitive)
 
 ### Step 2: Test MIDI Communication
 
@@ -617,6 +721,57 @@ python3 scripts/list/list_midi_ports.py
 - USB MIDI devices often appear as: `"USB MIDI Device"` or device-specific names
 - ALSA MIDI ports: `"MidiView 1"`, `"MidiView 2"`, etc.
 - Check with `aconnect -l` for ALSA client names
+
+### Quick Reference: Verifying Ketron EVM MIDI Connection
+
+**Run these commands in order to check if your Ketron EVM is connected:**
+
+```bash
+# 1. Check USB connection (quickest check)
+lsusb | grep -i midi
+# OR just:
+lsusb
+# Look for your Ketron device in the list
+
+# 2. Check ALSA MIDI clients (most reliable for MIDI)
+aconnect -l
+# Should show your Ketron device as a MIDI client
+# Example output:
+#   client 20: 'USB MIDI Device' [type=kernel,card=1]
+#   client 20: 'Ketron EVM' [type=kernel,card=1]
+
+# 3. List MIDI ports
+amidi -l
+# Should show available MIDI ports
+
+# 4. Use Python to list ports (application method)
+cd ~/devdeck
+source venv/bin/activate
+python3 scripts/list/list_midi_ports.py
+# Shows ports in the format your application uses
+
+# 5. Detect Ketron Event using MIDI Identity Request (most reliable)
+cd ~/devdeck
+source venv/bin/activate
+python3 tests/devdeck/ketron/test_ketron_identity.py
+# Sends MIDI Universal Identity Request and listens for responses
+# This is the standard way MIDI devices identify themselves
+```
+
+**Expected Output When Connected:**
+
+- `lsusb`: Shows USB device (may or may not say "MIDI" explicitly)
+- `aconnect -l`: Shows MIDI client (e.g., "USB MIDI Device" or "Ketron EVM")
+- `amidi -l`: Shows MIDI ports (e.g., "hw:1,0,0 USB MIDI Device MIDI 1")
+- Python script: Shows port names your application can use
+
+**If Nothing Shows:**
+
+1. Check USB cable is securely connected
+2. Try a different USB port on the Raspberry Pi
+3. Check if device needs external power
+4. Verify USB cable is data-capable (not charge-only)
+5. Check dmesg for connection errors: `dmesg | tail -30`
 
 ---
 
@@ -666,6 +821,1704 @@ source venv/bin/activate
 python3 -m devdeck.main
 
 # Press Ctrl+C to stop
+```
+
+---
+
+## Samba Configuration (Windows Network Access)
+
+This section provides detailed instructions for configuring Samba on your Raspberry Pi to enable Windows file sharing for the `~/devdeck` directory. This allows you to access and edit files directly from your Windows machine over the network.
+
+### Step 1: Install Samba
+
+```bash
+# Update package lists
+sudo apt update
+
+# Install Samba and related tools
+sudo apt install -y samba samba-common-bin
+```
+
+### Step 2: Configure Samba Share for ~/devdeck
+
+**Option A: Secure Configuration (Recommended - Requires Password)**
+
+This option requires authentication but is more secure:
+
+```bash
+# Backup the original Samba configuration
+sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.backup
+
+# Edit Samba configuration
+sudo nano /etc/samba/smb.conf
+```
+
+**First, check the `[global]` section** (at the top of the file) and ensure it has:
+
+```ini
+[global]
+   server min protocol = SMB2
+   server max protocol = SMB3
+```
+
+If these lines don't exist, add them to the `[global]` section. This ensures Windows 10/11 compatibility.
+
+**Then, add the following configuration at the end of the file** (replace `admin` with your actual username):
+
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   valid users = admin
+   create mask = 0664
+   directory mask = 0775
+   force user = admin
+   force group = admin
+```
+
+**Important**: 
+- Replace `admin` with your actual username. You can find your username with: `whoami`
+- **If you get "NT_STATUS_NO_SUCH_GROUP" error**: The `force group = admin` line requires that a group named `admin` exists. You can either:
+  - Create the group: `sudo groupadd admin` (if it doesn't exist)
+  - Or remove the `force group = admin` line from the config (Samba will use the user's default group)
+
+**Option B: Guest Access (Less Secure - No Password Required)**
+
+If you prefer guest access without a password (only recommended for trusted local networks):
+
+```bash
+# Edit Samba configuration
+sudo nano /etc/samba/smb.conf
+```
+
+Add the following configuration at the end of the file (replace `admin` with your actual username):
+
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   guest ok = yes
+   create mask = 0664
+   directory mask = 0775
+   force user = admin
+   force group = admin
+```
+
+**Important**: 
+- Replace `admin` with your actual username. You can find your username with: `whoami`
+- **If you get "NT_STATUS_NO_SUCH_GROUP" error**: The `force group = admin` line requires that a group named `admin` exists. You can either:
+  - Create the group: `sudo groupadd admin` (if it doesn't exist)
+  - Or remove the `force group = admin` line from the config (Samba will use the user's default group)
+
+**Important Notes:**
+- **Replace `admin` with your actual username** in all configuration examples above
+- Find your username: `whoami`
+- Option A (secure) is recommended for production use
+- Option B (guest) is convenient but less secure
+- The `create mask = 0664` allows the owner and group to write files (needed for config files)
+
+### Step 3: Set Samba User Password (For Secure Configuration)
+
+If you chose Option A (secure configuration), set a Samba password for your user:
+
+```bash
+# Set Samba password for your user (replace 'admin' with your username)
+sudo smbpasswd -a admin
+```
+
+You'll be prompted to enter a password. This password is separate from your Linux user password and is used specifically for Samba access.
+
+**Note**: If the user doesn't exist in Samba yet, you may need to enable the user:
+
+```bash
+# Enable Samba user (replace 'admin' with your username)
+sudo smbpasswd -e admin
+```
+
+**Find your username:**
+```bash
+whoami
+```
+
+### Step 3a: Adding Additional Samba Users or Changing Users
+
+If you want to add a different user (e.g., `pi` instead of `admin`) or add multiple users:
+
+**Adding a New Samba User:**
+
+```bash
+# Add a new Samba user (e.g., 'pi')
+sudo smbpasswd -a pi
+
+# You'll be prompted to enter a password twice
+# This password is separate from the Linux user password
+
+# Enable the user
+sudo smbpasswd -e pi
+
+# Verify the user was added
+sudo pdbedit -L
+# Should show both users: admin and pi
+```
+
+**Updating Samba Configuration for New User:**
+
+If you want to change the share to use a different user (e.g., `pi` instead of `admin`):
+
+```bash
+# Edit Samba config
+sudo nano /etc/samba/smb.conf
+```
+
+Update the `[devdeck]` section to use the new user:
+
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/pi/devdeck          ← Change to new user's home directory
+   browseable = yes
+   writeable = yes
+   valid users = pi                 ← Change to new username
+   create mask = 0664
+   directory mask = 0775
+   force user = pi                  ← Change to new username
+   # force group = pi               ← Optional: change if needed
+```
+
+**Important**: If changing users, also update:
+1. **Directory path**: Change `/home/admin/devdeck` to `/home/pi/devdeck` (or new user's path)
+2. **Directory ownership**: 
+   ```bash
+   sudo chown -R pi:pi /home/pi/devdeck
+   ```
+3. **Directory permissions**:
+   ```bash
+   find /home/pi/devdeck -type d -exec chmod 755 {} \;
+   find /home/pi/devdeck -type f -exec chmod 664 {} \;
+   ```
+
+**Allowing Multiple Users:**
+
+If you want multiple users to access the share:
+
+```bash
+# Add multiple users
+sudo smbpasswd -a admin
+sudo smbpasswd -a pi
+
+# Enable both
+sudo smbpasswd -e admin
+sudo smbpasswd -e pi
+```
+
+Then in `smb.conf`, list all users:
+
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   valid users = admin, pi          ← List all allowed users
+   create mask = 0664
+   directory mask = 0775
+   force user = admin               ← Files will be owned by this user
+```
+
+**Managing Samba Users:**
+
+```bash
+# List all Samba users
+sudo pdbedit -L
+
+# View detailed user information
+sudo pdbedit -L -v username
+
+# Change a user's password
+sudo smbpasswd username
+
+# Disable a user (prevent login but keep account)
+sudo smbpasswd -d username
+
+# Enable a user
+sudo smbpasswd -e username
+
+# Delete a Samba user (doesn't delete Linux user)
+sudo smbpasswd -x username
+```
+
+**Restart Samba after making changes:**
+
+```bash
+sudo systemctl restart smbd
+```
+
+### Step 4: Verify Directory Permissions
+
+Ensure the `~/devdeck` directory has proper permissions. **Important**: Config files must be writable by the application:
+
+```bash
+# Check current permissions
+ls -la ~/devdeck
+
+# Set ownership (if needed)
+# $USER is a shell variable that automatically expands to your current username
+# So if you're logged in as 'admin', $USER will be 'admin'
+# You do NOT need to replace $USER with your username - it's automatic!
+sudo chown -R $USER:$USER ~/devdeck
+
+# Alternative: If $USER doesn't work, you can use your username directly:
+# sudo chown -R admin:admin ~/devdeck
+# (Replace 'admin' with your actual username if different)
+
+# Set directory permissions (directories need execute permission)
+find ~/devdeck -type d -exec chmod 755 {} \;
+
+# Set file permissions (files need read/write for owner, read for group)
+find ~/devdeck -type f -exec chmod 664 {} \;
+
+# Make scripts executable
+find ~/devdeck -name "*.sh" -exec chmod 755 {} \;
+
+# Verify config files are writable
+ls -la ~/devdeck/config/
+# Should show: -rw-rw-r-- for files (664 permissions)
+```
+
+**Critical**: The application needs to write to `config/key_mappings.json` and other config files. Files must have `664` permissions (read/write for owner, read for group), not `644` (read-only for owner).
+
+### Step 5: Test Samba Configuration
+
+```bash
+# Test Samba configuration file syntax
+sudo testparm
+
+# Or get a cleaner summary (suppresses warnings)
+sudo testparm -s
+
+# View just the devdeck share configuration
+sudo testparm -s | grep -A 15 "\[devdeck\]"
+```
+
+**What to Look For in testparm Output:**
+
+For the `[devdeck]` share, you should see:
+
+```
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   read only = No          ← This means writable (good!)
+   valid users = admin
+   create mask = 0664
+   directory mask = 0775
+   force user = admin
+   force group = admin
+```
+
+**Key Settings Explained:**
+
+- **`read only = No`** ✅ **This is correct!** This means the share is writable (not read-only). This is what you want.
+- **`browseable = yes`** ✅ Share is visible in network browser
+- **`valid users = admin`** ✅ Your username is allowed to access
+- **`create mask = 0664`** ✅ New files will be readable/writable by owner
+- **`directory mask = 0775`** ✅ New directories will have proper permissions
+- **`force user = admin`** ✅ Files created via Samba will be owned by your user
+
+**If you see `read only = Yes`**, the share is read-only and you need to fix it:
+```bash
+# Check your smb.conf file
+sudo nano /etc/samba/smb.conf
+# Make sure the [devdeck] section has: writeable = yes
+# Or: read only = no
+# Then restart: sudo systemctl restart smbd
+```
+
+**Note**: If testparm shows warnings, they're usually safe to ignore. Errors need to be fixed before proceeding.
+
+### Step 6: Restart Samba Service
+
+```bash
+# Restart Samba service to apply changes
+sudo systemctl restart smbd
+
+# Enable Samba to start on boot (optional)
+sudo systemctl enable smbd
+
+# Check service status
+sudo systemctl status smbd
+```
+
+### Step 7: Find Raspberry Pi IP Address
+
+You'll need your Raspberry Pi's IP address to connect from Windows:
+
+```bash
+# Find IP address
+hostname -I
+
+# Or get more detailed information
+ip addr show | grep "inet "
+
+# Note the IP address (e.g., 192.168.1.100)
+```
+
+**Write down this IP address** - you'll need it in the next step!
+
+### Step 8: Configure Windows to Access the Share
+
+Follow these steps on your **Windows computer** to access the Raspberry Pi's `devdeck` directory:
+
+#### Prerequisites (Get from Raspberry Pi)
+
+Before starting, you need:
+1. **Raspberry Pi IP address** (from Step 7 above, e.g., `192.168.1.100`)
+2. **Your Raspberry Pi username** (run `whoami` on Pi, e.g., `admin`)
+3. **Samba password** (the password you set with `sudo smbpasswd -a admin`)
+
+#### Quick Access Method (Temporary Connection)
+
+**Easiest way to access the share:**
+
+1. **Press `Windows Key + R`** to open Run dialog
+2. **Type**: `\\192.168.1.100\devdeck` (replace `192.168.1.100` with your Pi's IP)
+3. **Press Enter**
+4. **Enter credentials** when prompted:
+   - **Username**: `admin` (replace with your Pi username - use just the username, NOT `WORKGROUP\admin`)
+   - **Password**: Your Samba password
+   - **Check "Remember my credentials"** if you want Windows to save it
+   - **If you get "group name not found" error**: Try `WORKGROUP\admin` or just `admin` (without any prefix)
+5. **Click OK**
+
+You should now see the `devdeck` folder contents in File Explorer!
+
+**Important**: Make sure you're connecting to `\\IP\devdeck` directly, NOT `\\IP\admin` or browsing through a parent folder. If you see both `admin` and `devdeck` folders, you're in the wrong location - connect directly to `\\IP\devdeck` instead.
+
+**Troubleshooting**: If you get a "group name not found" error, see the [troubleshooting section](#group-name-not-found-error) below. Common fixes: use just the username (not `WORKGROUP\username`), or verify the Samba user exists with `sudo pdbedit -L` on the Pi.
+
+**Note**: This connection is temporary and will disconnect when you close File Explorer or restart Windows.
+
+#### Method 1: Using File Explorer Address Bar (Recommended for Quick Access)
+
+1. **Open File Explorer** (press `Windows Key + E`)
+2. **Click in the address bar** at the top (or press `Ctrl + L`)
+3. **Type**: `\\192.168.1.100\devdeck`
+   - Replace `192.168.1.100` with your Raspberry Pi's IP address
+   - Example: `\\192.168.1.100\devdeck`
+4. **Press Enter**
+5. **Enter credentials** when Windows prompts:
+   - **Username**: `admin` (replace with your Pi username from `whoami`)
+   - **Password**: Your Samba password (set with `sudo smbpasswd -a admin`)
+   - **Check "Remember my credentials"** to save for future access
+6. **Click OK**
+
+You should now see the contents of `~/devdeck` from your Raspberry Pi!
+
+**Tip**: You can bookmark this location by dragging it to your Quick Access toolbar.
+
+#### Method 2: Map Network Drive (Permanent Connection - Recommended)
+
+This creates a permanent drive letter (like `Z:`) that stays connected:
+
+1. **Open File Explorer** (press `Windows Key + E`)
+2. **Right-click "This PC"** in the left sidebar
+   - If you don't see "This PC", click "View" → "Show" → "Navigation pane"
+3. **Select "Map network drive..."** from the context menu
+4. **Choose a drive letter** from the dropdown (e.g., `Z:`)
+5. **Enter folder path**: `\\192.168.1.100\devdeck`
+   - Replace `192.168.1.100` with your Raspberry Pi's IP address
+6. **Check "Reconnect at sign-in"** ✓ (this makes it permanent)
+7. **Check "Connect using different credentials"** ✓ (if using secure Samba config)
+8. **Click "Finish"**
+9. **Enter credentials** when prompted:
+   - **Username**: `admin` (replace with your Pi username)
+   - **Password**: Your Samba password
+   - **Check "Remember my credentials"** ✓
+10. **Click OK**
+
+The drive will now appear as `Z:` (or your chosen letter) in File Explorer under "This PC" → "Network locations". It will automatically reconnect every time you sign in to Windows!
+
+**To disconnect later**: Right-click the drive → "Disconnect"
+
+#### Method 3: Using PowerShell/Command Prompt
+
+For command-line users or scripting:
+
+1. **Open PowerShell** (press `Windows Key + X` → "Windows PowerShell" or "Terminal")
+2. **Run this command** (replace with your details):
+   ```powershell
+   net use Z: \\192.168.1.100\devdeck /user:admin /persistent:yes
+   ```
+   - Replace `192.168.1.100` with your Pi's IP address
+   - Replace `admin` with your Pi username
+   - Replace `Z:` with your preferred drive letter
+3. **Enter password** when prompted
+4. The drive is now mapped and will persist across reboots
+
+**If you get "System error 2220 - The group name could not be found":**
+- Try: `net use Z: \\192.168.1.100\devdeck /user:WORKGROUP\admin /persistent:yes`
+- Or verify the Samba user exists on Pi: `sudo pdbedit -L` (should show your username)
+- See [troubleshooting section](#group-name-not-found-error) for more solutions
+
+**To disconnect later:**
+```powershell
+net use Z: /delete
+```
+
+**To list all mapped drives:**
+```powershell
+net use
+```
+
+#### Quick Reference: Windows Access Summary
+
+**What you need:**
+- Raspberry Pi IP address (e.g., `192.168.1.100`)
+- Your Pi username (e.g., `admin` - find with `whoami` on Pi)
+- Samba password (set with `sudo smbpasswd -a admin` on Pi)
+
+**Quickest way to connect:**
+1. Press `Windows Key + R`
+2. Type: `\\192.168.1.100\devdeck` (replace with your Pi's IP)
+3. Press Enter
+4. Enter username and Samba password
+
+**For permanent access:**
+- Use Method 2 (Map Network Drive) to create a drive letter that stays connected
+
+**Connection path format:**
+- `\\IP-ADDRESS\devdeck` (e.g., `\\192.168.1.100\devdeck`)
+- Or `\\HOSTNAME\devdeck` (e.g., `\\raspberrypi\devdeck`)
+
+**⚠️ Important**: Connect directly to `\\IP\devdeck`, NOT `\\IP\admin` or through a parent folder. If you see both `admin` and `devdeck` folders, you're in the wrong location - use the direct path above.
+
+### Step 9: Access by Hostname (Optional)
+
+Instead of using an IP address, you can use the Raspberry Pi's hostname:
+
+```bash
+# On Raspberry Pi, check hostname
+hostname
+
+# Example output: raspberrypi
+```
+
+Then on Windows, use: `\\raspberrypi\devdeck` (or whatever your hostname is)
+
+**Note**: Hostname resolution may not work on all networks. If it doesn't work, use the IP address instead.
+
+### Step 10: Mount Samba Share on Linux (Alternative Method)
+
+If you're accessing the Samba share from another Linux machine (including another Raspberry Pi), you can mount it using CIFS:
+
+**Install CIFS Utilities:**
+
+```bash
+# On the Linux machine that will mount the share
+sudo apt update
+sudo apt install -y cifs-utils
+```
+
+**Create Mount Point:**
+
+```bash
+# Create directory for mounting
+sudo mkdir -p /mnt/devdeck
+```
+
+**Mount the Share:**
+
+```bash
+# Method 1: Mount with password prompt (most secure)
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+
+# Enter password when prompted
+
+# Method 2: Mount with password in command (less secure, but convenient)
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,password=YOUR_PASSWORD,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+
+# Method 3: Mount with credentials file (more secure than Method 2)
+# First, create credentials file:
+echo "username=admin" | sudo tee /root/.devdeck_credentials
+echo "password=YOUR_PASSWORD" | sudo tee -a /root/.devdeck_credentials
+sudo chmod 600 /root/.devdeck_credentials
+
+# Then mount:
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o credentials=/root/.devdeck_credentials,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Important Options Explained:**
+
+- `username=admin`: Your Samba username
+- `password=YOUR_PASSWORD`: Your Samba password (use credentials file for security)
+- `uid=$(id -u)`: Mount as your user ID (so files are owned by you)
+- `gid=$(id -g)`: Mount with your group ID
+- `iocharset=utf8`: Support UTF-8 filenames
+- `file_mode=0664`: File permissions (read/write for owner and group)
+- `dir_mode=0775`: Directory permissions
+
+**Unmount the Share:**
+
+```bash
+sudo umount /mnt/devdeck
+```
+
+**Auto-Mount on Boot (Optional):**
+
+Add to `/etc/fstab`:
+
+```bash
+sudo nano /etc/fstab
+```
+
+Add this line (replace with your details):
+
+```
+//10.0.0.51/devdeck /mnt/devdeck cifs credentials=/root/.devdeck_credentials,uid=1000,gid=1000,iocharset=utf8,file_mode=0664,dir_mode=0775 0 0
+```
+
+**Troubleshooting CIFS Mount Errors:**
+
+**Error: "mount error(22): Invalid argument"**
+
+This usually means a syntax error in the mount command. Common fixes:
+
+1. **Check password syntax**: Use `password=YOUR_PASSWORD`, not `username=admin,YOUR_PASSWORD`
+   ```bash
+   # WRONG:
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck -o username=admin,aminnie123,...
+   
+   # CORRECT:
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck -o username=admin,password=aminnie123,...
+   ```
+
+2. **Verify mount point exists**:
+   ```bash
+   sudo mkdir -p /mnt/devdeck
+   ```
+
+3. **Check if cifs-utils is installed**:
+   ```bash
+   dpkg -l | grep cifs-utils
+   # If not installed:
+   sudo apt install cifs-utils
+   ```
+
+4. **Try with SMB version specified**:
+   ```bash
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+     -o username=admin,password=YOUR_PASSWORD,vers=3.0,uid=$(id -u),gid=$(id -g),iocharset=utf8
+   ```
+
+5. **Check kernel messages for details**:
+   ```bash
+   dmesg | tail -20
+   # Look for CIFS-related error messages
+   ```
+
+6. **Test with minimal options first**:
+   ```bash
+   # Start simple, then add options
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck -o username=admin
+   # Enter password when prompted
+   # If this works, add other options one by one
+   ```
+
+**Error: "mount error(13): Permission denied"**
+
+This error means authentication failed or the user doesn't have permission. Try these fixes:
+
+**Fix 1: Verify Samba User Exists and is Enabled**
+
+On the Raspberry Pi (the Samba server), check:
+
+```bash
+# List all Samba users
+sudo pdbedit -L
+
+# Should show: admin (or your username)
+# If your user is NOT listed, add it:
+sudo smbpasswd -a admin
+# Enter password twice
+
+# Enable the user (if disabled):
+sudo smbpasswd -e admin
+
+# Verify user is enabled:
+sudo pdbedit -L -v admin
+# Should show account flags: [U] (User account)
+```
+
+**Fix 2: Verify Password is Correct**
+
+The password you enter must be the **Samba password**, not your Linux user password:
+
+```bash
+# On Raspberry Pi, reset Samba password if needed:
+sudo smbpasswd admin
+# Enter new password twice
+```
+
+**Fix 3: Check Samba Share Configuration**
+
+On Raspberry Pi, verify the share allows your user:
+
+```bash
+# Check Samba configuration
+sudo testparm -s | grep -A 10 "\[devdeck\]"
+```
+
+Should show:
+```
+[devdeck]
+   valid users = admin    ← Your username should be here
+   read only = No
+   writeable = yes
+```
+
+If `valid users` doesn't include your username, edit `/etc/samba/smb.conf`:
+
+```bash
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[devdeck]` section, ensure:
+```ini
+[devdeck]
+   valid users = admin
+   # Or for multiple users: valid users = admin, pi
+```
+
+Then restart:
+```bash
+sudo systemctl restart smbd
+```
+
+**Fix 4: Try with Workgroup/Domain Prefix**
+
+Sometimes you need to specify the workgroup:
+
+```bash
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=WORKGROUP\\admin,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+# Note: Use double backslash \\ for workgroup prefix
+```
+
+Or with domain= option:
+```bash
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,domain=WORKGROUP,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 5: Try Guest Access (If Enabled)**
+
+If guest access is enabled on the share, try mounting without credentials:
+
+```bash
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o guest,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 6: Check SMB Protocol Version**
+
+Try specifying SMB version explicitly:
+
+```bash
+# Try SMB 3.0
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,vers=3.0,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+
+# Or try SMB 2.1
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,vers=2.1,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 7: Test Samba Share from Raspberry Pi**
+
+On the Raspberry Pi, test if the share works locally:
+
+```bash
+# Test accessing the share
+smbclient //localhost/devdeck -U admin
+# Enter Samba password
+# Type 'ls' to list files
+# Type 'exit' to quit
+```
+
+If this works, the share is configured correctly and the issue is with the mount command or network.
+
+**Fix 8: Check Network Connectivity and Firewall**
+
+```bash
+# Test connectivity
+ping 10.0.0.51
+
+# Test SMB port
+telnet 10.0.0.51 445
+# Or:
+nc -zv 10.0.0.51 445
+
+# On Raspberry Pi, check firewall
+sudo ufw status
+# If firewall is active, ensure Samba is allowed:
+sudo ufw allow samba
+```
+
+**Fix 9: Use Credentials File**
+
+Create a credentials file for more reliable authentication:
+
+```bash
+# Create credentials file
+echo "username=admin" | sudo tee /root/.devdeck_credentials
+echo "password=YOUR_SAMBA_PASSWORD" | sudo tee -a /root/.devdeck_credentials
+echo "domain=WORKGROUP" | sudo tee -a /root/.devdeck_credentials
+sudo chmod 600 /root/.devdeck_credentials
+
+# Mount using credentials file
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o credentials=/root/.devdeck_credentials,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 10: Check Kernel Messages**
+
+For more details on the error:
+
+```bash
+# Check kernel messages
+dmesg | tail -30
+# Look for CIFS-related error messages
+
+# Check system logs
+sudo journalctl -xe | tail -30
+```
+
+**Most Common Causes:**
+
+1. **Samba user doesn't exist**: Run `sudo smbpasswd -a admin` on Raspberry Pi
+2. **Wrong password**: Use the Samba password (set with `smbpasswd`), not Linux password
+3. **User not in valid_users**: Check `valid users = admin` in smb.conf
+4. **SMB version mismatch**: Try adding `vers=3.0` or `vers=2.1` to mount options
+
+**Error: "Host is down" or "Connection refused"**
+
+- Verify Raspberry Pi is accessible: `ping 10.0.0.51`
+- Check Samba service is running: `sudo systemctl status smbd` on Pi
+- Verify firewall allows SMB: `sudo ufw allow samba` on Pi
+
+### Step 11: Verify Access
+
+Test that you can read and write files:
+
+1. **From Windows**: Create a test file in the mapped drive
+2. **On Raspberry Pi**: Verify the file appears:
+   ```bash
+   ls -la ~/devdeck/test.txt
+   ```
+3. **From Windows**: Edit a file (e.g., `config/settings.yml`)
+4. **On Raspberry Pi**: Verify changes are saved:
+   ```bash
+   cat ~/devdeck/config/settings.yml
+   ```
+
+### Troubleshooting Samba Access
+
+#### Quick Fix: Permission Denied After Samba Setup
+
+**If you're seeing `[Errno 13] Permission denied: '/home/admin/devdeck/config/key_mappings.json'` errors**, run these commands immediately:
+
+```bash
+# 1. Find your username
+whoami
+
+# 2. Fix ownership (replace 'admin' with your username if different)
+sudo chown -R $USER:$USER ~/devdeck
+
+# 3. Fix directory permissions
+find ~/devdeck -type d -exec chmod 755 {} \;
+
+# 4. Fix file permissions (664 = read/write for owner, read for group)
+find ~/devdeck -type f -exec chmod 664 {} \;
+
+# 5. Make scripts executable
+find ~/devdeck -name "*.sh" -exec chmod 755 {} \;
+
+# 6. Verify config files are writable
+ls -la ~/devdeck/config/
+# Should show: -rw-rw-r-- (664), NOT -rw-r--r-- (644)
+
+# 7. Update Samba config to use your username (if needed)
+# Edit /etc/samba/smb.conf and replace 'pi' with your username in the [devdeck] section
+sudo nano /etc/samba/smb.conf
+# Change: force user = pi  →  force user = admin (or your username)
+# Change: valid users = pi  →  valid users = admin (or your username)
+# Change: path = /home/pi/devdeck  →  path = /home/admin/devdeck (or your path)
+
+# 8. Restart Samba
+sudo systemctl restart smbd
+
+# 9. Restart the application service
+sudo systemctl restart devdeck.service
+
+# 10. Check if it's working
+sudo systemctl status devdeck.service
+```
+
+**Root Cause**: The `chmod 644` command in the original instructions made files read-only. Config files need `664` permissions so the application can write to them.
+
+#### Cannot Access Share from Windows
+
+**Problem**: Windows cannot connect to `\\raspberry-pi-ip\devdeck`
+
+**Windows-Side Checks:**
+
+1. **Test network connectivity** (in PowerShell):
+   ```powershell
+   ping 192.168.1.100
+   ```
+   Replace with your Pi's IP. If this fails, check network connection.
+
+2. **Test SMB port** (in PowerShell):
+   ```powershell
+   Test-NetConnection -ComputerName 192.168.1.100 -Port 445
+   ```
+   Should show "TcpTestSucceeded : True". If false, check firewall.
+
+3. **Check Windows Firewall**:
+   - Open "Windows Defender Firewall" → "Allow an app through firewall"
+   - Ensure "File and Printer Sharing" is enabled for Private networks
+
+4. **Try different connection method**:
+   - If `\\IP\devdeck` doesn't work, try `\\raspberrypi\devdeck` (hostname)
+   - Or try accessing via "Network" in File Explorer
+
+5. **Clear Windows credentials** (if authentication keeps failing):
+   - Open "Credential Manager" (search in Start menu)
+   - Go to "Windows Credentials"
+   - Remove any entries for your Raspberry Pi
+   - Try connecting again
+
+#### "Extended Error" When Mapping Network Drive
+
+**Problem**: Windows shows "extended error" when trying to map the network drive
+
+**Solution 1: Use File Explorer First (Recommended)**
+
+Before mapping, test the connection directly:
+
+1. **Press `Windows Key + R`**
+2. **Type**: `\\192.168.1.100\devdeck` (your Pi's IP)
+3. **Press Enter**
+4. **Enter credentials** and connect
+5. **If this works**, then try mapping the drive again
+
+**Solution 2: Check SMB Protocol Version**
+
+Windows 10/11 may require SMB 2.0 or higher. On Raspberry Pi:
+
+```bash
+# Check Samba version
+samba --version
+
+# Edit Samba config to ensure SMB 2.0+ is enabled
+sudo nano /etc/samba/smb.conf
+```
+
+Add or verify in the `[global]` section (at the top of the file):
+
+```ini
+[global]
+   server min protocol = SMB2
+   server max protocol = SMB3
+```
+
+Then restart Samba:
+```bash
+sudo systemctl restart smbd
+```
+
+**Solution 3: Use PowerShell Instead of GUI**
+
+Sometimes the GUI has issues, but PowerShell works:
+
+1. **Open PowerShell as Administrator** (Right-click → "Run as administrator")
+2. **Run**:
+   ```powershell
+   net use Z: \\192.168.1.100\devdeck /user:admin /persistent:yes
+   ```
+   Replace with your Pi's IP and username
+3. **Enter password** when prompted
+4. **Check if it worked**:
+   ```powershell
+   net use
+   ```
+   Should show `Z:` mapped
+
+**Solution 4: Clear All Network Drive Mappings**
+
+Sometimes old mappings cause conflicts:
+
+1. **Open PowerShell as Administrator**
+2. **List all mapped drives**:
+   ```powershell
+   net use
+   ```
+3. **Disconnect all** (if needed):
+   ```powershell
+   net use * /delete
+   ```
+4. **Try mapping again**
+
+**Solution 5: Check Windows SMB Client**
+
+Enable SMB 1.0 (if needed, though not recommended for security):
+
+1. **Open "Turn Windows features on or off"** (search in Start menu)
+2. **Expand "SMB 1.0/CIFS File Sharing Support"**
+3. **Check "SMB 1.0/CIFS Client"** (NOT the server)
+4. **Click OK** and restart if prompted
+5. **Try mapping again**
+
+**Note**: SMB 1.0 is deprecated and insecure. Only use this as a last resort.
+
+**Solution 6: Verify Share is Accessible**
+
+On Raspberry Pi, test the share locally:
+
+```bash
+# Test Samba share from command line
+smbclient //localhost/devdeck -U admin
+# Enter your Samba password
+# Type 'ls' to list files
+# Type 'exit' to quit
+
+# If this works, the share is configured correctly
+# The issue is likely Windows-side
+```
+
+**Solution 7: Check Windows Event Viewer**
+
+For more details on the error:
+
+1. **Open "Event Viewer"** (search in Start menu)
+2. **Go to**: Windows Logs → System
+3. **Look for errors** around the time you tried to map the drive
+4. **Check the error message** for more details
+
+**Solution 8: Try Different Drive Letter**
+
+Sometimes a specific drive letter is in use or reserved:
+
+1. **Try a different letter** (e.g., `X:`, `Y:`, `W:`)
+2. **Or let Windows assign automatically**:
+   ```powershell
+   net use * \\192.168.1.100\devdeck /user:admin /persistent:yes
+   ```
+
+#### "Group Name Not Found" Error
+
+**Problem**: Windows shows "group name not found" when trying to access `\\IP\devdeck`
+
+This error usually means Windows is having trouble with the username format or authentication.
+
+**Solution 1: Use Correct Username Format**
+
+When Windows prompts for credentials, use one of these formats:
+
+1. **Just the username** (try this first):
+   - Username: `admin` (your Pi username)
+   - Password: Your Samba password
+
+2. **With workgroup prefix** (if above doesn't work):
+   - Username: `WORKGROUP\admin` or `RASPBERRYPI\admin`
+   - Password: Your Samba password
+
+3. **With IP address prefix** (alternative):
+   - Username: `192.168.1.100\admin` (replace with your Pi's IP)
+   - Password: Your Samba password
+
+**Solution 2: Verify Samba User Exists and is Enabled**
+
+On Raspberry Pi, check that your user is properly set up in Samba:
+
+```bash
+# List all Samba users
+sudo pdbedit -L
+
+# Should show your username (e.g., admin)
+# If your username is NOT listed, add it:
+sudo smbpasswd -a admin
+# Enter password twice
+
+# Enable the user (if needed)
+sudo smbpasswd -e admin
+
+# Verify user details
+sudo pdbedit -L -v admin
+```
+
+**Solution 3: Check Samba Workgroup Setting**
+
+Windows might be looking for a different workgroup. On Raspberry Pi:
+
+```bash
+# Check current workgroup setting
+sudo testparm -s | grep workgroup
+
+# Edit Samba config
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[global]` section, ensure you have:
+
+```ini
+[global]
+   workgroup = WORKGROUP
+   server string = %h server (Samba, Ubuntu)
+```
+
+Then restart:
+```bash
+sudo systemctl restart smbd
+```
+
+**Solution 4: Use IP Address Instead of Hostname**
+
+Sometimes hostname resolution causes issues. Always use the IP address:
+
+- ✅ Use: `\\192.168.1.100\devdeck`
+- ❌ Avoid: `\\raspberrypi\devdeck` (if it causes issues)
+
+**Solution 5: Clear Windows Credentials and Retry**
+
+Windows might have cached incorrect credentials:
+
+1. **Open "Credential Manager"** (search in Start menu)
+2. **Go to "Windows Credentials"**
+3. **Find and remove** any entries for:
+   - Your Raspberry Pi IP address
+   - Your Raspberry Pi hostname
+   - `WORKGROUP` entries
+4. **Close Credential Manager**
+5. **Try connecting again** with fresh credentials
+
+**Solution 6: Use PowerShell with Explicit Credentials**
+
+Instead of the GUI, use PowerShell with explicit credentials:
+
+```powershell
+# Method 1: Prompt for password
+$cred = Get-Credential
+# Enter: admin (username) and your Samba password
+net use Z: \\192.168.1.100\devdeck /user:admin /persistent:yes
+
+# Method 2: Direct command (will prompt for password)
+net use Z: \\192.168.1.100\devdeck /user:admin /persistent:yes
+# Enter password when prompted
+```
+
+**If you get "System error 2220 - The group name could not be found" in PowerShell:**
+
+This error means Windows can't resolve the username/group. Try these fixes:
+
+**Fix 1: Use Workgroup Prefix in PowerShell**
+```powershell
+# Try with workgroup prefix
+net use Z: \\10.0.0.51\devdeck /user:WORKGROUP\admin /persistent:yes
+# Enter password when prompted
+```
+
+**Fix 2: Use IP Address as Domain**
+```powershell
+# Try with IP as domain
+net use Z: \\10.0.0.51\devdeck /user:10.0.0.51\admin /persistent:yes
+# Enter password when prompted
+```
+
+**Fix 3: Verify Samba User on Raspberry Pi First**
+On your Raspberry Pi, run:
+```bash
+# Check if user exists in Samba
+sudo pdbedit -L
+# Should show: admin
+
+# If NOT listed, add the user:
+sudo smbpasswd -a admin
+# Enter password twice
+
+# Enable the user:
+sudo smbpasswd -e admin
+
+# Verify it's enabled:
+sudo pdbedit -L -v admin
+```
+
+**Fix 4: Check Samba Workgroup Setting**
+On Raspberry Pi:
+```bash
+# Check workgroup
+sudo testparm -s | grep workgroup
+
+# Edit if needed
+sudo nano /etc/samba/smb.conf
+# In [global] section, ensure: workgroup = WORKGROUP
+
+# Restart Samba
+sudo systemctl restart smbd
+```
+
+**Fix 5: Use Different Username Format**
+Try these variations in PowerShell:
+```powershell
+# Option A: Just username (most common)
+net use Z: \\10.0.0.51\devdeck /user:admin /persistent:yes
+
+# Option B: With workgroup
+net use Z: \\10.0.0.51\devdeck /user:WORKGROUP\admin /persistent:yes
+
+# Option C: With IP as domain
+net use Z: \\10.0.0.51\devdeck /user:10.0.0.51\admin /persistent:yes
+
+# Option D: With hostname as domain (if you know it)
+net use Z: \\10.0.0.51\devdeck /user:raspberrypi\admin /persistent:yes
+```
+
+**Most Common Fix**: Run Fix 3 (verify Samba user exists) on the Pi, then try Fix 5 Option A or B in PowerShell.
+
+**Solution 7: Check if User Group Exists**
+
+On Raspberry Pi, verify the user's primary group exists:
+
+```bash
+# Check your user's groups
+groups admin
+# (Replace 'admin' with your username)
+
+# Check if primary group exists
+id admin
+# Should show: uid=1000(admin) gid=1000(admin) groups=1000(admin),...
+
+# If group doesn't exist, create it (rarely needed):
+sudo groupadd admin
+sudo usermod -g admin admin
+```
+
+**Solution 8: Test Samba Share from Command Line**
+
+Verify the share works from the Pi itself:
+
+```bash
+# Test accessing the share locally
+smbclient //localhost/devdeck -U admin
+# Enter your Samba password
+# Type 'ls' to list files
+# Type 'exit' to quit
+
+# If this works, Samba is configured correctly
+# The issue is Windows authentication format
+```
+
+**If you get "NT_STATUS_NO_SUCH_GROUP" error when testing with smbclient:**
+
+This error means Samba can't find the group specified in the configuration. Fix it with:
+
+**Fix 1: Check User's Primary Group**
+
+```bash
+# Check your user's groups
+id admin
+# Should show: uid=1000(admin) gid=1000(admin) groups=1000(admin),...
+
+# Check if the primary group exists
+getent group admin
+# Should show: admin:x:1000:admin
+
+# If group doesn't exist, create it:
+sudo groupadd admin
+sudo usermod -g admin admin
+```
+
+**Fix 2: Remove or Fix force group Setting**
+
+The `force group = admin` in your Samba config might be pointing to a non-existent group:
+
+```bash
+# Check current Samba config
+sudo testparm -s | grep -A 10 "\[devdeck\]"
+
+# Edit Samba config
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[devdeck]` section, either:
+
+**Option A: Remove force group** (if group doesn't exist):
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   valid users = admin
+   create mask = 0664
+   directory mask = 0775
+   force user = admin
+   # Remove or comment out: force group = admin
+```
+
+**Option B: Fix force group** (if group should exist):
+```bash
+# First, ensure the group exists
+sudo groupadd admin  # Only if it doesn't exist
+getent group admin   # Verify it exists
+
+# Then in smb.conf, keep:
+force group = admin
+```
+
+**Fix 3: Use User's Actual Primary Group**
+
+Find your user's actual primary group and use that:
+
+```bash
+# Find your user's primary group
+id -gn admin
+# Example output: admin or users or pi
+
+# Edit smb.conf and use the actual group name
+sudo nano /etc/samba/smb.conf
+```
+
+In `[devdeck]` section, set:
+```ini
+force group = admin  # or whatever id -gn showed
+```
+
+**Fix 4: Remove force group Entirely (Simplest Fix)**
+
+The simplest solution is to remove `force group` and let Samba use the user's default group:
+
+```bash
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[devdeck]` section, remove or comment out the `force group` line:
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   valid users = admin
+   create mask = 0664
+   directory mask = 0775
+   force user = admin
+   # force group = admin  ← Comment this out or remove it
+```
+
+Then restart Samba:
+```bash
+sudo systemctl restart smbd
+```
+
+Test again:
+```bash
+smbclient //localhost/devdeck -U admin
+```
+
+**Most Common Fix**: Fix 4 (remove `force group`) usually resolves this error.
+
+**Solution 9: Temporarily Enable Guest Access (Testing Only)**
+
+To test if it's an authentication issue, temporarily enable guest access:
+
+On Raspberry Pi:
+```bash
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[devdeck]` section, add:
+```ini
+[devdeck]
+   ...
+   guest ok = yes
+   guest only = yes
+```
+
+Then restart:
+```bash
+sudo systemctl restart smbd
+```
+
+Try accessing from Windows without credentials. **If this works**, the issue is authentication format. **Remove the guest access** after testing and use Solution 1-8 instead.
+
+**Most Common Fix**: Solution 1 (username format) or Solution 2 (verify Samba user exists) usually resolves this.
+
+#### Transitioning from Guest Access to Secure Access
+
+**If guest access worked**, the share is configured correctly but authentication needs to be fixed. Follow these steps to enable secure access:
+
+**Step 1: Remove Guest Access**
+
+```bash
+# Edit Samba config
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[devdeck]` section, **remove or comment out** these lines:
+```ini
+[devdeck]
+   ...
+   # guest ok = yes      ← Comment this out
+   # guest only = yes    ← Comment this out
+```
+
+**Step 2: Ensure Secure Configuration**
+
+Make sure your `[devdeck]` section looks like this (secure configuration):
+
+```ini
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   valid users = admin
+   create mask = 0664
+   directory mask = 0775
+   force user = admin
+   # force group = admin  ← Remove or comment out if causing issues
+```
+
+**Step 3: Verify Samba User Exists**
+
+```bash
+# Check if your user exists in Samba
+sudo pdbedit -L
+# Should show: admin
+
+# If NOT listed, add it:
+sudo smbpasswd -a admin
+# Enter password twice (this is your Samba password)
+
+# Enable the user:
+sudo smbpasswd -e admin
+
+# Verify:
+sudo pdbedit -L -v admin
+```
+
+**Step 4: Restart Samba**
+
+```bash
+sudo systemctl restart smbd
+```
+
+**Step 5: Test from Raspberry Pi**
+
+```bash
+# Test with authentication
+smbclient //localhost/devdeck -U admin
+# Enter your Samba password
+# Type 'ls' to list files
+# Type 'exit' to quit
+```
+
+**Step 6: Test from Windows**
+
+Now try from Windows:
+
+1. **Press `Windows Key + R`**
+2. **Type**: `\\10.0.0.51\devdeck` (your Pi's IP)
+3. **Enter credentials**:
+   - Username: `admin` (or try `WORKGROUP\admin` if that doesn't work)
+   - Password: Your Samba password (the one you set with `sudo smbpasswd -a admin`)
+4. **Click OK**
+
+**If it still doesn't work**, try these username formats in order:
+- `admin`
+- `WORKGROUP\admin`
+- `10.0.0.51\admin` (your Pi's IP)
+
+**Note**: Guest access is convenient but insecure - anyone on your network can access the share. Secure access with authentication is recommended for production use.
+
+**Raspberry Pi-Side Checks:**
+
+```bash
+# 1. Check Samba service is running
+sudo systemctl status smbd
+
+# 2. Check firewall (if enabled)
+sudo ufw status
+# If firewall is active, allow Samba:
+sudo ufw allow samba
+
+# 3. Verify Samba configuration
+sudo testparm -s | grep -A 15 "\[devdeck\]"
+# Should show: read only = No (writable), browseable = yes, valid users = admin
+
+# 4. Check Samba logs
+sudo tail -f /var/log/samba/log.smbd
+
+# 5. Verify user is enabled in Samba
+sudo pdbedit -L
+# Should show your user (admin or your username)
+
+# 6. Restart Samba service
+sudo systemctl restart smbd
+```
+
+#### Can See Folders But Cannot Browse Into devdeck
+
+**Problem**: You can connect and see `admin` and `devdeck` folders, but cannot browse into the `devdeck` folder
+
+**This usually means you're connecting to a parent share instead of the `devdeck` share directly.**
+
+**Solution 1: Connect Directly to the devdeck Share**
+
+Instead of browsing through `\\IP\admin` or similar, connect directly:
+
+1. **Press `Windows Key + R`**
+2. **Type**: `\\192.168.1.100\devdeck` (replace with your Pi's IP)
+3. **Press Enter**
+4. **Enter credentials**:
+   - Username: `admin` (your Pi username)
+   - Password: Your Samba password
+5. You should now see the contents of `~/devdeck` directly
+
+**Solution 2: Verify Samba Share Configuration**
+
+On Raspberry Pi, check that the `devdeck` share is properly configured:
+
+```bash
+# Test Samba configuration
+sudo testparm -s | grep -A 10 "\[devdeck\]"
+```
+
+You should see output like:
+```
+[devdeck]
+   comment = DevDeck Application Directory
+   path = /home/admin/devdeck
+   browseable = yes
+   writeable = yes
+   valid users = admin
+```
+
+**Solution 3: Check Share Permissions**
+
+```bash
+# Verify the devdeck directory exists and has correct permissions
+ls -la ~/devdeck
+
+# Fix ownership if needed
+sudo chown -R $USER:$USER ~/devdeck
+
+# Fix permissions
+find ~/devdeck -type d -exec chmod 755 {} \;
+find ~/devdeck -type f -exec chmod 664 {} \;
+
+# Verify Samba can access it
+sudo testparm
+```
+
+**Solution 4: Check if Multiple Shares Are Configured**
+
+You might have both a home directory share and a devdeck share. Check:
+
+```bash
+# List all Samba shares
+sudo testparm -s | grep "^\["
+```
+
+If you see both `[admin]` (or `[homes]`) and `[devdeck]`, you need to connect to `\\IP\devdeck` specifically, not `\\IP\admin`.
+
+**Solution 5: Restart Samba After Configuration Changes**
+
+```bash
+# Restart Samba to apply any changes
+sudo systemctl restart smbd
+
+# Verify it's running
+sudo systemctl status smbd
+```
+
+**Solution 6: Access via Network Browser (Alternative)**
+
+1. Open File Explorer
+2. Click "Network" in the left sidebar
+3. Find your Raspberry Pi in the list
+4. Double-click it
+5. You should see the `devdeck` share listed
+6. Double-click `devdeck` to access it
+
+#### Authentication Fails
+
+**Problem**: Windows prompts for password but authentication fails
+
+**Solutions**:
+
+```bash
+# 1. Verify Samba user exists and is enabled
+sudo pdbedit -L -v
+
+# 2. Reset Samba password (replace 'admin' with your username)
+sudo smbpasswd -a admin
+sudo smbpasswd -e admin
+
+# 3. Check if user exists in system (replace 'admin' with your username)
+id admin
+whoami  # Find your username
+
+# 4. Verify Samba configuration allows the user
+sudo testparm -s | grep -A 5 "\[devdeck\]"
+```
+
+#### Permission Denied Errors
+
+**Problem**: Can access share but cannot create/modify files, OR application gets "[Errno 13] Permission denied" errors
+
+**Solutions**:
+
+```bash
+# 1. Check directory ownership (replace 'admin' with your username)
+ls -la ~/devdeck
+whoami  # Verify your username
+
+# 2. Fix ownership if needed (replace 'admin' with your username)
+sudo chown -R $USER:$USER ~/devdeck
+
+# 3. Fix directory permissions (directories need execute permission)
+find ~/devdeck -type d -exec chmod 755 {} \;
+
+# 4. Fix file permissions (files need read/write for owner - 664, not 644)
+find ~/devdeck -type f -exec chmod 664 {} \;
+
+# 5. Make scripts executable
+find ~/devdeck -name "*.sh" -exec chmod 755 {} \;
+
+# 6. Verify config files are writable (critical for application)
+ls -la ~/devdeck/config/
+# Should show: -rw-rw-r-- (664) for files, not -rw-r--r-- (644)
+
+# 7. Verify Samba configuration has writeable = yes
+sudo testparm -s | grep -A 5 "\[devdeck\]"
+
+# 8. Check Samba force user matches your username
+sudo testparm -s | grep "force user"
+# Should show: force user = admin (or your username)
+```
+
+**Critical Fix for Application Errors**: If you see `[Errno 13] Permission denied: '/home/admin/devdeck/config/key_mappings.json'`:
+
+```bash
+# Fix ownership and permissions for the entire devdeck directory
+sudo chown -R $USER:$USER ~/devdeck
+find ~/devdeck -type d -exec chmod 755 {} \;
+find ~/devdeck -type f -exec chmod 664 {} \;
+
+# Verify config files are writable
+chmod 664 ~/devdeck/config/*.json ~/devdeck/config/*.yml
+
+# Restart the application service
+sudo systemctl restart devdeck.service
+```
+
+**Root Cause**: The `chmod 644` command makes files read-only for the owner. Config files need `664` permissions (read/write for owner) so the application can modify them.
+
+#### Windows Shows "Network Path Not Found"
+
+**Problem**: Windows cannot find the network path
+
+**Solutions**:
+
+```bash
+# 1. Verify IP address is correct
+hostname -I
+
+# 2. Test connectivity from Windows (PowerShell):
+# Test-NetConnection -ComputerName 192.168.1.100 -Port 445
+
+# 3. Check if Samba is listening on port 445
+sudo netstat -tlnp | grep 445
+
+# 4. Verify network connectivity
+ping raspberry-pi-ip  # From Windows
+
+# 5. Check Windows Firewall (may block SMB)
+# Windows: Settings > Network & Internet > Windows Firewall
+```
+
+#### Slow File Transfers
+
+**Problem**: File transfers are very slow
+
+**Solutions**:
+
+```bash
+# 1. Add performance optimizations to Samba config
+sudo nano /etc/samba/smb.conf
+```
+
+Add to the `[global]` section (at the top of the file):
+
+```ini
+[global]
+   socket options = TCP_NODELAY IPTOS_LOWDELAY SO_RCVBUF=131072 SO_SNDBUF=131072
+   read raw = yes
+   write raw = yes
+   max xmit = 65536
+   dead time = 15
+   getwd cache = yes
+```
+
+Then restart Samba:
+
+```bash
+sudo systemctl restart smbd
+```
+
+### Security Considerations
+
+1. **Use Secure Configuration**: Prefer Option A (password-protected) over guest access
+2. **Strong Passwords**: Use a strong Samba password different from your Linux password
+3. **Network Isolation**: Only enable Samba on trusted local networks
+4. **Firewall**: Consider restricting Samba access to specific IP addresses:
+   ```bash
+   sudo ufw allow from 192.168.1.0/24 to any port 445
+   ```
+5. **Regular Updates**: Keep Samba updated:
+   ```bash
+   sudo apt update && sudo apt upgrade samba
+   ```
+
+### Additional Samba Shares (Optional)
+
+You can add more shares by adding additional sections to `/etc/samba/smb.conf`. For example, to share your entire home directory:
+
+```ini
+[home]
+   comment = Home Directory
+   path = /home/pi
+   browseable = yes
+   writeable = yes
+   valid users = pi
+   create mask = 0644
+   directory mask = 0755
+```
+
+After adding new shares, restart Samba:
+
+```bash
+sudo systemctl restart smbd
 ```
 
 ---
@@ -1267,6 +3120,26 @@ pip install --force-reinstall streamdeck
 
 **Root Cause**: The `devdeck-core` package uses the deprecated `textsize()` method which was removed in Pillow 10.0.0+.
 
+**⚠️ Important: Platform Differences**
+
+This issue affects both Windows and Raspberry Pi, but the fix must be applied separately in each environment's virtual environment. The fix cannot be committed to your project because it's in an external dependency (`devdeck-core`) installed in `venv/`, which is gitignored.
+
+**Recommended Solution: Pin Pillow Version (Prevents Issue)**
+
+The best approach is to pin Pillow to a version before 10.0.0 in `requirements.txt`:
+
+```txt
+pillow<10.0.0
+```
+
+This ensures both Windows and Raspberry Pi use a compatible Pillow version. After updating `requirements.txt`:
+- **Windows**: `pip install -r requirements.txt` (will downgrade if needed)
+- **Raspberry Pi**: `pip install -r requirements.txt` (will install compatible version)
+
+**Manual Fix: Apply to devdeck-core (If Pillow 10.0.0+ Already Installed)**
+
+If Pillow 10.0.0+ is already installed, you can manually fix `devdeck-core` in each environment:
+
 **Solutions**:
 
 **Step 1: Check Pillow Version**
@@ -1277,6 +3150,8 @@ pip show pillow
 ```
 
 **Step 2: Fix devdeck-core text_renderer.py**
+
+**On Raspberry Pi:**
 ```bash
 # Find the text_renderer.py file in devdeck-core
 find ~/devdeck/venv -name "text_renderer.py" -path "*/devdeck_core/*"
@@ -1286,6 +3161,17 @@ find ~/devdeck/venv -name "text_renderer.py" -path "*/devdeck_core/*"
 
 # Edit the file
 nano ~/devdeck/venv/lib/python3.*/site-packages/devdeck_core/rendering/text_renderer.py
+```
+
+**On Windows:**
+```powershell
+# Find the file
+Get-ChildItem -Path "venv\Lib\site-packages\devdeck_core\rendering\text_renderer.py"
+
+# Edit with notepad or your preferred editor
+notepad venv\Lib\site-packages\devdeck_core\rendering\text_renderer.py
+# Or with VS Code:
+code venv\Lib\site-packages\devdeck_core\rendering\text_renderer.py
 ```
 
 **Step 3: Replace textsize() with textbbox()**
@@ -1317,11 +3203,26 @@ source venv/bin/activate
 pip install "pillow<10.0.0"
 ```
 
-**Note**: This fix is applied to your local virtual environment. If you recreate the venv or reinstall `devdeck-core`, you'll need to reapply this fix. Consider submitting a patch to the `devdeck-core` project for a permanent solution.
+**⚠️ Critical Troubleshooting Tip: Platform Differences**
+
+**Important Notes**:
+- ⚠️ **This fix must be applied separately in each virtual environment** (Windows and Raspberry Pi have separate venvs)
+- The fix is applied to your local virtual environment only - it **cannot be committed to git** (venv/ is gitignored)
+- If you recreate the venv or reinstall `devdeck-core`, you'll need to reapply this fix
+- **Best Practice**: Pin Pillow version in `requirements.txt` (`pillow<10.0.0`) to prevent this issue in new environments
+- Consider submitting a patch to the `devdeck-core` project for a permanent upstream solution
+
+**Why This Happens**:
+- `devdeck-core` is an external dependency installed in `venv/`
+- Each platform (Windows/Raspberry Pi) has its own virtual environment
+- The fix must be applied to each environment independently
+- Pinning Pillow version in `requirements.txt` ensures consistency across platforms
 
 **Common Causes**:
 - Pillow 10.0.0+ installed (textsize() method removed)
 - devdeck-core package not updated for Pillow 10.0.0+
+- Missing system fonts (DejaVu, Liberation, or Arial)
+- Font path issues in devdeck-core library
 
 ### Button Actions Not Triggering
 
@@ -1775,15 +3676,7 @@ scp -r ~/devdeck/* pi@raspberry-pi-ip:~/devdeck/
 ```
 
 **Method 3: Shared Folder** (Samba):
-```bash
-# Install Samba on Pi
-sudo apt install samba
-
-# Configure shared folder
-sudo nano /etc/samba/smb.conf
-
-# Access from Windows: \\raspberry-pi-ip\devdeck
-```
+See the [Samba Configuration section](#samba-configuration-windows-network-access) for detailed setup instructions. This allows direct file access from Windows without copying files.
 
 **Method 4: USB Drive**:
 - Copy files to USB drive
@@ -1848,4 +3741,6 @@ Use this checklist for a quick deployment:
 *Last Updated: 2025*
 
 **Note**: This guide assumes Raspberry Pi OS (64-bit). Adjustments may be needed for other Linux distributions.
+
+To do: This file needs to be reviewed to ensure it is accurate
 
