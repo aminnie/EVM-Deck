@@ -1312,7 +1312,309 @@ Then on Windows, use: `\\raspberrypi\devdeck` (or whatever your hostname is)
 
 **Note**: Hostname resolution may not work on all networks. If it doesn't work, use the IP address instead.
 
-### Step 10: Verify Access
+### Step 10: Mount Samba Share on Linux (Alternative Method)
+
+If you're accessing the Samba share from another Linux machine (including another Raspberry Pi), you can mount it using CIFS:
+
+**Install CIFS Utilities:**
+
+```bash
+# On the Linux machine that will mount the share
+sudo apt update
+sudo apt install -y cifs-utils
+```
+
+**Create Mount Point:**
+
+```bash
+# Create directory for mounting
+sudo mkdir -p /mnt/devdeck
+```
+
+**Mount the Share:**
+
+```bash
+# Method 1: Mount with password prompt (most secure)
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+
+# Enter password when prompted
+
+# Method 2: Mount with password in command (less secure, but convenient)
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,password=YOUR_PASSWORD,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+
+# Method 3: Mount with credentials file (more secure than Method 2)
+# First, create credentials file:
+echo "username=admin" | sudo tee /root/.devdeck_credentials
+echo "password=YOUR_PASSWORD" | sudo tee -a /root/.devdeck_credentials
+sudo chmod 600 /root/.devdeck_credentials
+
+# Then mount:
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o credentials=/root/.devdeck_credentials,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Important Options Explained:**
+
+- `username=admin`: Your Samba username
+- `password=YOUR_PASSWORD`: Your Samba password (use credentials file for security)
+- `uid=$(id -u)`: Mount as your user ID (so files are owned by you)
+- `gid=$(id -g)`: Mount with your group ID
+- `iocharset=utf8`: Support UTF-8 filenames
+- `file_mode=0664`: File permissions (read/write for owner and group)
+- `dir_mode=0775`: Directory permissions
+
+**Unmount the Share:**
+
+```bash
+sudo umount /mnt/devdeck
+```
+
+**Auto-Mount on Boot (Optional):**
+
+Add to `/etc/fstab`:
+
+```bash
+sudo nano /etc/fstab
+```
+
+Add this line (replace with your details):
+
+```
+//10.0.0.51/devdeck /mnt/devdeck cifs credentials=/root/.devdeck_credentials,uid=1000,gid=1000,iocharset=utf8,file_mode=0664,dir_mode=0775 0 0
+```
+
+**Troubleshooting CIFS Mount Errors:**
+
+**Error: "mount error(22): Invalid argument"**
+
+This usually means a syntax error in the mount command. Common fixes:
+
+1. **Check password syntax**: Use `password=YOUR_PASSWORD`, not `username=admin,YOUR_PASSWORD`
+   ```bash
+   # WRONG:
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck -o username=admin,aminnie123,...
+   
+   # CORRECT:
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck -o username=admin,password=aminnie123,...
+   ```
+
+2. **Verify mount point exists**:
+   ```bash
+   sudo mkdir -p /mnt/devdeck
+   ```
+
+3. **Check if cifs-utils is installed**:
+   ```bash
+   dpkg -l | grep cifs-utils
+   # If not installed:
+   sudo apt install cifs-utils
+   ```
+
+4. **Try with SMB version specified**:
+   ```bash
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+     -o username=admin,password=YOUR_PASSWORD,vers=3.0,uid=$(id -u),gid=$(id -g),iocharset=utf8
+   ```
+
+5. **Check kernel messages for details**:
+   ```bash
+   dmesg | tail -20
+   # Look for CIFS-related error messages
+   ```
+
+6. **Test with minimal options first**:
+   ```bash
+   # Start simple, then add options
+   sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck -o username=admin
+   # Enter password when prompted
+   # If this works, add other options one by one
+   ```
+
+**Error: "mount error(13): Permission denied"**
+
+This error means authentication failed or the user doesn't have permission. Try these fixes:
+
+**Fix 1: Verify Samba User Exists and is Enabled**
+
+On the Raspberry Pi (the Samba server), check:
+
+```bash
+# List all Samba users
+sudo pdbedit -L
+
+# Should show: admin (or your username)
+# If your user is NOT listed, add it:
+sudo smbpasswd -a admin
+# Enter password twice
+
+# Enable the user (if disabled):
+sudo smbpasswd -e admin
+
+# Verify user is enabled:
+sudo pdbedit -L -v admin
+# Should show account flags: [U] (User account)
+```
+
+**Fix 2: Verify Password is Correct**
+
+The password you enter must be the **Samba password**, not your Linux user password:
+
+```bash
+# On Raspberry Pi, reset Samba password if needed:
+sudo smbpasswd admin
+# Enter new password twice
+```
+
+**Fix 3: Check Samba Share Configuration**
+
+On Raspberry Pi, verify the share allows your user:
+
+```bash
+# Check Samba configuration
+sudo testparm -s | grep -A 10 "\[devdeck\]"
+```
+
+Should show:
+```
+[devdeck]
+   valid users = admin    ← Your username should be here
+   read only = No
+   writeable = yes
+```
+
+If `valid users` doesn't include your username, edit `/etc/samba/smb.conf`:
+
+```bash
+sudo nano /etc/samba/smb.conf
+```
+
+In the `[devdeck]` section, ensure:
+```ini
+[devdeck]
+   valid users = admin
+   # Or for multiple users: valid users = admin, pi
+```
+
+Then restart:
+```bash
+sudo systemctl restart smbd
+```
+
+**Fix 4: Try with Workgroup/Domain Prefix**
+
+Sometimes you need to specify the workgroup:
+
+```bash
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=WORKGROUP\\admin,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+# Note: Use double backslash \\ for workgroup prefix
+```
+
+Or with domain= option:
+```bash
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,domain=WORKGROUP,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 5: Try Guest Access (If Enabled)**
+
+If guest access is enabled on the share, try mounting without credentials:
+
+```bash
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o guest,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 6: Check SMB Protocol Version**
+
+Try specifying SMB version explicitly:
+
+```bash
+# Try SMB 3.0
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,vers=3.0,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+
+# Or try SMB 2.1
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o username=admin,vers=2.1,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 7: Test Samba Share from Raspberry Pi**
+
+On the Raspberry Pi, test if the share works locally:
+
+```bash
+# Test accessing the share
+smbclient //localhost/devdeck -U admin
+# Enter Samba password
+# Type 'ls' to list files
+# Type 'exit' to quit
+```
+
+If this works, the share is configured correctly and the issue is with the mount command or network.
+
+**Fix 8: Check Network Connectivity and Firewall**
+
+```bash
+# Test connectivity
+ping 10.0.0.51
+
+# Test SMB port
+telnet 10.0.0.51 445
+# Or:
+nc -zv 10.0.0.51 445
+
+# On Raspberry Pi, check firewall
+sudo ufw status
+# If firewall is active, ensure Samba is allowed:
+sudo ufw allow samba
+```
+
+**Fix 9: Use Credentials File**
+
+Create a credentials file for more reliable authentication:
+
+```bash
+# Create credentials file
+echo "username=admin" | sudo tee /root/.devdeck_credentials
+echo "password=YOUR_SAMBA_PASSWORD" | sudo tee -a /root/.devdeck_credentials
+echo "domain=WORKGROUP" | sudo tee -a /root/.devdeck_credentials
+sudo chmod 600 /root/.devdeck_credentials
+
+# Mount using credentials file
+sudo mount -t cifs //10.0.0.51/devdeck /mnt/devdeck \
+  -o credentials=/root/.devdeck_credentials,uid=$(id -u),gid=$(id -g),iocharset=utf8,file_mode=0664,dir_mode=0775
+```
+
+**Fix 10: Check Kernel Messages**
+
+For more details on the error:
+
+```bash
+# Check kernel messages
+dmesg | tail -30
+# Look for CIFS-related error messages
+
+# Check system logs
+sudo journalctl -xe | tail -30
+```
+
+**Most Common Causes:**
+
+1. **Samba user doesn't exist**: Run `sudo smbpasswd -a admin` on Raspberry Pi
+2. **Wrong password**: Use the Samba password (set with `smbpasswd`), not Linux password
+3. **User not in valid_users**: Check `valid users = admin` in smb.conf
+4. **SMB version mismatch**: Try adding `vers=3.0` or `vers=2.1` to mount options
+
+**Error: "Host is down" or "Connection refused"**
+
+- Verify Raspberry Pi is accessible: `ping 10.0.0.51`
+- Check Samba service is running: `sudo systemctl status smbd` on Pi
+- Verify firewall allows SMB: `sudo ufw allow samba` on Pi
+
+### Step 11: Verify Access
 
 Test that you can read and write files:
 
@@ -3242,4 +3544,6 @@ Use this checklist for a quick deployment:
 *Last Updated: 2025*
 
 **Note**: This guide assumes Raspberry Pi OS (64-bit). Adjustments may be needed for other Linux distributions.
+
+To do: This file needs to be reviewed to ensure it is accurate
 
