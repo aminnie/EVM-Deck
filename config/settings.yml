@@ -5,34 +5,44 @@ decks:
     controls:
     - key: 0
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 1
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 2
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 3
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 4
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 5
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 6
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 7
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 8
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 9
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 10
       name: devdeck.controls.navigation_toggle_control.NavigationToggleControl
       settings:
@@ -44,34 +54,44 @@ decks:
           controls:
           - key: 0
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 1
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 2
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 3
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 4
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 5
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 6
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 7
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 8
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 9
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 10
             name: devdeck.controls.navigation_toggle_control.NavigationToggleControl
             settings:
@@ -80,25 +100,33 @@ decks:
               text_color: black
           - key: 11
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 12
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 13
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
           - key: 14
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-            settings: {}
+            settings:
+              port: "USB MIDI Interface MIDI 14"
     - key: 11
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 12
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 13
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"
     - key: 14
       name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
-      settings: {}
+      settings:
+        port: "USB MIDI Interface MIDI 14"

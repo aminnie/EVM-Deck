@@ -2736,6 +2736,149 @@ aseqdump -p 20:0
 aseqdump -l
 ```
 
+**Method 3a: Use aconnect to Route MIDI for Testing**
+
+The `aconnect` tool can be used to route MIDI between ports, which is useful for testing and verification. This technique is based on [using a Raspberry Pi as a MIDI USB/5-pin bridge](https://m635j520.blogspot.com/2017/01/using-raspberry-pi-as-midi-usb5-pin.html).
+
+**Step 1: List All MIDI Ports**
+
+```bash
+# List all MIDI input and output ports
+aconnect -l
+
+# Or list only input ports:
+aconnect -i
+
+# Or list only output ports:
+aconnect -o
+```
+
+**Example Output**:
+```
+client 0: 'System' [type=kernel]
+    0 'Timer           '
+    1 'Announce        '
+client 14: 'Midi Through' [type=kernel]
+    0 'Midi Through Port-0'
+client 20: 'USB MIDI Interface' [type=kernel,card=1]
+    0 'USB MIDI Interface MIDI 1'
+client 24: 'EVM Stream Deck Controller' [type=user,pid=1230]
+    0 'output          '
+```
+
+**Step 2: Connect MIDI Ports for Testing**
+
+You can use `aconnect` to route MIDI from your application's virtual port to your USB MIDI interface:
+
+**First, identify the correct port numbers:**
+
+```bash
+# List all MIDI ports with their client:port numbers
+aconnect -l
+
+# Or list only output ports (sources):
+aconnect -o
+
+# Or list only input ports (destinations):
+aconnect -i
+```
+
+**Then connect the ports:**
+
+```bash
+# Syntax: aconnect <source_client>:<source_port> <dest_client>:<dest_port>
+# Connect virtual port (client 24, port 0) to USB MIDI interface (client 20, port 0)
+aconnect 24:0 20:0
+
+# Verify the connection:
+aconnect -l
+# Should show: "Connecting To: 20:0" under client 24
+```
+
+**Common Issues and Solutions:**
+
+1. **"client 24:0 is not available" or "client 20:0 is not available"**:
+   - The port numbers don't exist or have changed
+   - Run `aconnect -l` again to get current port numbers
+   - Port numbers can change when devices are reconnected
+
+2. **"client 24:0 is not a valid source"**:
+   - The source port must be an output port
+   - Check with `aconnect -o` to see available output ports
+   - Virtual ports created by applications are usually output ports
+
+3. **"client 20:0 is not a valid destination"**:
+   - The destination port must be an input port
+   - Check with `aconnect -i` to see available input ports
+   - USB MIDI interfaces usually have both input and output ports
+
+4. **"Connection failed: Device or resource busy"**:
+   - The port is already connected to another port
+   - Disconnect existing connections first: `aconnect -x 24:0`
+   - Or disconnect specific connection: `aconnect -d 24:0 20:0`
+
+5. **"Permission denied"**:
+   - User needs to be in the `audio` group
+   - Add user: `sudo usermod -a -G audio $USER`
+   - Log out and log back in for changes to take effect
+
+**Example Workflow:**
+
+```bash
+# Step 1: Start your application (creates virtual MIDI port)
+cd ~/devdeck
+source venv/bin/activate
+python3 -m devdeck.main &
+# Note the PID or check aconnect -l in another terminal
+
+# Step 2: In another terminal, find the port numbers
+aconnect -l
+# Look for "EVM Stream Deck Controller" or similar - note the client number
+# Look for your USB MIDI interface - note its client number
+
+# Step 3: Connect them (replace with actual numbers from step 2)
+aconnect 24:0 20:0
+
+# Step 4: Verify connection
+aconnect -l
+# Should show connection between the ports
+
+# Step 5: Monitor MIDI traffic
+aseqdump -p 20:0
+```
+
+**Step 3: Test MIDI Routing**
+
+1. **Start your application** (creates virtual MIDI port)
+2. **Connect the virtual port to USB MIDI interface**:
+   ```bash
+   aconnect -l  # Find your virtual port number
+   aconnect 24:0 20:0  # Connect virtual port to USB MIDI interface
+   ```
+3. **Monitor MIDI traffic** on the USB MIDI interface:
+   ```bash
+   aseqdump -p 20:0
+   ```
+4. **Press buttons on Stream Deck** - you should see MIDI messages in aseqdump
+
+**Step 4: Disconnect When Done**
+
+```bash
+# Disconnect ports
+aconnect -d 24:0 20:0
+
+# Or disconnect all connections from a port:
+aconnect -x 24:0
+```
+
+**Use Cases**:
+- Route MIDI from virtual port to hardware MIDI interface
+- Connect multiple MIDI devices together
+- Create MIDI bridges between USB and 5-pin MIDI devices
+- Test MIDI routing without modifying application code
+
+**Note**: Connections made with `aconnect` are temporary and will be lost on reboot. For permanent routing, see the article on [automatic MIDI connection setup](https://m635j520.blogspot.com/2017/01/using-raspberry-pi-as-midi-usb5-pin.html).
+
 **Method 4: Test with MIDI Monitor on Another Device**
 
 1. **Connect USB MIDI Interface to Windows Computer**:
