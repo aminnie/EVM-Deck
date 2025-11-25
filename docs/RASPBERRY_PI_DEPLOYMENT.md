@@ -966,6 +966,203 @@ aplaymidi -l
 cat /proc/asound/cards
 ```
 
+### Using aseqdump for USB MIDI Troubleshooting
+
+**Tool**: `aseqdump` - A command-line tool for monitoring MIDI events (part of the `alsa-utils` package)
+
+This tool is useful for debugging USB MIDI connections and verifying that MIDI messages are being sent correctly.
+
+**Step 1: Install alsa-utils (if not already installed)**
+
+```bash
+# Install alsa-utils package (includes aseqdump)
+sudo apt install -y alsa-utils
+```
+
+**Step 2: List Available MIDI Ports**
+
+```bash
+# List all MIDI clients and ports
+aseqdump -l
+```
+
+This will show a list of clients and ports, including any connected USB MIDI devices. The output will look something like:
+```
+ Port    Client name                      Port name
+  0:0    System                          Timer
+  0:1    System                          Announce
+ 20:0    Launchkey 25                    Launchkey 25 MIDI 1
+```
+
+**Step 3: Monitor MIDI Events from a Specific Port**
+
+```bash
+# Dump MIDI events from a specific port
+aseqdump -p client:port
+```
+
+Replace `client:port` with the identified client and port number of your MIDI output device from the previous step. For example:
+```bash
+# Monitor Launchkey 25 MIDI 1 (client 20, port 0)
+aseqdump -p 20:0
+```
+
+This will display MIDI messages in real-time as they are sent, showing the message type, channel, and data. Press `Ctrl+C` to stop monitoring.
+
+**Example Output**:
+```
+Waiting for data. Press Ctrl+C to end.
+Source  Event                  Ch  Data
+ 20:0   Control Change          0, controller 102, value 64
+ 20:0   Note on                 0, note 60, velocity 100
+ 20:0   Note off                0, note 60, velocity 0
+```
+
+**Use Cases**:
+- Verify that MIDI devices are detected by ALSA
+- Monitor MIDI messages being sent from your application
+- Debug MIDI communication issues
+- Identify the correct client:port numbers for your MIDI devices
+
+**Note**: The `aseqdump` tool works with ALSA MIDI ports. If your MIDI device appears in `aseqdump -l`, it should also be available to your application through the `mido` library.
+
+### Testing MIDI Output with mido
+
+**Tool**: Direct Python test using the `mido` library
+
+This test allows you to verify that MIDI output ports are accessible and can send messages correctly. This is useful when troubleshooting MIDI communication issues.
+
+**Step 1: Activate Virtual Environment**
+
+```bash
+# Navigate to project root
+cd ~/devdeck
+
+# Activate virtual environment
+source venv/bin/activate
+```
+
+**Step 2: List Available MIDI Output Ports**
+
+```bash
+# Run Python to list output ports
+python3 -c "import mido; print('Available MIDI output ports:'); [print(f'  - {port}') for port in mido.get_output_names()]"
+```
+
+This will display all available MIDI output ports. Note the exact name of your MIDI device.
+
+**Step 3: Test MIDI Output**
+
+Create a test script or run directly in Python:
+
+```bash
+# Test MIDI output (replace 'Your MIDI Output Port Name' with actual port name)
+python3 << 'EOF'
+import mido
+
+# List output ports
+print("Available MIDI output ports:")
+for port in mido.get_output_names():
+    print(f"  - {port}")
+
+# Open the output port you are sending messages to
+# Replace 'Your MIDI Output Port Name' with the actual name
+port_name = 'Your MIDI Output Port Name'  # Change this to your MIDI port name
+try:
+    outport = mido.open_output(port_name)
+    print(f"\n✓ Successfully opened MIDI output port: {port_name}")
+    
+    # Example: Send a note on message
+    outport.send(mido.Message('note_on', note=60, velocity=64))
+    print("✓ Sent note_on message (note=60, velocity=64)")
+    
+    # Send note off after a short delay
+    import time
+    time.sleep(0.1)
+    outport.send(mido.Message('note_off', note=60, velocity=0))
+    print("✓ Sent note_off message")
+    
+    # Close the port
+    outport.close()
+    print("✓ MIDI port closed successfully")
+except Exception as e:
+    print(f"\n✗ Error: {e}")
+EOF
+```
+
+**Alternative: Interactive Test Script**
+
+You can also create a reusable test script:
+
+```bash
+# Create test script
+cat > ~/devdeck/test_midi_output.py << 'EOF'
+#!/usr/bin/env python3
+import mido
+import sys
+
+# List output ports
+print("Available MIDI output ports:")
+ports = mido.get_output_names()
+if not ports:
+    print("  No MIDI output ports found!")
+    sys.exit(1)
+
+for i, port in enumerate(ports):
+    print(f"  {i}: {port}")
+
+# If port name provided as argument, use it; otherwise use first port
+if len(sys.argv) > 1:
+    port_name = sys.argv[1]
+else:
+    port_name = ports[0]
+    print(f"\nUsing first available port: {port_name}")
+
+try:
+    # Open the output port
+    outport = mido.open_output(port_name)
+    print(f"\n✓ Successfully opened MIDI output port: {port_name}")
+    
+    # Send a test note on message
+    outport.send(mido.Message('note_on', note=60, velocity=64))
+    print("✓ Sent note_on message (note=60, velocity=64)")
+    
+    # Wait a moment
+    import time
+    time.sleep(0.1)
+    
+    # Send note off
+    outport.send(mido.Message('note_off', note=60, velocity=0))
+    print("✓ Sent note_off message")
+    
+    # Close the port
+    outport.close()
+    print("✓ MIDI port closed successfully")
+    print("\nTest completed successfully!")
+    
+except Exception as e:
+    print(f"\n✗ Error: {e}")
+    sys.exit(1)
+EOF
+
+# Make script executable
+chmod +x ~/devdeck/test_midi_output.py
+
+# Run the test script
+python3 ~/devdeck/test_midi_output.py
+
+# Or specify a port name
+python3 ~/devdeck/test_midi_output.py "Your MIDI Output Port Name"
+```
+
+**Use Cases**:
+- Verify that MIDI output ports are accessible
+- Test MIDI message sending functionality
+- Debug MIDI port connection issues
+- Verify that your MIDI device receives messages correctly
+
+**Note**: If you have a MIDI loopback or monitor device, you can also open an input port and listen for echoed messages to verify the complete MIDI path.
+
 ### Application Crashes on Startup
 
 **Problem**: Service fails to start
