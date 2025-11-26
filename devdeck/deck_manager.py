@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 # Constants
 DEFAULT_DECK_BRIGHTNESS = 50
-DEFAULT_SCREEN_SAVER_TIMEOUT_SECONDS = 15
+DEFAULT_SCREEN_SAVER_TIMEOUT_SECONDS = 1800  # 30 minutes (30 * 60 seconds)
 SCREEN_SAVER_BRIGHTNESS = 5  # Very low brightness when in screen saver mode
 IDLE_CHECK_INTERVAL = 1.0  # Check idle time every second
 
@@ -28,7 +28,7 @@ class DeckManager:
         
         Args:
             deck: Stream Deck device instance
-            screen_saver_timeout: Timeout in seconds before screen saver activates (default: 15)
+            screen_saver_timeout: Timeout in seconds before screen saver activates (default: 1800 = 30 minutes)
         """
         self.__logger = logging.getLogger('devdeck')
         self.__deck = deck

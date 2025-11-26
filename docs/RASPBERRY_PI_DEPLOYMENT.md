@@ -825,12 +825,11 @@ python3 -m devdeck.main
 
 ### Step 4: Configure Screen Saver (Optional)
 
-The application includes a screen saver feature that activates after a period of inactivity. When active, the screen dims and displays "Ketron EVM" text cycling across the keys to indicate the system is still running.
+The application includes a screen saver feature that activates after a period of inactivity. When active, the screen brightness is dimmed to preserve the display and reduce power consumption.
 
 **Default Behavior:**
-- Screen saver activates after **15 seconds** of inactivity (no key presses)
+- Screen saver activates after **30 minutes** of inactivity (no key presses)
 - Brightness dims to 5% (from default 50%)
-- "Ketron EVM" text cycles across all keys
 - Any key press immediately wakes the display and restores normal operation
 
 **Configuration:**
@@ -849,16 +848,14 @@ decks:
 
 **Configuration Options:**
 - `screen_saver_timeout` (optional): Time in seconds before screen saver activates
-  - Default: 15 seconds (if not specified)
-  - Recommended values: 60-600 seconds (1-10 minutes) for production use
-  - Set to 15 seconds for testing/debugging
+  - Default: 1800 seconds (30 minutes) if not specified
+  - Recommended values: 300-3600 seconds (5-60 minutes) for production use
+  - Set to 15-60 seconds for testing/debugging
 
 **How It Works:**
 1. The application tracks the last time any key was pressed
 2. After the timeout period, the screen saver activates:
    - Brightness is reduced to 5%
-   - All keys are cleared
-   - "Ketron EVM" text begins cycling across keys
 3. Pressing any key immediately:
    - Restores original brightness
    - Re-renders the active deck
@@ -875,20 +872,24 @@ settings:
 settings:
   screen_saver_timeout: 60
 
-# Medium timeout (5 minutes) - recommended
+# Medium timeout (5 minutes)
 settings:
   screen_saver_timeout: 300
 
-# Long timeout (10 minutes)
+# Default timeout (30 minutes) - used if not specified
 settings:
-  screen_saver_timeout: 600
+  screen_saver_timeout: 1800
+
+# Long timeout (1 hour)
+settings:
+  screen_saver_timeout: 3600
 
 # Disable screen saver (set to very high value)
 settings:
   screen_saver_timeout: 86400  # 24 hours (effectively disabled)
 ```
 
-**Note:** The screen saver helps preserve the Stream Deck display and clearly indicates the system is active and ready to use.
+**Note:** The screen saver helps preserve the Stream Deck display by reducing brightness during periods of inactivity. The system remains fully functional and ready to use - simply press any key to wake the display.
 
 ---
 
