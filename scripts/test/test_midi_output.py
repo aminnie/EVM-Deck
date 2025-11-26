@@ -105,20 +105,21 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 2: Send MIDI Note messages on channel 16 with volume ramping on channel 16
-        print("Test 2: Sending MIDI Note Messages on Channel 16 with Volume Ramping on Channel 16")
+        # Test 2: Send MIDI Note messages on channel 4 with volume ramping (Upper) on channel 16
+        print("Test 2: Sending MIDI Note Messages on Channel 4 with Volume Ramping (Upper) on Channel 16")
         print("-" * 70)
         # Send 40 different notes (C major scale extended across multiple octaves)
         # MIDI note numbers: C3=48 through A7=105 (extended C major scale)
         notes = [48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84, 86, 88, 89, 91, 93, 95, 96, 98, 100, 101, 103, 105, 107, 108, 110, 112, 113, 115]
         note_names = ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6', 'D6', 'E6', 'F6', 'G6', 'A6', 'B6', 'C7', 'D7', 'E7', 'F7', 'G7', 'A7', 'B7', 'C8', 'D8', 'E8', 'F8', 'G8']
         
-        # LOWERS_CC = 0x6C = 108 (volume control for lower voices)
-        LOWERS_CC = 0x6C
-        midi_channel_16 = 15 # Channel 16 (0-indexed: 15) for both notes and volume CC
+        # VOICE1_CC = 0x72 = 114 (volume control for upper/voice1 voices)
+        VOICE1_CC = 0x72
+        midi_channel_4 = 3   # Channel 4 (0-indexed: 3) for notes
+        midi_channel_16 = 15 # Channel 16 (0-indexed: 15) for volume CC
         
-        print(f"Sending {len(notes)} different notes on MIDI channel 16...")
-        print("Ramping 'lower' volume CC (108) on channel 16 from 0 to 127 in steps of 16, then back down...")
+        print(f"Sending {len(notes)} different notes on MIDI channel 4...")
+        print("Ramping 'upper' volume CC (114) on channel 16 from 0 to 127 in steps of 16, then back down...")
         print()
         
         # Create volume ramp: 0, 16, 32, 48, 64, 80, 96, 112, 127, 112, 96, 80, 64, 48, 32, 16, 0
@@ -136,9 +137,9 @@ def test_midi_output(port_name=None):
             if (i - 1) % notes_per_volume == 0 and volume_index < len(volume_ramp):
                 volume = volume_ramp[volume_index]
                 
-                # Send volume CC on channel 16
-                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 108, ch 16)...", end='', flush=True)
-                if midi.send_cc(LOWERS_CC, volume, midi_channel_16, port_name):
+                # Send volume CC (Upper/Voice1) on channel 16
+                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 114 Upper, ch 16)...", end='', flush=True)
+                if midi.send_cc(VOICE1_CC, volume, midi_channel_16, port_name):
                     print(" ✓", flush=True)
                 else:
                     print(" ✗", flush=True)
@@ -148,8 +149,8 @@ def test_midi_output(port_name=None):
                 time.sleep(0.05)  # Brief delay after volume change
             
             # Send note on
-            print(f"  [{i:2d}/{len(notes)}] Note On ({note_name}, note {note}, vel 100, ch 16)...", end='', flush=True)
-            if midi.send_note_on(note, velocity=100, channel=midi_channel_16, port_name=port_name):
+            print(f"  [{i:2d}/{len(notes)}] Note On ({note_name}, note {note}, vel 100, ch 4)...", end='', flush=True)
+            if midi.send_note_on(note, velocity=100, channel=midi_channel_4, port_name=port_name):
                 print(" ✓", flush=True)
             else:
                 print(" ✗", flush=True)
@@ -161,8 +162,8 @@ def test_midi_output(port_name=None):
         
         print(f"\nSending Note Off for all {len(notes)} notes...")
         for i, (note, note_name) in enumerate(zip(notes, note_names), 1):
-            print(f"  [{i:2d}/{len(notes)}] Sending Note Off ({note_name}, note {note}, ch 16)...", end='', flush=True)
-            if midi.send_note_off(note, velocity=0, channel=midi_channel_16, port_name=port_name):
+            print(f"  [{i:2d}/{len(notes)}] Sending Note Off ({note_name}, note {note}, ch 4)...", end='', flush=True)
+            if midi.send_note_off(note, velocity=0, channel=midi_channel_4, port_name=port_name):
                 print(" ✓", flush=True)
             else:
                 print(" ✗", flush=True)
