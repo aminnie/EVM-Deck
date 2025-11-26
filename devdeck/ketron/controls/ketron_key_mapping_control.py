@@ -34,6 +34,7 @@ class KetronKeyMappingControl(BaseDeckControl):
         port: MIDI port name (optional, uses first available if not specified)
         cc_value: CC value to send for cc_midis (optional, default: 64)
         cc_channel: MIDI channel for CC messages (optional, default: 0)
+        midi_channel: MIDI channel for volume CC messages (optional, 1-16, default: 16)
     """
     
     _key_mappings_cache = None
@@ -456,6 +457,12 @@ class KetronKeyMappingControl(BaseDeckControl):
                 'required': False,
                 'min': 0,
                 'max': 15
+            },
+            'midi_channel': {
+                'type': 'integer',
+                'required': False,
+                'min': 1,
+                'max': 16
             },
             # Allow TextControl settings for backward compatibility (they're ignored)
             'text': {
