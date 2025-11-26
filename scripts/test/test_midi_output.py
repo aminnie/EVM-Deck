@@ -166,8 +166,8 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 2: Send MIDI Note messages on channel 4 with volume ramping (Upper) on channel 16
-        print("Test 2: Sending MIDI Note Messages on Channel 4 with Volume Ramping (Upper) on Channel 16")
+        # Test 2: Send MIDI Note messages on channel 3 with volume ramping (Upper) on channel 3
+        print("Test 2: Sending MIDI Note Messages on Channel 3 with Volume Ramping (Upper) on Channel 3")
         print("-" * 70)
         # Send 40 different notes (C major scale extended across multiple octaves)
         # MIDI note numbers: C3=48 through A7=105 (extended C major scale)
@@ -179,8 +179,8 @@ def test_midi_output(port_name=None):
         midi_channel_4 = 3 - 1   # Channel 4-1 = Channel 3 (0-indexed: 2) for notes
         midi_channel_16 = 15 - 1 # Channel 16-1 = Channel 15 (0-indexed: 14) for volume CC
         
-        print(f"Sending {len(notes)} different notes on MIDI channel 4...")
-        print("Ramping 'upper' volume CC (114) on channel 16 from 0 to 127 in steps of 16, then back down...")
+        print(f"Sending {len(notes)} different notes on MIDI channel 3...")
+        print("Ramping 'upper' volume CC (114) on channel 3 (same as notes) from 0 to 127 in steps of 16, then back down...")
         print()
         
         # Create volume ramp: 0, 16, 32, 48, 64, 80, 96, 112, 127, 112, 96, 80, 64, 48, 32, 16, 0
@@ -198,9 +198,10 @@ def test_midi_output(port_name=None):
             if (i - 1) % notes_per_volume == 0 and volume_index < len(volume_ramp):
                 volume = volume_ramp[volume_index]
                 
-                # Send volume CC (Upper/Voice1) on channel 16
-                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 114 Upper, ch 16)...", end='', flush=True)
-                if midi.send_cc(VOICE1_CC, volume, midi_channel_16, port_name):
+                # Send volume CC (Upper/Voice1) on the same channel as notes (channel 3)
+                # The Ketron EVM may require volume CC on the same channel as the notes
+                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 114 Upper, ch 3)...", end='', flush=True)
+                if midi.send_cc(VOICE1_CC, volume, midi_channel_4, port_name):
                     print(" ✓", flush=True)
                 else:
                     print(" ✗", flush=True)

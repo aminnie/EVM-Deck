@@ -54,16 +54,16 @@ class KetronVolumeManager:
         self.__logger = logging.getLogger('devdeck')
         self._volume_lock = threading.Lock()
         
-        # Initialize all volumes to 64 (middle value) by default
-        self._lower = 64
-        self._voice1 = 64
-        self._voice2 = 64
-        self._drawbars = 64
-        self._style = 64
-        self._drum = 64
-        self._chord = 64
-        self._realchord = 64
-        self._master = 64  # Master volume
+        # Initialize all volumes to 80 by default
+        self._lower = 80
+        self._voice1 = 80
+        self._voice2 = 80
+        self._drawbars = 80
+        self._style = 80
+        self._drum = 80
+        self._chord = 80
+        self._realchord = 80
+        self._master = 80  # Master volume
         
         # Initialize MIDI output channel (1-16, default: 16)
         self._midi_out_channel = 16
@@ -897,14 +897,14 @@ class KetronVolumeManager:
     def toggle_mute_last_pressed_volume(self, port_name: Optional[str] = None) -> Optional[int]:
         """
         Toggle mute for the last pressed volume key.
-        - If volume is 0 (muted), restore to 64
+        - If volume is 0 (muted), restore to 80
         - If volume is not 0, mute it (set to 0)
         
         Args:
             port_name: MIDI port name (optional, uses default if None)
         
         Returns:
-            New volume value (0 or 64) if successful, None if no last pressed key or invalid key
+            New volume value (0 or 80) if successful, None if no last pressed key or invalid key
         """
         key_name = self.last_pressed_key_name
         if not key_name:
@@ -920,10 +920,10 @@ class KetronVolumeManager:
         # Get current volume
         current_volume = self._get_volume(volume_name)
         
-        # Toggle: if muted (0), restore to 64; otherwise mute (set to 0)
+        # Toggle: if muted (0), restore to 80; otherwise mute (set to 0)
         if current_volume == 0:
-            # Restore to 64
-            new_volume = 64
+            # Restore to 80
+            new_volume = 80
             self._set_volume(volume_name, new_volume)
             # Special handling for master volume (uses Expression CC)
             if volume_name == "master":
