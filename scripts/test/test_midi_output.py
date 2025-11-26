@@ -115,8 +115,8 @@ def test_midi_output(port_name=None):
         
         # VOICE1_CC = 0x72 = 114 (volume control for upper/voice1 voices)
         VOICE1_CC = 0x72
-        midi_channel_4 = 3   # Channel 4 (0-indexed: 3) for notes
-        midi_channel_16 = 15 # Channel 16 (0-indexed: 15) for volume CC
+        midi_channel_4 = 3 - 1   # Channel 4-1 = Channel 3 (0-indexed: 2) for notes
+        midi_channel_16 = 15 - 1 # Channel 16-1 = Channel 15 (0-indexed: 14) for volume CC
         
         print(f"Sending {len(notes)} different notes on MIDI channel 4...")
         print("Ramping 'upper' volume CC (114) on channel 16 from 0 to 127 in steps of 16, then back down...")
