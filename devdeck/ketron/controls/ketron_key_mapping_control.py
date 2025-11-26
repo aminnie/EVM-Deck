@@ -214,7 +214,7 @@ class KetronKeyMappingControl(BaseDeckControl):
         # Render the control
         self._render()
     
-    def _render(self):
+    def _render(self, background_color_override=None):
         """Render the control with text and colors from key_mappings.json"""
         with self.deck_context() as context:
             with context.renderer() as r:
@@ -231,7 +231,8 @@ class KetronKeyMappingControl(BaseDeckControl):
                 # Get text and colors from mapping
                 key_name = self.key_mapping.get('key_name', '')
                 text_color = self.key_mapping.get('text_color', 'white')
-                background_color = self.key_mapping.get('background_color', 'black')
+                # Use override if provided, otherwise use from mapping
+                background_color = background_color_override if background_color_override else self.key_mapping.get('background_color', 'black')
                 
                 # Wrap text to maximum 6 characters per line
                 wrapped_text = wrap_text_to_lines(key_name, max_chars_per_line=6)
@@ -257,6 +258,64 @@ class KetronKeyMappingControl(BaseDeckControl):
                     .center_vertically()\
                     .center_horizontally()\
                     .end()
+    
+    def _flash_key(self, flash_color: str, flash_duration_ms: int = 100) -> None:
+        """
+        Flash the key with a specified background color for a duration.
+        
+        Args:
+            flash_color: Color to flash (e.g., 'offwhite', 'red')
+            flash_duration_ms: Duration of flash in milliseconds (default: 100)
+        """
+        # Render with flash color
+        self._render(background_color_override=flash_color)
+        
+        # Restore original state after flash duration
+        def _restore_after_flash():
+            time.sleep(flash_duration_ms / 1000.0)
+            self._render()
+        
+        thread = threading.Thread(target=_restore_after_flash, daemon=True)
+        thread.start()
+    
+    def _flash_key_with_error(self, flash_color: str, error_text: str, flash_duration_ms: int = 100) -> None:
+        """
+        Flash the key with a specified background color and show an error message.
+        
+        Args:
+            flash_color: Color to flash (e.g., 'red')
+            error_text: Error message to display
+            flash_duration_ms: Duration of flash in milliseconds (default: 100)
+        """
+        # Render error message with flash background
+        with self.deck_context() as context:
+            with context.renderer() as r:
+                # Convert color if needed
+                standard_colors = {'blue', 'green', 'red', 'yellow', 'orange', 'purple', 'white', 'black', 'grey', 'gray', 'cyan', 'magenta', 'pink', 'brown', 'teal', 'navy', 'maroon', 'lime', 'silver', 'gold', 'lightblue', 'lightgreen', 'lightgray', 'darkblue', 'darkgreen', 'darkred'}
+                bg_color = flash_color
+                if bg_color.lower() not in standard_colors:
+                    if bg_color in COLOR_MAP:
+                        hex_value = COLOR_MAP[bg_color]
+                        bg_color = f"#{hex_value:06X}"
+                    elif bg_color.lower() in COLOR_MAP:
+                        hex_value = COLOR_MAP[bg_color.lower()]
+                        bg_color = f"#{hex_value:06X}"
+                
+                r.background_color(bg_color)
+                r.text(error_text)\
+                    .font_size(70)\
+                    .color('red')\
+                    .center_vertically()\
+                    .center_horizontally()\
+                    .end()
+        
+        # Restore original state after flash duration
+        def _restore_after_flash():
+            time.sleep(flash_duration_ms / 1000.0)
+            self._render()
+        
+        thread = threading.Thread(target=_restore_after_flash, daemon=True)
+        thread.start()
     
     def _find_key_in_dict(self, key_name, dictionary):
         """
@@ -474,9 +533,12 @@ class KetronKeyMappingControl(BaseDeckControl):
                 success = self.ketron_midi.send_pedal_command(matched_key, port_name)
                 if not success:
                     self.__logger.error(f"Failed to send pedal command '{matched_key}' for key {self.key_no}")
-                    self._render_error("SEND\nFAILED")
+                    # Flash with red background for failure (error message will be shown during flash)
+                    self._flash_key_with_error('red', "SEND\nFAILED")
                 else:
                     self.__logger.info(f"Sent pedal command '{matched_key}' for key {self.key_no}")
+                    # Flash with offwhite background for success
+                    self._flash_key('offwhite')
             
             elif source_list_name == 'tab_midis':
                 # Find the matching key (case-insensitive)
@@ -490,9 +552,12 @@ class KetronKeyMappingControl(BaseDeckControl):
                 success = self.ketron_midi.send_tab_command(matched_key, port_name)
                 if not success:
                     self.__logger.error(f"Failed to send tab command '{matched_key}' for key {self.key_no}")
-                    self._render_error("SEND\nFAILED")
+                    # Flash with red background for failure (error message will be shown during flash)
+                    self._flash_key_with_error('red', "SEND\nFAILED")
                 else:
                     self.__logger.info(f"Sent tab command '{matched_key}' for key {self.key_no}")
+                    # Flash with offwhite background for success
+                    self._flash_key('offwhite')
             
             elif source_list_name == 'cc_midis':
                 # For CC buttons, find the matching key (case-insensitive)
@@ -527,12 +592,15 @@ class KetronKeyMappingControl(BaseDeckControl):
                 success = self.midi_manager.send_cc(cc_control, cc_value, cc_channel, port_name)
                 if not success:
                     self.__logger.error(f"Failed to send CC message: control={cc_control}, value={cc_value}, channel={cc_channel}")
-                    self._render_error("SEND\nFAILED")
+                    # Flash with red background for failure (error message will be shown during flash)
+                    self._flash_key_with_error('red', "SEND\nFAILED")
                 else:
                     if volume_name:
                         self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value} (current {volume_name} volume), channel=16 for key {self.key_no}")
                     else:
                         self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value}, channel={cc_channel} for key {self.key_no}")
+                    # Flash with offwhite background for success
+                    self._flash_key('offwhite')
             
             else:
                 self.__logger.error(f"Invalid source_list_name '{source_list_name}' for key {self.key_no}")

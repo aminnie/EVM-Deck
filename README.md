@@ -91,6 +91,9 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
 - **Cross-Platform MIDI**: Works on Windows, Linux, macOS, and Raspberry Pi
 - **Port Management**: Automatic or manual MIDI port selection
 - **Thread-Safe**: Safe concurrent MIDI message sending
+- **Visual Feedback**: Keys flash for 100ms after sending MIDI messages:
+  - **Offwhite background** for successful sends
+  - **Red background** for failed sends (with error message)
 
 ### 3. Ketron EVM Integration
 - Pre-configured SysEx message formatting for Ketron devices
@@ -247,6 +250,9 @@ Ketron key mappings can be imported from `config/key_mappings.json`:
 - **MidiControl** (`devdeck.midi.controls.midi_control.MidiControl`)
   - Sends MIDI CC or SysEx messages
   - Configurable port, channel, and message data
+  - **Visual Feedback**: Keys flash for 100ms after sending:
+    - Offwhite background for successful sends
+    - Red background with error message for failed sends
   - See [MIDI Support](#midi-support) for details
 
 ### Ketron Controls
@@ -254,7 +260,10 @@ Ketron key mappings can be imported from `config/key_mappings.json`:
 - **KetronKeyMappingControl** (`devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl`)
   - Maps Stream Deck keys to Ketron functions
   - Reads mappings from `config/key_mappings.json`
-  - Sends Ketron-specific SysEx messages
+  - Sends Ketron-specific SysEx messages (pedal, tab, and CC commands)
+  - **Visual Feedback**: Keys flash for 100ms after sending MIDI messages:
+    - Offwhite background for successful sends
+    - Red background with error message for failed sends
 
 ## MIDI Support
 
@@ -269,6 +278,18 @@ The `MidiManager` provides:
 - Automatic port connection/disconnection
 - Support for multiple MIDI ports
 - CC and SysEx message sending
+
+### Visual Feedback
+
+All MIDI controls provide immediate visual feedback when sending messages:
+
+- **Successful Sends**: The key flashes with an **offwhite background** for 100ms, confirming the message was sent successfully
+- **Failed Sends**: The key flashes with a **red background** for 100ms, displaying an error message (e.g., "SEND\nFAILED")
+- **Automatic Restoration**: After the flash, the key automatically returns to its original appearance
+
+This feedback applies to:
+- `MidiControl` for CC and SysEx messages
+- `KetronKeyMappingControl` for pedal commands, tab commands, and CC messages
 
 ### Usage Examples
 
@@ -325,6 +346,7 @@ The Ketron integration provides specialized support for Ketron EVM and Event dev
    - Reads key mappings from JSON configuration
    - Sends appropriate Ketron SysEx or CC messages
    - Provides visual feedback on Stream Deck keys
+   - Flashes keys with offwhite (success) or red (failure) background for 100ms after each MIDI send
 
 ### Configuration
 

@@ -7,10 +7,13 @@ messages when a deck key is pressed. It uses the MidiManager for port management
 
 import logging
 import os
+import threading
+import time
 
 from devdeck_core.controls.deck_control import DeckControl
 from devdeck.controls.base_control import BaseDeckControl
 from devdeck.midi import MidiManager
+from devdeck.ketron import COLOR_MAP
 
 
 class MidiControl(BaseDeckControl):
@@ -58,14 +61,28 @@ class MidiControl(BaseDeckControl):
         # Render the control
         self._render()
     
-    def _render(self):
+    def _render(self, background_color=None):
         """Render the control icon or text"""
         with self.deck_context() as context:
             with context.renderer() as r:
+                # Convert color if needed (for custom colors like 'offwhite')
+                if background_color:
+                    standard_colors = {'blue', 'green', 'red', 'yellow', 'orange', 'purple', 'white', 'black', 'grey', 'gray', 'cyan', 'magenta', 'pink', 'brown', 'teal', 'navy', 'maroon', 'lime', 'silver', 'gold', 'lightblue', 'lightgreen', 'lightgray', 'darkblue', 'darkgreen', 'darkred'}
+                    if background_color.lower() not in standard_colors:
+                        # It's a custom color name, check COLOR_MAP
+                        if background_color in COLOR_MAP:
+                            hex_value = COLOR_MAP[background_color]
+                            background_color = f"#{hex_value:06X}"
+                        elif background_color.lower() in COLOR_MAP:
+                            hex_value = COLOR_MAP[background_color.lower()]
+                            background_color = f"#{hex_value:06X}"
+                
                 # If icon is specified, use it
                 if 'icon' in self.settings and self.settings['icon']:
                     icon_path = os.path.expanduser(self.settings['icon'])
                     if os.path.exists(icon_path):
+                        if background_color:
+                            r.background_color(background_color)
                         r.image(icon_path).end()
                         return
                     else:
@@ -82,12 +99,72 @@ class MidiControl(BaseDeckControl):
                 else:
                     text = "MIDI"
                 
+                if background_color:
+                    r.background_color(background_color)
                 r.text(text)\
                     .font_size(100)\
                     .color('white')\
                     .center_vertically()\
                     .center_horizontally()\
                     .end()
+    
+    def _flash_key(self, flash_color: str, flash_duration_ms: int = 100) -> None:
+        """
+        Flash the key with a specified background color for a duration.
+        
+        Args:
+            flash_color: Color to flash (e.g., 'offwhite', 'red')
+            flash_duration_ms: Duration of flash in milliseconds (default: 100)
+        """
+        # Render with flash color
+        self._render(background_color=flash_color)
+        
+        # Restore original state after flash duration
+        def _restore_after_flash():
+            time.sleep(flash_duration_ms / 1000.0)
+            self._render()
+        
+        thread = threading.Thread(target=_restore_after_flash, daemon=True)
+        thread.start()
+    
+    def _flash_key_with_error(self, flash_color: str, error_text: str, flash_duration_ms: int = 100) -> None:
+        """
+        Flash the key with a specified background color and show an error message.
+        
+        Args:
+            flash_color: Color to flash (e.g., 'red')
+            error_text: Error message to display
+            flash_duration_ms: Duration of flash in milliseconds (default: 100)
+        """
+        # Render error message with flash background
+        with self.deck_context() as context:
+            with context.renderer() as r:
+                # Convert color if needed
+                standard_colors = {'blue', 'green', 'red', 'yellow', 'orange', 'purple', 'white', 'black', 'grey', 'gray', 'cyan', 'magenta', 'pink', 'brown', 'teal', 'navy', 'maroon', 'lime', 'silver', 'gold', 'lightblue', 'lightgreen', 'lightgray', 'darkblue', 'darkgreen', 'darkred'}
+                bg_color = flash_color
+                if bg_color.lower() not in standard_colors:
+                    if bg_color in COLOR_MAP:
+                        hex_value = COLOR_MAP[bg_color]
+                        bg_color = f"#{hex_value:06X}"
+                    elif bg_color.lower() in COLOR_MAP:
+                        hex_value = COLOR_MAP[bg_color.lower()]
+                        bg_color = f"#{hex_value:06X}"
+                
+                r.background_color(bg_color)
+                r.text(error_text)\
+                    .font_size(70)\
+                    .color('red')\
+                    .center_vertically()\
+                    .center_horizontally()\
+                    .end()
+        
+        # Restore original state after flash duration
+        def _restore_after_flash():
+            time.sleep(flash_duration_ms / 1000.0)
+            self._render()
+        
+        thread = threading.Thread(target=_restore_after_flash, daemon=True)
+        thread.start()
     
     def pressed(self):
         """Send MIDI message when key is pressed"""
@@ -125,7 +202,11 @@ class MidiControl(BaseDeckControl):
         success = self.midi_manager.send_cc(control, value, channel, port_name)
         if not success:
             self.__logger.error(f"Failed to send CC message: control={control}, value={value}, channel={channel}")
-            self._render_error("SEND\nFAILED")
+            # Flash with red background for failure (error message will be shown during flash)
+            self._flash_key_with_error('red', "SEND\nFAILED")
+        else:
+            # Flash with offwhite background for success
+            self._flash_key('offwhite')
     
     def _send_sysex(self, port_name):
         """Send a MIDI SysEx message"""
@@ -167,7 +248,11 @@ class MidiControl(BaseDeckControl):
         
         if not success:
             self.__logger.error("Failed to send SysEx message")
-            self._render_error("SEND\nFAILED")
+            # Flash with red background for failure (error message will be shown during flash)
+            self._flash_key_with_error('red', "SEND\nFAILED")
+        else:
+            # Flash with offwhite background for success
+            self._flash_key('offwhite')
     
     def settings_schema(self):
         """Define the settings schema for MidiControl"""
