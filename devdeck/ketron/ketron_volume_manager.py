@@ -70,8 +70,8 @@ class KetronVolumeManager:
         self._midi_out_channel = 16
         
         # Track last pressed button key_name from SecondPageDeckController
-        # Default to "STYLE" so Volume Up/Down always have a target
-        self._last_pressed_key_name: Optional[str] = "STYLE"
+        # Default to "Style" so Volume Up/Down always have a target
+        self._last_pressed_key_name: Optional[str] = "Style"
         
         # Initialize KetronMidi and MidiManager for sending CC commands
         self.ketron_midi = KetronMidi()
@@ -86,10 +86,14 @@ class KetronVolumeManager:
             "DRAW ORGAN": "drawbars",  # For "Draw Organ" in cc_midis
             "DRAWBARS": "drawbars",  # For "drawbars" in cc_midis
             "STYLE": "style",
+            "Style": "style",
             "DRUM": "drum",
+            "Drums": "drum",
             "CHORD": "chord",
+            "Chords": "chord",
             "REALCHORD": "realchord",
             "REAL CHORD": "realchord",  # For "REAL CHORD" in cc_midis
+            "Real CHords": "realchord",
             "BASS": "bass",
             "MASTER VOLUME": "master",
             "MASTER": "master"

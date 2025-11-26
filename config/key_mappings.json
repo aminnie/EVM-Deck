@@ -156,21 +156,21 @@
     },
     {
       "key_no": 22,
-      "key_name": "DRUM",
+      "key_name": "Drums",
       "source_list_name": "cc_midis",
       "text_color": "black",
       "background_color": "offwhite"
     },
     {
       "key_no": 23,
-      "key_name": "CHORD",
+      "key_name": "Chords",
       "source_list_name": "cc_midis",
       "text_color": "black",
       "background_color": "lightyellow"
     },
     {
       "key_no": 24,
-      "key_name": "REAL CHORD",
+      "key_name": "Real CHords",
       "source_list_name": "cc_midis",
       "text_color": "black",
       "background_color": "lightyellow"
@@ -205,7 +205,7 @@
     },
     {
       "key_no": 29,
-      "key_name": "STYLE",
+      "key_name": "Style",
       "source_list_name": "cc_midis",
       "text_color": "white",
       "background_color": "purple"
