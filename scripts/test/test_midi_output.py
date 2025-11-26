@@ -74,11 +74,12 @@ def test_midi_output(port_name=None):
         print(f"✓ Successfully opened MIDI port: {port_name}")
         print()
         
-        # Test 1: Send MIDI CC (Control Change) messages
-        print("Test 1: Sending MIDI CC (Control Change) Messages")
+        # Test 1: Send MIDI CC (Control Change) messages on channel 3
+        print("Test 1: Sending MIDI CC (Control Change) Messages on Channel 3")
         print("-" * 70)
-        print("Sending CC 102 (value 64) on channel 0...")
-        if midi.send_cc(102, 64, 0, port_name):
+        midi_channel = 2  # Channel 3 (0-indexed: 2)
+        print(f"Sending CC 102 (value 64) on channel 3...")
+        if midi.send_cc(102, 64, midi_channel, port_name):
             print("  ✓ CC message sent successfully")
         else:
             print("  ✗ Failed to send CC message")
@@ -86,8 +87,8 @@ def test_midi_output(port_name=None):
         
         time.sleep(0.5)
         
-        print("Sending CC 102 (value 127) on channel 0...")
-        if midi.send_cc(102, 127, 0, port_name):
+        print(f"Sending CC 102 (value 127) on channel 3...")
+        if midi.send_cc(102, 127, midi_channel, port_name):
             print("  ✓ CC message sent successfully")
         else:
             print("  ✗ Failed to send CC message")
@@ -95,8 +96,8 @@ def test_midi_output(port_name=None):
         
         time.sleep(0.5)
         
-        print("Sending CC 102 (value 0) on channel 0...")
-        if midi.send_cc(102, 0, 0, port_name):
+        print(f"Sending CC 102 (value 0) on channel 3...")
+        if midi.send_cc(102, 0, midi_channel, port_name):
             print("  ✓ CC message sent successfully")
         else:
             print("  ✗ Failed to send CC message")
@@ -104,18 +105,48 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 2: Send MIDI Note messages
-        print("Test 2: Sending MIDI Note Messages")
+        # Test 2: Send MIDI Note messages on channel 3 with volume ramping
+        print("Test 2: Sending MIDI Note Messages on Channel 3 with Volume Ramping")
         print("-" * 70)
-        # Send 10 different notes (C major scale: C, D, E, F, G, A, B, C, D, E)
-        # MIDI note numbers: C4=60, D4=62, E4=64, F4=65, G4=67, A4=69, B4=71, C5=72, D5=74, E5=76
-        notes = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76]
-        note_names = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5']
+        # Send 20 different notes (C major scale extended: C, D, E, F, G, A, B, C, D, E, F, G, A, B, C, D, E, F, G, A)
+        # MIDI note numbers: C4=60, D4=62, E4=64, F4=65, G4=67, A4=69, B4=71, C5=72, D5=74, E5=76, F5=77, G5=79, A5=81, B5=83, C6=84, D6=86, E6=88, F6=89, G6=91, A6=93
+        notes = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84, 86, 88, 89, 91, 93]
+        note_names = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6', 'D6', 'E6', 'F6', 'G6', 'A6']
         
-        print(f"Sending {len(notes)} different notes...")
+        # LOWERS_CC = 0x6C = 108 (volume control for lower voices)
+        LOWERS_CC = 0x6C
+        midi_channel = 2  # Channel 3 (0-indexed: 2)
+        
+        print(f"Sending {len(notes)} different notes on MIDI channel 3...")
+        print("Ramping 'lower' volume CC (108) from 0 to 127 in steps of 16, then back down...")
+        print()
+        
+        # Create volume ramp: 0, 16, 32, 48, 64, 80, 96, 112, 127, 112, 96, 80, 64, 48, 32, 16, 0
+        volume_up = list(range(0, 128, 16))  # [0, 16, 32, 48, 64, 80, 96, 112]
+        volume_up.append(127)  # Add 127 as max
+        volume_down = list(reversed(volume_up[1:]))  # [112, 96, 80, 64, 48, 32, 16, 0] (skip 127 to avoid duplicate)
+        volume_ramp = volume_up + volume_down  # [0, 16, 32, ..., 127, 112, 96, ..., 16, 0]
+        
+        # Calculate how many notes per volume step (distribute 20 notes across volume ramp)
+        notes_per_volume = max(1, len(notes) // len(volume_ramp))
+        
+        volume_index = 0
         for i, (note, note_name) in enumerate(zip(notes, note_names), 1):
-            print(f"  [{i:2d}/{len(notes)}] Sending Note On ({note_name}, note {note}, velocity 100)...", end='', flush=True)
-            if midi.send_note_on(note, velocity=100, channel=0, port_name=port_name):
+            # Update volume at the start and periodically during the sequence
+            if (i - 1) % notes_per_volume == 0 and volume_index < len(volume_ramp):
+                volume = volume_ramp[volume_index]
+                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 108, ch 3)...", end='', flush=True)
+                if midi.send_cc(LOWERS_CC, volume, midi_channel, port_name):
+                    print(" ✓", flush=True)
+                else:
+                    print(" ✗", flush=True)
+                    return False
+                volume_index += 1
+                time.sleep(0.05)  # Brief delay after volume change
+            
+            # Send note on
+            print(f"  [{i:2d}/{len(notes)}] Note On ({note_name}, note {note}, vel 100, ch 3)...", end='', flush=True)
+            if midi.send_note_on(note, velocity=100, channel=midi_channel, port_name=port_name):
                 print(" ✓", flush=True)
             else:
                 print(" ✗", flush=True)
@@ -125,10 +156,10 @@ def test_midi_output(port_name=None):
         
         time.sleep(0.5)
         
-        print(f"Sending Note Off for all {len(notes)} notes...")
+        print(f"\nSending Note Off for all {len(notes)} notes...")
         for i, (note, note_name) in enumerate(zip(notes, note_names), 1):
-            print(f"  [{i:2d}/{len(notes)}] Sending Note Off ({note_name}, note {note})...", end='', flush=True)
-            if midi.send_note_off(note, velocity=0, channel=0, port_name=port_name):
+            print(f"  [{i:2d}/{len(notes)}] Sending Note Off ({note_name}, note {note}, ch 3)...", end='', flush=True)
+            if midi.send_note_off(note, velocity=0, channel=midi_channel, port_name=port_name):
                 print(" ✓", flush=True)
             else:
                 print(" ✗", flush=True)
@@ -170,13 +201,14 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 4: Send multiple rapid messages
-        print("Test 4: Sending Multiple Rapid Messages")
+        # Test 4: Send multiple rapid messages on channel 3
+        print("Test 4: Sending Multiple Rapid Messages on Channel 3")
         print("-" * 70)
+        midi_channel = 2  # Channel 3 (0-indexed: 2)
         print("Sending 10 CC messages rapidly...")
         success_count = 0
         for i in range(10):
-            if midi.send_cc(102, i * 12, 0, port_name):
+            if midi.send_cc(102, i * 12, midi_channel, port_name):
                 success_count += 1
             time.sleep(0.1)
         
