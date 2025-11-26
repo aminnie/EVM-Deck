@@ -8,6 +8,7 @@ with python-rtmidi backend for cross-platform compatibility (Windows, Linux, Ras
 
 import logging
 import platform
+import re
 import threading
 from typing import Optional, List
 
@@ -94,6 +95,7 @@ class MidiManager:
         
         This is useful when USB MIDI port numbers change after reboot.
         For example, "CH345:CH345 MIDI 1" will match "CH345:CH345 MIDI 1 16:0" or "CH345:CH345 MIDI 1 24:0".
+        Also handles full port names like "CH345:CH345 MIDI 1 24:0" matching "CH345:CH345 MIDI 1 16:0".
         
         Args:
             partial_name: Partial port name to search for (case-insensitive)
@@ -112,6 +114,19 @@ class MidiManager:
             for port in available_ports:
                 if port == partial_name:
                     return port
+            
+            # Extract device name from full port name (remove port number suffix like " 24:0")
+            # Port names typically follow pattern: "DeviceName PortNumber:SubPort"
+            # Try to extract just the device name part
+            # Match pattern like " 16:0" or " 24:0" at the end
+            device_name_match = re.match(r'^(.+?)\s+\d+:\d+$', partial_name)
+            if device_name_match:
+                device_name = device_name_match.group(1)
+                device_name_lower = device_name.lower()
+                # Look for ports that start with the device name
+                matches = [p for p in available_ports if p.lower().startswith(device_name_lower)]
+                if matches:
+                    return matches[0]
             
             # Then try partial match (port name starts with or contains the partial name)
             # Prefer ports that start with the partial name

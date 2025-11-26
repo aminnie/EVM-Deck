@@ -12,6 +12,7 @@ Usage:
 
 import sys
 import os
+import re
 import time
 
 # Add project root to path (three levels up from scripts/test/)
@@ -19,6 +20,24 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, project_root)
 
 from devdeck.midi import MidiManager
+
+
+def strip_port_number_suffix(port_name: str) -> str:
+    """
+    Remove port number suffix (e.g., " 24:0") from a port name.
+    
+    This allows users to pass either "CH345:CH345 MIDI 1 24:0" or "CH345:CH345 MIDI 1"
+    and both will work, with the port number being automatically stripped.
+    
+    Args:
+        port_name: Full port name that may include a port number suffix
+    
+    Returns:
+        Port name with port number suffix removed
+    """
+    # Match pattern like " 16:0" or " 24:0" at the end
+    # Remove it to get just the device name
+    return re.sub(r'\s+\d+:\d+$', '', port_name)
 
 
 def test_midi_output(port_name=None):
@@ -324,6 +343,11 @@ def test_midi_output(port_name=None):
 if __name__ == '__main__':
     # Allow port name to be specified as command line argument
     port_name = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    # Automatically strip port number suffix (e.g., " 24:0") if present
+    # This allows users to pass either "CH345:CH345 MIDI 1 24:0" or "CH345:CH345 MIDI 1"
+    if port_name:
+        port_name = strip_port_number_suffix(port_name)
     
     success = test_midi_output(port_name)
     sys.exit(0 if success else 1)
