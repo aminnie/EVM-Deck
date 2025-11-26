@@ -149,7 +149,7 @@
     },
     {
       "key_no": 21,
-      "key_name": "BASS",
+      "key_name": "Bass",
       "source_list_name": "cc_midis",
       "text_color": "white",
       "background_color": "orange"

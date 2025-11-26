@@ -167,7 +167,7 @@ class KetronMidi:
             "CHORD": SliderCC.CHORD_CC, "Chords": SliderCC.CHORD_CC,             "REALCHORD": SliderCC.REALCHORD_CC, 
             "REAL CHORD": SliderCC.REALCHORD_CC,  # Alias for REALCHORD
             "Real CHords": SliderCC.REALCHORD_CC,
-            "BASS": SliderCC.BASS_CC, "LOWERS": SliderCC.LOWERS_CC, "USER2": SliderCC.USER2_CC, "USER3": SliderCC.USER3_CC, 
+            "BASS": SliderCC.BASS_CC, "Bass": SliderCC.BASS_CC, "LOWERS": SliderCC.LOWERS_CC, "USER2": SliderCC.USER2_CC, "USER3": SliderCC.USER3_CC, 
             "VOICE1": SliderCC.VOICE1_CC, "VOICE2": SliderCC.VOICE2_CC, "drawbars": SliderCC.DRAWBARS_CC,
             "Draw Organ": SliderCC.DRAWBARS_CC,  # Alias for drawbars
             "MICRO1": SliderCC.MICRO1_CC, "VOCAL": SliderCC.VOCAL_CC
