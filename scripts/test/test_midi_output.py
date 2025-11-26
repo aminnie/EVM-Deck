@@ -105,20 +105,21 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 2: Send MIDI Note messages on channel 3 with volume ramping
-        print("Test 2: Sending MIDI Note Messages on Channel 3 with Volume Ramping")
+        # Test 2: Send MIDI Note messages on channel 3 with volume ramping on channels 3 and 16
+        print("Test 2: Sending MIDI Note Messages on Channel 3 with Volume Ramping on Channels 3 & 16")
         print("-" * 70)
-        # Send 20 different notes (C major scale extended: C, D, E, F, G, A, B, C, D, E, F, G, A, B, C, D, E, F, G, A)
-        # MIDI note numbers: C4=60, D4=62, E4=64, F4=65, G4=67, A4=69, B4=71, C5=72, D5=74, E5=76, F5=77, G5=79, A5=81, B5=83, C6=84, D6=86, E6=88, F6=89, G6=91, A6=93
-        notes = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84, 86, 88, 89, 91, 93]
-        note_names = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6', 'D6', 'E6', 'F6', 'G6', 'A6']
+        # Send 40 different notes (C major scale extended across multiple octaves)
+        # MIDI note numbers: C3=48 through A7=105 (extended C major scale)
+        notes = [48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84, 86, 88, 89, 91, 93, 95, 96, 98, 100, 101, 103, 105, 107, 108, 110, 112, 113, 115]
+        note_names = ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6', 'D6', 'E6', 'F6', 'G6', 'A6', 'B6', 'C7', 'D7', 'E7', 'F7', 'G7', 'A7', 'B7', 'C8', 'D8', 'E8', 'F8', 'G8']
         
         # LOWERS_CC = 0x6C = 108 (volume control for lower voices)
         LOWERS_CC = 0x6C
-        midi_channel = 2  # Channel 3 (0-indexed: 2)
+        midi_channel_3 = 2   # Channel 3 (0-indexed: 2)
+        midi_channel_16 = 15 # Channel 16 (0-indexed: 15)
         
         print(f"Sending {len(notes)} different notes on MIDI channel 3...")
-        print("Ramping 'lower' volume CC (108) from 0 to 127 in steps of 16, then back down...")
+        print("Ramping 'lower' volume CC (108) on channels 3 and 16 from 0 to 127 in steps of 16, then back down...")
         print()
         
         # Create volume ramp: 0, 16, 32, 48, 64, 80, 96, 112, 127, 112, 96, 80, 64, 48, 32, 16, 0
@@ -127,7 +128,7 @@ def test_midi_output(port_name=None):
         volume_down = list(reversed(volume_up[1:]))  # [112, 96, 80, 64, 48, 32, 16, 0] (skip 127 to avoid duplicate)
         volume_ramp = volume_up + volume_down  # [0, 16, 32, ..., 127, 112, 96, ..., 16, 0]
         
-        # Calculate how many notes per volume step (distribute 20 notes across volume ramp)
+        # Calculate how many notes per volume step (distribute notes across volume ramp)
         notes_per_volume = max(1, len(notes) // len(volume_ramp))
         
         volume_index = 0
@@ -135,18 +136,29 @@ def test_midi_output(port_name=None):
             # Update volume at the start and periodically during the sequence
             if (i - 1) % notes_per_volume == 0 and volume_index < len(volume_ramp):
                 volume = volume_ramp[volume_index]
+                
+                # Send volume CC on channel 3
                 print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 108, ch 3)...", end='', flush=True)
-                if midi.send_cc(LOWERS_CC, volume, midi_channel, port_name):
+                if midi.send_cc(LOWERS_CC, volume, midi_channel_3, port_name):
+                    print(" ✓", end='', flush=True)
+                else:
+                    print(" ✗", flush=True)
+                    return False
+                
+                # Send volume CC on channel 16
+                print(f" (ch 16)...", end='', flush=True)
+                if midi.send_cc(LOWERS_CC, volume, midi_channel_16, port_name):
                     print(" ✓", flush=True)
                 else:
                     print(" ✗", flush=True)
                     return False
+                
                 volume_index += 1
                 time.sleep(0.05)  # Brief delay after volume change
             
             # Send note on
             print(f"  [{i:2d}/{len(notes)}] Note On ({note_name}, note {note}, vel 100, ch 3)...", end='', flush=True)
-            if midi.send_note_on(note, velocity=100, channel=midi_channel, port_name=port_name):
+            if midi.send_note_on(note, velocity=100, channel=midi_channel_3, port_name=port_name):
                 print(" ✓", flush=True)
             else:
                 print(" ✗", flush=True)
@@ -159,7 +171,7 @@ def test_midi_output(port_name=None):
         print(f"\nSending Note Off for all {len(notes)} notes...")
         for i, (note, note_name) in enumerate(zip(notes, note_names), 1):
             print(f"  [{i:2d}/{len(notes)}] Sending Note Off ({note_name}, note {note}, ch 3)...", end='', flush=True)
-            if midi.send_note_off(note, velocity=0, channel=midi_channel, port_name=port_name):
+            if midi.send_note_off(note, velocity=0, channel=midi_channel_3, port_name=port_name):
                 print(" ✓", flush=True)
             else:
                 print(" ✗", flush=True)
@@ -168,7 +180,9 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 3: Send MIDI SysEx message (Ketron Start/Stop command)
+        # Test 3: Send MIDI SysEx message (Ketron Start/Stop command) - DISABLED
+        # Uncomment the section below to enable Start/Stop SysEx testing
+        """
         print("Test 3: Sending MIDI SysEx Message (Ketron Start/Stop)")
         print("-" * 70)
         # Ketron SysEx format for Start/Stop pedal command (based on CircuitPython implementation):
@@ -191,13 +205,16 @@ def test_midi_output(port_name=None):
         time.sleep(0.5)  # Delay between ON and OFF (simulates key press duration)
         
         # Send Start/Stop OFF message
-        sysex_off = [0x43, 0x00, 0x12, 0x00]  # Manufacturer, Device, Start/Stop, OFF
+        sysex_off = [0x26, 0x79, 0x03, 0x12, 0x00]  # Manufacturer (2 bytes), Type, Start/Stop, OFF
         print(f"Sending Start/Stop OFF: F0 {' '.join([hex(b) for b in sysex_off])} F7")
         if midi.send_sysex(sysex_off, port_name):
             print("  ✓ Start/Stop OFF message sent successfully")
         else:
             print("  ✗ Failed to send Start/Stop OFF message")
             return False
+        
+        print()
+        """
         
         print()
         
