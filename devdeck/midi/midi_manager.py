@@ -88,6 +88,47 @@ class MidiManager:
             self.__logger.error(f"Error listing MIDI output ports: {e}")
             return []
     
+    def find_port_by_partial_name(self, partial_name: str) -> Optional[str]:
+        """
+        Find a MIDI port by partial name match.
+        
+        This is useful when USB MIDI port numbers change after reboot.
+        For example, "CH345:CH345 MIDI 1" will match "CH345:CH345 MIDI 1 16:0" or "CH345:CH345 MIDI 1 24:0".
+        
+        Args:
+            partial_name: Partial port name to search for (case-insensitive)
+        
+        Returns:
+            Full port name if found, None otherwise
+        """
+        if mido is None:
+            return None
+        
+        try:
+            available_ports = mido.get_output_names()
+            partial_lower = partial_name.lower()
+            
+            # First try exact match
+            for port in available_ports:
+                if port == partial_name:
+                    return port
+            
+            # Then try partial match (port name starts with or contains the partial name)
+            # Prefer ports that start with the partial name
+            matches_starting = [p for p in available_ports if p.lower().startswith(partial_lower)]
+            if matches_starting:
+                return matches_starting[0]
+            
+            # If no starting match, try contains match
+            matches_containing = [p for p in available_ports if partial_lower in p.lower()]
+            if matches_containing:
+                return matches_containing[0]
+            
+            return None
+        except Exception as e:
+            self.__logger.error(f"Error finding port by partial name: {e}")
+            return None
+    
     def open_port(self, port_name: Optional[str] = None, use_virtual: bool = True) -> bool:
         """
         Open a MIDI output port.
@@ -176,10 +217,16 @@ class MidiManager:
                             port_name = available_ports[0]
                             self.__logger.warning(f"No port specified, only GS Wavetable Synth available, using: {port_name}")
                 
-                # Check if port exists
+                # Check if port exists - try exact match first, then partial match
                 if port_name not in available_ports:
-                    self.__logger.error(f"MIDI port '{port_name}' not found. Available ports: {available_ports}")
-                    return False
+                    # Try to find port by partial name match (useful when USB port numbers change)
+                    matched_port = self.find_port_by_partial_name(port_name)
+                    if matched_port:
+                        self.__logger.info(f"Port '{port_name}' not found exactly, but found matching port: '{matched_port}'")
+                        port_name = matched_port
+                    else:
+                        self.__logger.error(f"MIDI port '{port_name}' not found. Available ports: {available_ports}")
+                        return False
                 
                 # Open the hardware port
                 try:
@@ -345,7 +392,7 @@ class MidiManager:
         Get a MIDI output port.
         
         Args:
-            port_name: Name of the port. If None, returns the first open port.
+            port_name: Name of the port (supports partial matching). If None, returns the first open port.
         
         Returns:
             MidiOutput port or None if not available
@@ -359,10 +406,19 @@ class MidiManager:
                 # Return first available port
                 return next(iter(self._output_ports.values()))
             else:
-                if port_name not in self._output_ports:
-                    self.__logger.error(f"Port '{port_name}' is not open")
-                    return None
-                return self._output_ports[port_name]
+                # First try exact match
+                if port_name in self._output_ports:
+                    return self._output_ports[port_name]
+                
+                # Then try partial match (useful when USB port numbers change)
+                port_lower = port_name.lower()
+                for open_port_name, open_port in self._output_ports.items():
+                    # Check if open port starts with or contains the requested port name
+                    if open_port_name.lower().startswith(port_lower) or port_lower in open_port_name.lower():
+                        return open_port
+                
+                self.__logger.error(f"Port '{port_name}' is not open")
+                return None
     
     def send_note_on(self, note: int, velocity: int = 64, channel: int = 0, port_name: Optional[str] = None) -> bool:
         """
@@ -503,7 +559,7 @@ class MidiManager:
         Check if a MIDI port is open.
         
         Args:
-            port_name: Name of the port. If None, checks if any port is open.
+            port_name: Name of the port (supports partial matching). If None, checks if any port is open.
         
         Returns:
             True if port is open, False otherwise
@@ -511,5 +567,17 @@ class MidiManager:
         with self._port_lock:
             if port_name is None:
                 return len(self._output_ports) > 0
-            return port_name in self._output_ports
+            
+            # First try exact match
+            if port_name in self._output_ports:
+                return True
+            
+            # Then try partial match (useful when USB port numbers change)
+            port_lower = port_name.lower()
+            for open_port in self._output_ports.keys():
+                # Check if open port starts with or contains the requested port name
+                if open_port.lower().startswith(port_lower) or port_lower in open_port.lower():
+                    return True
+            
+            return False
 

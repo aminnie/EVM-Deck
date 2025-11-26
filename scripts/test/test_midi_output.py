@@ -58,9 +58,20 @@ def test_midi_output(port_name=None):
             port_name = ports[0]
             print(f"Using first available port: {port_name}")
         else:
+            # Try exact match first
             if port_name not in ports:
-                print(f"ERROR: Port '{port_name}' not found in available ports!")
-                return False
+                # Try partial match (useful when USB port numbers change after reboot)
+                matched_port = midi.find_port_by_partial_name(port_name)
+                if matched_port:
+                    print(f"Port '{port_name}' not found exactly, but found matching port: '{matched_port}'")
+                    port_name = matched_port
+                else:
+                    print(f"ERROR: Port '{port_name}' not found in available ports!")
+                    print()
+                    print("Tip: USB MIDI port numbers can change after reboot.")
+                    print("     Try using just the device name (e.g., 'CH345:CH345 MIDI 1')")
+                    print("     instead of the full port string with numbers.")
+                    return False
             print(f"Using specified port: {port_name}")
         
         print()
