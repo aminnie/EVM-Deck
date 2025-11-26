@@ -230,9 +230,10 @@ class KetronVolumeManager:
                 f"but trying to update '{volume_name}'. MIDI CC may be incorrect."
             )
         
-        # All MIDI CC volume commands are sent on channel 16 (global channel)
-        # Convert from 1-16 to 0-15 for MidiManager (channel 16 = index 15)
-        midi_channel = 15  # Channel 16 (0-indexed: 15)
+        # All MIDI CC volume commands are sent on the configured MIDI output channel
+        # Convert from 1-16 (property) to 0-15 (MidiManager format)
+        # CircuitPython uses channel 15 (0-indexed) = channel 16 (1-indexed)
+        midi_channel = self.midi_out_channel - 1  # Convert from 1-based (16) to 0-based (15)
         
         # Send the MIDI CC command
         success = self.midi_manager.send_cc(cc_control, volume_value, midi_channel, port_name)
@@ -255,13 +256,13 @@ class KetronVolumeManager:
                 # mido not installed - this is expected in test environments, use debug level
                 self.__logger.debug(
                     f"MIDI CC not sent (mido library not available): control={cc_control}, "
-                    f"value={volume_value}, channel=16 (global) for key_name='{matched_key}'"
+                    f"value={volume_value}, channel={self.midi_out_channel} for key_name='{matched_key}'"
                 )
             else:
                 # mido is available but send failed - this is a real error
                 self.__logger.error(
                     f"Failed to send MIDI CC: control={cc_control}, value={volume_value}, "
-                    f"channel=16 (global) for key_name='{matched_key}'"
+                    f"channel={self.midi_out_channel} for key_name='{matched_key}'"
                 )
         
         return success
@@ -731,7 +732,9 @@ class KetronVolumeManager:
             True if CC was sent successfully, False otherwise
         """
         expression_cc = 0x07  # MIDI CC 7 = Expression
-        midi_channel = 15  # Channel 16 (0-indexed: 15)
+        # Convert from 1-16 (property) to 0-15 (MidiManager format)
+        # CircuitPython uses channel 15 (0-indexed) = channel 16 (1-indexed)
+        midi_channel = self.midi_out_channel - 1  # Convert from 1-based (16) to 0-based (15)
         
         # Send the MIDI CC command
         success = self.midi_manager.send_cc(expression_cc, volume_value, midi_channel, port_name)
@@ -739,7 +742,7 @@ class KetronVolumeManager:
         if success:
             self.__logger.info(
                 f"Sent Master Volume Expression CC: control={expression_cc} (0x{expression_cc:02X}), "
-                f"value={volume_value}, channel=16 (global)"
+                f"value={volume_value}, channel={self.midi_out_channel}"
             )
         else:
             # Check if mido is available - if not, this is expected in test environments
@@ -753,7 +756,7 @@ class KetronVolumeManager:
                 # mido not installed - this is expected in test environments, use debug level
                 self.__logger.debug(
                     f"Master Volume Expression CC not sent (mido library not available): control={expression_cc}, "
-                    f"value={volume_value}, channel=16 (global)"
+                    f"value={volume_value}, channel={self.midi_out_channel}"
                 )
             else:
                 # mido is available but send failed - this is a real error
