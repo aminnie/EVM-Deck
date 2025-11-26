@@ -1,0 +1,25 @@
+[Unit]
+Description=Ketron EVM Stream Deck Controller
+After=network.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# IMPORTANT: Replace 'admin' with your actual username
+User=admin
+# IMPORTANT: Replace '/home/admin/devdeck' with your actual project path
+WorkingDirectory=/home/admin/devdeck
+Environment="PATH=/home/admin/devdeck/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/admin/devdeck/venv/bin/python -m devdeck.main
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

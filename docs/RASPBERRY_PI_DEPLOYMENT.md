@@ -823,6 +823,73 @@ python3 -m devdeck.main
 # Press Ctrl+C to stop
 ```
 
+### Step 4: Configure Screen Saver (Optional)
+
+The application includes a screen saver feature that activates after a period of inactivity. When active, the screen dims and displays "Ketron EVM" text cycling across the keys to indicate the system is still running.
+
+**Default Behavior:**
+- Screen saver activates after **15 seconds** of inactivity (no key presses)
+- Brightness dims to 5% (from default 50%)
+- "Ketron EVM" text cycles across all keys
+- Any key press immediately wakes the display and restores normal operation
+
+**Configuration:**
+
+To customize the screen saver timeout, add `screen_saver_timeout` to your deck settings in `settings.yml`:
+
+```yaml
+decks:
+- name: devdeck.decks.single_page_deck_controller.SinglePageDeckController
+  serial_number: YOUR_SERIAL_NUMBER_HERE
+  settings:
+    screen_saver_timeout: 300  # Timeout in seconds (e.g., 300 = 5 minutes)
+    controls:
+      # ... rest of configuration
+```
+
+**Configuration Options:**
+- `screen_saver_timeout` (optional): Time in seconds before screen saver activates
+  - Default: 15 seconds (if not specified)
+  - Recommended values: 60-600 seconds (1-10 minutes) for production use
+  - Set to 15 seconds for testing/debugging
+
+**How It Works:**
+1. The application tracks the last time any key was pressed
+2. After the timeout period, the screen saver activates:
+   - Brightness is reduced to 5%
+   - All keys are cleared
+   - "Ketron EVM" text begins cycling across keys
+3. Pressing any key immediately:
+   - Restores original brightness
+   - Re-renders the active deck
+   - Resets the idle timer
+
+**Example Configurations:**
+
+```yaml
+# Quick timeout for testing (15 seconds)
+settings:
+  screen_saver_timeout: 15
+
+# Short timeout (1 minute)
+settings:
+  screen_saver_timeout: 60
+
+# Medium timeout (5 minutes) - recommended
+settings:
+  screen_saver_timeout: 300
+
+# Long timeout (10 minutes)
+settings:
+  screen_saver_timeout: 600
+
+# Disable screen saver (set to very high value)
+settings:
+  screen_saver_timeout: 86400  # 24 hours (effectively disabled)
+```
+
+**Note:** The screen saver helps preserve the Stream Deck display and clearly indicates the system is active and ready to use.
+
 ---
 
 ## Samba Configuration (Windows Network Access)
@@ -2523,9 +2590,31 @@ sudo systemctl restart smbd
 
 ---
 
-## Running as a Service
+## Auto-Start on Boot (Systemd Service)
+
+The recommended way to automatically start the application on boot is using a **systemd service**. This runs the application in the background (not in a terminal), but you can easily control it using systemctl commands.
+
+**Note**: The service runs in the background, so you won't see it in a terminal window. However, you can:
+- Start/stop/restart it using `systemctl` commands
+- View logs using `journalctl` commands
+- Check its status at any time
 
 ### Step 1: Create Systemd Service File
+
+**Option A: Use the provided template (Recommended)**
+
+```bash
+# Navigate to your project directory
+cd ~/devdeck
+
+# Copy the service template
+sudo cp scripts/systemd/devdeck.service /etc/systemd/system/devdeck.service
+
+# Edit the service file to match your username and paths
+sudo nano /etc/systemd/system/devdeck.service
+```
+
+**Option B: Create manually**
 
 ```bash
 # Create service file
@@ -2537,13 +2626,16 @@ Add the following content (adjust paths as needed):
 [Unit]
 Description=Ketron EVM Stream Deck Controller
 After=network.target sound.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/devdeck
-Environment="PATH=/home/pi/devdeck/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/home/pi/devdeck/venv/bin/python -m devdeck.main
+# IMPORTANT: Replace 'admin' with your actual username
+User=admin
+# IMPORTANT: Replace '/home/admin/devdeck' with your actual project path
+WorkingDirectory=/home/admin/devdeck
+Environment="PATH=/home/admin/devdeck/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/admin/devdeck/venv/bin/python -m devdeck.main
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -2557,23 +2649,29 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-**Important**: Replace `/home/pi` with your actual home directory if different.
+**Important**: 
+- Replace `admin` with your actual username (e.g., `pi`, `admin`, etc.)
+- Replace `/home/admin/devdeck` with your actual project directory path
+- You can find your username with: `whoami`
+- You can find your home directory with: `echo $HOME`
 
 ### Step 2: Enable and Start Service
 
 ```bash
-# Reload systemd
+# Reload systemd to recognize the new service
 sudo systemctl daemon-reload
 
-# Enable service (start on boot)
+# Enable service (this makes it start automatically on boot)
 sudo systemctl enable devdeck.service
 
-# Start service
+# Start the service now (don't wait for reboot)
 sudo systemctl start devdeck.service
 
-# Check status
+# Check if it's running
 sudo systemctl status devdeck.service
 ```
+
+**Expected output**: You should see `Active: active (running)` in green.
 
 ### Step 3: View Service Logs
 
@@ -2590,35 +2688,89 @@ sudo journalctl -u devdeck.service -b
 
 ### Step 4: Service Management Commands
 
+**Control the service** (the application runs in the background, not in a terminal):
+
 ```bash
-# Start service
+# Start the service
 sudo systemctl start devdeck.service
 
-# Stop service
+# Stop the service
 sudo systemctl stop devdeck.service
 
-# Restart service
+# Restart the service (useful after making code changes)
 sudo systemctl restart devdeck.service
 
-# Check status
+# Check if it's running
 sudo systemctl status devdeck.service
 
-# Disable auto-start
+# Disable auto-start on boot (service will not start automatically)
 sudo systemctl disable devdeck.service
 
-# Enable auto-start
+# Enable auto-start on boot (service will start automatically on boot)
 sudo systemctl enable devdeck.service
 ```
 
+**Note**: Even though the service runs in the background, you can easily stop it using `sudo systemctl stop devdeck.service` from any terminal.
+
 ---
 
-## Auto-Start Configuration
+## Alternative: Running in a Terminal Session (Screen/Tmux)
 
-### Option 1: Systemd Service (Recommended)
+If you prefer to run the application in a terminal session that you can attach to and see the output directly, you can use `screen` or `tmux`. This is useful for debugging or if you want to see the logs in real-time in a terminal.
 
-The systemd service created above will automatically start on boot. This is the recommended method.
+### Option 1: Using Screen
 
-### Option 2: Crontab (Alternative)
+```bash
+# Install screen (if not already installed)
+sudo apt install -y screen
+
+# Create a startup script
+cat > ~/start-devdeck-screen.sh << 'EOF'
+#!/bin/bash
+cd ~/devdeck
+source venv/bin/activate
+python -m devdeck.main
+EOF
+
+chmod +x ~/start-devdeck-screen.sh
+
+# Start in a screen session (detached)
+screen -dmS devdeck ~/start-devdeck-screen.sh
+
+# Attach to the screen session to see output
+screen -r devdeck
+
+# Detach from screen: Press Ctrl+A, then D
+# Stop the application: Attach to screen, then press Ctrl+C
+```
+
+### Option 2: Using Tmux
+
+```bash
+# Install tmux (if not already installed)
+sudo apt install -y tmux
+
+# Create a startup script
+cat > ~/start-devdeck-tmux.sh << 'EOF'
+#!/bin/bash
+cd ~/devdeck
+source venv/bin/activate
+python -m devdeck.main
+EOF
+
+chmod +x ~/start-devdeck-tmux.sh
+
+# Start in a tmux session (detached)
+tmux new-session -d -s devdeck '~/start-devdeck-tmux.sh'
+
+# Attach to the tmux session to see output
+tmux attach-session -t devdeck
+
+# Detach from tmux: Press Ctrl+B, then D
+# Stop the application: Attach to tmux, then press Ctrl+C
+```
+
+### Option 3: Crontab (Alternative to Systemd)
 
 If you prefer not to use systemd:
 
@@ -2627,16 +2779,10 @@ If you prefer not to use systemd:
 crontab -e
 
 # Add this line (adjust path as needed)
-@reboot cd /home/pi/devdeck && /home/pi/devdeck/venv/bin/python -m devdeck.main >> /home/pi/devdeck/logs/devdeck.log 2>&1
+@reboot cd /home/admin/devdeck && /home/admin/devdeck/venv/bin/python -m devdeck.main >> /home/admin/devdeck/logs/devdeck.log 2>&1
 ```
 
-### Option 3: .bashrc or .profile (Not Recommended)
-
-Not recommended for production, but can be used for testing:
-```bash
-# Add to ~/.bashrc (only if not using systemd)
-# cd ~/devdeck && source venv/bin/activate && python -m devdeck.main &
-```
+**Note**: The systemd service method (described above) is recommended because it provides better process management, automatic restarts, and easier log viewing.
 
 ---
 

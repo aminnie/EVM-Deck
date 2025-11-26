@@ -1,4 +1,6 @@
 import logging
+import threading
+import time
 from typing import Optional, TYPE_CHECKING
 
 from devdeck.deck_context import DeckContext
@@ -8,6 +10,10 @@ if TYPE_CHECKING:
 
 # Constants
 DEFAULT_DECK_BRIGHTNESS = 50
+DEFAULT_SCREEN_SAVER_TIMEOUT_SECONDS = 15
+SCREEN_SAVER_BRIGHTNESS = 5  # Very low brightness when in screen saver mode
+IDLE_CHECK_INTERVAL = 1.0  # Check idle time every second
+ANIMATION_UPDATE_INTERVAL = 0.8  # Update animation every 0.8 seconds
 
 
 class DeckManager:
@@ -17,12 +23,13 @@ class DeckManager:
     Handles deck initialization, deck switching, key callbacks, and cleanup.
     """
     
-    def __init__(self, deck) -> None:
+    def __init__(self, deck, screen_saver_timeout: Optional[int] = None) -> None:
         """
         Initialize the deck manager.
         
         Args:
             deck: Stream Deck device instance
+            screen_saver_timeout: Timeout in seconds before screen saver activates (default: 15)
         """
         self.__logger = logging.getLogger('devdeck')
         self.__deck = deck
@@ -30,6 +37,20 @@ class DeckManager:
         self.__deck.reset()
         self.__deck.set_key_callback(self.key_callback)
         self.decks: list['DeckController'] = []
+        
+        # Screen saver state
+        self._screen_saver_timeout = screen_saver_timeout if screen_saver_timeout is not None else DEFAULT_SCREEN_SAVER_TIMEOUT_SECONDS
+        self._last_activity_time = time.time()
+        self._screen_saver_active = False
+        self._original_brightness = DEFAULT_DECK_BRIGHTNESS
+        self._screen_saver_lock = threading.Lock()
+        self._idle_check_thread: Optional[threading.Thread] = None
+        self._animation_thread: Optional[threading.Thread] = None
+        self._stop_threads = False
+        
+        # Start idle check thread
+        self._idle_check_thread = threading.Thread(target=self._check_idle_time, daemon=True)
+        self._idle_check_thread.start()
 
     def set_active_deck(self, deck: 'DeckController') -> None:
         """
@@ -79,17 +100,159 @@ class DeckManager:
             key: Key number that was pressed/released
             state: True if key was pressed, False if released
         """
+        # Update activity time on any key press
         if state:
+            with self._screen_saver_lock:
+                self._last_activity_time = time.time()
+                
+                # Wake from screen saver if active
+                if self._screen_saver_active:
+                    self._wake_from_screen_saver()
+            
+            # Proceed with normal key handling
             self.get_active_deck().pressed(key)
         else:
             self.get_active_deck().released(key)
 
+    def _check_idle_time(self) -> None:
+        """
+        Background thread function to check idle time and activate screen saver.
+        """
+        while not self._stop_threads:
+            try:
+                time.sleep(IDLE_CHECK_INTERVAL)
+                
+                with self._screen_saver_lock:
+                    if self._stop_threads:
+                        break
+                    
+                    if not self._screen_saver_active:
+                        idle_time = time.time() - self._last_activity_time
+                        if idle_time >= self._screen_saver_timeout:
+                            self._activate_screen_saver()
+            except Exception as ex:
+                self.__logger.error("Error in idle check thread: %s", ex, exc_info=True)
+    
+    def _activate_screen_saver(self) -> None:
+        """
+        Activate screen saver: dim brightness and start animation.
+        """
+        if self._screen_saver_active:
+            return
+        
+        self.__logger.info("Activating screen saver (idle timeout: %d seconds)", self._screen_saver_timeout)
+        
+        # Save current brightness
+        self._original_brightness = DEFAULT_DECK_BRIGHTNESS  # Could get current brightness if API supports it
+        
+        # Dim brightness
+        self.__deck.set_brightness(SCREEN_SAVER_BRIGHTNESS)
+        
+        # Set screen saver active flag
+        self._screen_saver_active = True
+        
+        # Start animation thread
+        self._animation_thread = threading.Thread(target=self._animate_screen_saver, daemon=True)
+        self._animation_thread.start()
+    
+    def _animate_screen_saver(self) -> None:
+        """
+        Animate "Ketron EVM" text cycling across keys during screen saver.
+        """
+        text = "Ketron EVM"
+        keys = self.__deck.key_count()
+        current_key = 0
+        
+        context = DeckContext(self, self.__deck)
+        
+        while not self._stop_threads:
+            # Check if screen saver is still active
+            with self._screen_saver_lock:
+                if not self._screen_saver_active:
+                    break
+            
+            try:
+                # Clear all keys first
+                context.reset_deck()
+                
+                # Check again after reset (screen saver might have been deactivated)
+                with self._screen_saver_lock:
+                    if not self._screen_saver_active:
+                        break
+                
+                # Display text on current key
+                with context.renderer(current_key) as r:
+                    r.background_color('black')
+                    r.text(text)\
+                        .font_size(80)\
+                        .color('white')\
+                        .center_vertically()\
+                        .center_horizontally()\
+                        .end()
+                
+                # Move to next key
+                current_key = (current_key + 1) % keys
+                
+                time.sleep(ANIMATION_UPDATE_INTERVAL)
+            except Exception as ex:
+                self.__logger.error("Error in screen saver animation thread: %s", ex, exc_info=True)
+                break
+    
+    def _wake_from_screen_saver(self) -> None:
+        """
+        Wake from screen saver: restore brightness and re-render active deck.
+        """
+        if not self._screen_saver_active:
+            return
+        
+        self.__logger.info("Waking from screen saver")
+        
+        # Stop animation thread
+        self._screen_saver_active = False
+        
+        # Wait for animation thread to stop (with timeout)
+        if self._animation_thread is not None and self._animation_thread.is_alive():
+            self._animation_thread.join(timeout=1.0)
+            if self._animation_thread.is_alive():
+                self.__logger.warning("Animation thread did not stop within timeout")
+        
+        # Restore brightness
+        self.__deck.set_brightness(self._original_brightness)
+        
+        # Re-render active deck
+        active_deck = self.get_active_deck()
+        if active_deck is not None:
+            active_deck.render(DeckContext(self, self.__deck))
+    
     def close(self) -> None:
         """
         Close the deck manager and clean up resources.
         
         Disposes all deck controllers and clears all key images.
         """
+        # Check if screen saver is active before stopping threads
+        was_screen_saver_active = False
+        with self._screen_saver_lock:
+            was_screen_saver_active = self._screen_saver_active
+            self._stop_threads = True
+            self._screen_saver_active = False
+        
+        # Wait for threads to stop
+        if self._idle_check_thread is not None and self._idle_check_thread.is_alive():
+            self._idle_check_thread.join(timeout=2.0)
+            if self._idle_check_thread.is_alive():
+                self.__logger.warning("Idle check thread did not stop within timeout")
+        
+        if self._animation_thread is not None and self._animation_thread.is_alive():
+            self._animation_thread.join(timeout=2.0)
+            if self._animation_thread.is_alive():
+                self.__logger.warning("Animation thread did not stop within timeout")
+        
+        # Restore brightness if screen saver was active
+        if was_screen_saver_active:
+            self.__deck.set_brightness(self._original_brightness)
+        
+        # Clean up decks
         keys = self.__deck.key_count()
         for deck in self.decks:
             deck.dispose()

@@ -87,7 +87,11 @@ def main() -> None:
             deck.close()
             continue
 
-        deck_manager = DeckManager(deck)
+        # Get screen saver timeout from settings (optional, defaults to 15 seconds)
+        deck_settings_dict = deck_settings.settings()
+        screen_saver_timeout = deck_settings_dict.get('screen_saver_timeout')
+        
+        deck_manager = DeckManager(deck, screen_saver_timeout=screen_saver_timeout)
 
         # Instantiate deck
         main_deck = deck_settings.deck_class()(None, **deck_settings.settings())
