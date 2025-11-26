@@ -27,11 +27,11 @@ class NavigationToggleControl(DeckControl):
                     
                     # Check if we're on the main deck (stack depth = 1) or second deck (stack depth = 2)
                     if deck_count == 1:
-                        # On main deck, show "Page 2" to indicate going to page 2
-                        page_text = "Page 2"
+                        # On main deck, show "Page Styles" to indicate going to page 2
+                        page_text = "Page Styles"
                     else:
-                        # On second deck or deeper, show "Page 1" to indicate going back to page 1
-                        page_text = "Page 1"
+                        # On second deck or deeper, show "Page Arranger" to indicate going back to page 1
+                        page_text = "Page Arranger"
                     
                     # Get background color from settings, default to black
                     background_color = self.settings.get('background_color', 'black')
@@ -80,14 +80,14 @@ class NavigationToggleControl(DeckControl):
                 second_layer_deck = self._get_second_layer_deck()
                 if second_layer_deck:
                     context.deck_context.set_active_deck(second_layer_deck)
-                    # Re-render to update text to "Page 1"
+                    # Re-render to update text to "Page Arranger"
                     self._render_text()
                 else:
                     self.__logger.warning("Second layer deck not configured for navigation control")
             else:
                 # On second deck or deeper, navigate back
                 context.deck_context.pop_active_deck()
-                # Re-render to update text to "Page 2"
+                # Re-render to update text to "Page Styles"
                 self._render_text()
 
     def settings_schema(self):
