@@ -461,25 +461,6 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self.__logger.info(f"Mute: unmuted volume (restored to {new_volume})")
             return
         
-        elif key_name.upper() == "MASTER VOLUME":
-            # Track this as the last pressed volume key for volume manager
-            # This allows increment/decrement to know which volume to adjust
-            self.volume_manager.set_last_pressed_key_name("MASTER VOLUME")
-            self.__logger.debug(f"Tracked last pressed volume key: MASTER VOLUME for key {self.key_no}")
-            
-            # Send MIDI CC 0x07 (Expression) on channel 16 with current master volume value
-            master_volume = self.volume_manager.master
-            expression_cc = 0x07  # MIDI CC 7 = Expression
-            cc_channel = 15  # Channel 16 (0-indexed: 15)
-            
-            success = self.midi_manager.send_cc(expression_cc, master_volume, cc_channel, port_name)
-            if not success:
-                self.__logger.error(f"Failed to send Master Volume CC: control={expression_cc}, value={master_volume}, channel=16")
-                self._render_error("SEND\nFAILED")
-            else:
-                self.__logger.info(f"Sent Master Volume CC: control={expression_cc} (Expression), value={master_volume}, channel=16 for key {self.key_no}")
-            return
-        
         try:
             if source_list_name == 'pedal_midis':
                 # Find the matching key (case-insensitive)

@@ -28,10 +28,10 @@ class NavigationToggleControl(DeckControl):
                     # Check if we're on the main deck (stack depth = 1) or second deck (stack depth = 2)
                     if deck_count == 1:
                         # On main deck, show "Page Styles" to indicate going to page 2
-                        page_text = "Page Styles"
+                        page_text = "Page\nStyles"
                     else:
                         # On second deck or deeper, show "Page Arranger" to indicate going back to page 1
-                        page_text = "Page Arranger"
+                        page_text = "Page\nArranger"
                     
                     # Get background color from settings, default to black
                     background_color = self.settings.get('background_color', 'black')

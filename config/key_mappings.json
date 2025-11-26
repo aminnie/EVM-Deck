@@ -149,10 +149,10 @@
     },
     {
       "key_no": 21,
-      "key_name": "STYLE",
+      "key_name": "BASS",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "green"
+      "background_color": "orange"
     },
     {
       "key_no": 22,
@@ -205,7 +205,7 @@
     },
     {
       "key_no": 29,
-      "key_name": "Master Volume",
+      "key_name": "STYLE",
       "source_list_name": "cc_midis",
       "text_color": "white",
       "background_color": "purple"

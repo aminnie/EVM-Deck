@@ -63,6 +63,7 @@ class KetronVolumeManager:
         self._drum = 80
         self._chord = 80
         self._realchord = 80
+        self._bass = 80
         self._master = 80  # Master volume
         
         # Initialize MIDI output channel (1-16, default: 16)
@@ -89,6 +90,7 @@ class KetronVolumeManager:
             "CHORD": "chord",
             "REALCHORD": "realchord",
             "REAL CHORD": "realchord",  # For "REAL CHORD" in cc_midis
+            "BASS": "bass",
             "MASTER VOLUME": "master",
             "MASTER": "master"
         }
@@ -173,6 +175,12 @@ class KetronVolumeManager:
         """Get the realchord volume (0-127)"""
         with self._volume_lock:
             return self._realchord
+    
+    @property
+    def bass(self) -> int:
+        """Get the bass volume (0-127)"""
+        with self._volume_lock:
+            return self._bass
     
     @property
     def master(self) -> int:
@@ -671,6 +679,55 @@ class KetronVolumeManager:
         self._send_midi_cc_for_volume("realchord", 0, port_name)
         return 0
     
+    # Bass volume methods
+    def increment_bass(self, amount: int = 1, port_name: Optional[str] = None) -> int:
+        """
+        Increment the bass volume and send MIDI CC command.
+        
+        Args:
+            amount: Amount to increment by (default: 1)
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            New volume value (0-127)
+        """
+        current = self._get_volume("bass")
+        new_value = self._clamp_volume(current + amount)
+        self._set_volume("bass", new_value)
+        self._send_midi_cc_for_volume("bass", new_value, port_name)
+        return new_value
+    
+    def decrement_bass(self, amount: int = 1, port_name: Optional[str] = None) -> int:
+        """
+        Decrement the bass volume and send MIDI CC command.
+        
+        Args:
+            amount: Amount to decrement by (default: 1)
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            New volume value (0-127)
+        """
+        current = self._get_volume("bass")
+        new_value = self._clamp_volume(current - amount)
+        self._set_volume("bass", new_value)
+        self._send_midi_cc_for_volume("bass", new_value, port_name)
+        return new_value
+    
+    def mute_bass(self, port_name: Optional[str] = None) -> int:
+        """
+        Mute the bass volume (set to 0) and send MIDI CC command.
+        
+        Args:
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            New volume value (0)
+        """
+        self._set_volume("bass", 0)
+        self._send_midi_cc_for_volume("bass", 0, port_name)
+        return 0
+    
     # Master volume methods
     def increment_master(self, amount: int = 1, port_name: Optional[str] = None) -> int:
         """
@@ -783,6 +840,7 @@ class KetronVolumeManager:
             'drum': self.drum,
             'chord': self.chord,
             'realchord': self.realchord,
+            'bass': self.bass,
             'master': self.master
         }
     
@@ -801,7 +859,7 @@ class KetronVolumeManager:
         Raises:
             ValueError: If volume_name is not recognized
         """
-        valid_names = ['lower', 'voice1', 'voice2', 'drawbars', 'style', 'drum', 'chord', 'realchord', 'master']
+        valid_names = ['lower', 'voice1', 'voice2', 'drawbars', 'style', 'drum', 'chord', 'realchord', 'bass', 'master']
         if volume_name not in valid_names:
             raise ValueError(f"Invalid volume name: {volume_name}. Must be one of {valid_names}")
         
