@@ -174,6 +174,17 @@ class KetronKeyMappingControl(BaseDeckControl):
         # so we'll re-fetch in pressed() to ensure correct mapping
         self.key_mapping = self._get_key_mapping()
         
+        # Configure MIDI output channel for volume CC messages if specified
+        # This can be set at the deck level (in deck settings) or control level
+        midi_channel = self.settings.get('midi_channel')
+        if midi_channel is not None:
+            # Convert from 1-16 to 1-16 (validate range)
+            if 1 <= midi_channel <= 16:
+                self.volume_manager.set_midi_out_channel(midi_channel)
+                self.__logger.info(f"Configured MIDI output channel to {midi_channel} (from settings)")
+            else:
+                self.__logger.warning(f"Invalid MIDI channel {midi_channel}, must be 1-16. Using default channel 16.")
+        
         # Open MIDI port if specified or if no ports are open
         port_name = self.settings.get('port')
         
