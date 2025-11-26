@@ -241,7 +241,7 @@ class KetronVolumeManager:
         if success:
             self.__logger.info(
                 f"Sent MIDI CC: control={cc_control} (0x{cc_control:02X}), "
-                f"value={volume_value}, channel=16 (global) "
+                f"value={volume_value}, channel={self.midi_out_channel} "
                 f"for key_name='{matched_key}' -> volume='{volume_name}'"
             )
         else:
@@ -762,7 +762,7 @@ class KetronVolumeManager:
                 # mido is available but send failed - this is a real error
                 self.__logger.error(
                     f"Failed to send Master Volume Expression CC: control={expression_cc}, value={volume_value}, "
-                    f"channel=16 (global)"
+                    f"channel={self.midi_out_channel}"
                 )
         
         return success

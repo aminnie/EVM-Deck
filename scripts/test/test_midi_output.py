@@ -105,8 +105,8 @@ def test_midi_output(port_name=None):
         
         print()
         
-        # Test 2: Send MIDI Note messages on channel 3 with volume ramping on channels 3 and 16
-        print("Test 2: Sending MIDI Note Messages on Channel 3 with Volume Ramping on Channels 3 & 16")
+        # Test 2: Send MIDI Note messages on channel 3 with volume ramping on channel 16
+        print("Test 2: Sending MIDI Note Messages on Channel 3 with Volume Ramping on Channel 16")
         print("-" * 70)
         # Send 40 different notes (C major scale extended across multiple octaves)
         # MIDI note numbers: C3=48 through A7=105 (extended C major scale)
@@ -115,11 +115,11 @@ def test_midi_output(port_name=None):
         
         # LOWERS_CC = 0x6C = 108 (volume control for lower voices)
         LOWERS_CC = 0x6C
-        midi_channel_3 = 2   # Channel 3 (0-indexed: 2)
-        midi_channel_16 = 15 # Channel 16 (0-indexed: 15)
+        midi_channel_3 = 2   # Channel 3 (0-indexed: 2) for notes
+        midi_channel_16 = 15 # Channel 16 (0-indexed: 15) for volume CC
         
         print(f"Sending {len(notes)} different notes on MIDI channel 3...")
-        print("Ramping 'lower' volume CC (108) on channels 3 and 16 from 0 to 127 in steps of 16, then back down...")
+        print("Ramping 'lower' volume CC (108) on channel 16 from 0 to 127 in steps of 16, then back down...")
         print()
         
         # Create volume ramp: 0, 16, 32, 48, 64, 80, 96, 112, 127, 112, 96, 80, 64, 48, 32, 16, 0
@@ -137,16 +137,8 @@ def test_midi_output(port_name=None):
             if (i - 1) % notes_per_volume == 0 and volume_index < len(volume_ramp):
                 volume = volume_ramp[volume_index]
                 
-                # Send volume CC on channel 3
-                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 108, ch 3)...", end='', flush=True)
-                if midi.send_cc(LOWERS_CC, volume, midi_channel_3, port_name):
-                    print(" ✓", end='', flush=True)
-                else:
-                    print(" ✗", flush=True)
-                    return False
-                
-                # Send volume CC on channel 16
-                print(f" (ch 16)...", end='', flush=True)
+                # Send volume CC on channel 16 only
+                print(f"  [{i:2d}/{len(notes)}] Volume → {volume:3d} (CC 108, ch 16)...", end='', flush=True)
                 if midi.send_cc(LOWERS_CC, volume, midi_channel_16, port_name):
                     print(" ✓", flush=True)
                 else:

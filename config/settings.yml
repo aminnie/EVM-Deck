@@ -71,22 +71,22 @@ decks:
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
             settings:
               port: "CH345:CH345 MIDI 1 24:0"
-              midi_channel: 2  # MIDI channel for volume CC messages (1-16)
+              midi_channel: 16  # MIDI channel for volume CC messages (1-16)
           - key: 2
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
             settings:
               port: "CH345:CH345 MIDI 1 24:0"
-              midi_channel: 3  # MIDI channel for volume CC messages (1-16)
+              midi_channel: 16  # MIDI channel for volume CC messages (1-16)
           - key: 3
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
             settings:
               port: "CH345:CH345 MIDI 1 24:0"
-              midi_channel: 3  # MIDI channel for volume CC messages (1-16)
+              midi_channel: 16  # MIDI channel for volume CC messages (1-16)
           - key: 4
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
             settings:
               port: "CH345:CH345 MIDI 1 24:0"
-              midi_channel: 3  # MIDI channel for volume CC messages (1-16)
+              midi_channel: 16  # MIDI channel for volume CC messages (1-16)
           - key: 5
             name: devdeck.ketron.controls.ketron_key_mapping_control.KetronKeyMappingControl
             settings:
