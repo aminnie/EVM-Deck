@@ -160,7 +160,7 @@ def test_midi_output(port_name=None):
         time.sleep(0.5)  # Delay between ON and OFF (simulates key press duration)
         
         # Send Start/Stop OFF message
-        sysex_off = [0x26, 0x79, 0x03, 0x12, 0x00]  # Manufacturer (2 bytes), Type, Start/Stop, OFF
+        sysex_off = [0x43, 0x00, 0x12, 0x00]  # Manufacturer, Device, Start/Stop, OFF
         print(f"Sending Start/Stop OFF: F0 {' '.join([hex(b) for b in sysex_off])} F7")
         if midi.send_sysex(sysex_off, port_name):
             print("  ✓ Start/Stop OFF message sent successfully")

@@ -1,8 +1,11 @@
 # Manage Control Panel Volume Sliders via midi CC
 
 # Ketron SysEx message format constants
-KETRON_SYSEX_MANUFACTURER_ID = 0x43  # Common MIDI manufacturer ID (may need adjustment for Ketron)
-KETRON_SYSEX_DEVICE_ID = 0x00  # Device ID (0 = all devices or specific device)
+# Based on working CircuitPython implementation
+KETRON_SYSEX_MANUFACTURER_ID_PEDAL = [0x26, 0x79]  # 2-byte manufacturer ID for pedal commands
+KETRON_SYSEX_MANUFACTURER_ID_TAB = [0x26, 0x7C]   # 2-byte manufacturer ID for tab commands
+KETRON_SYSEX_PEDAL_TYPE = 0x03  # Pedal command type byte (first data byte after manufacturer ID)
+KETRON_SYSEX_TAB_TYPE = 0x00    # Tab command type (implicit, no separate type byte)
 KETRON_SYSEX_ON_VALUE = 0x7F  # Value for ON state (127)
 KETRON_SYSEX_OFF_VALUE = 0x00  # Value for OFF state (0)
 
@@ -189,24 +192,26 @@ class KetronMidi:
         pedal_value = self.pedal_midis[pedal_name]
         state_value = KETRON_SYSEX_ON_VALUE if on_state else KETRON_SYSEX_OFF_VALUE
         
-        # Ketron SysEx format for pedal commands:
-        # For values < 128: F0 43 [device_id] [command_byte] [state_value] F7
-        # For values >= 128: F0 43 [device_id] [high_byte] [low_byte] [state_value] F7
+        # Ketron SysEx format for pedal commands (based on working CircuitPython implementation):
+        # For values < 128: F0 26 79 03 [command_byte] [state_value] F7
+        # For values >= 128: F0 26 79 05 [high_byte] [low_byte] [state_value] F7
+        # Manufacturer ID: [0x26, 0x79] (2-byte manufacturer ID for pedals)
+        # Type byte: 0x03 for values < 128, 0x05 for values >= 128
         # state_value: 0x7F (127) for ON, 0x00 (0) for OFF
         # Values >= 128 are split into two 7-bit bytes (high byte and low byte)
         
-        sysex_data = [
-            KETRON_SYSEX_MANUFACTURER_ID,
-            KETRON_SYSEX_DEVICE_ID
-        ]
+        # Start with 2-byte manufacturer ID
+        sysex_data = list(KETRON_SYSEX_MANUFACTURER_ID_PEDAL)
         
         if pedal_value < 128:
-            # Standard 3-byte format: manufacturer, device_id, command, state
+            # Standard format: manufacturer (2 bytes), type (0x03), command, state
+            sysex_data.append(KETRON_SYSEX_PEDAL_TYPE)  # 0x03
             sysex_data.append(pedal_value)
             sysex_data.append(state_value)
         else:
-            # Extended 4-byte format: manufacturer, device_id, high_byte, low_byte, state
+            # Extended format: manufacturer (2 bytes), type (0x05), high_byte, low_byte, state
             # Split value into two 7-bit bytes
+            sysex_data.append(0x05)  # Extended type byte (for values >= 128)
             high_byte = (pedal_value >> 7) & 0x7F
             low_byte = pedal_value & 0x7F
             sysex_data.append(high_byte)
@@ -235,15 +240,13 @@ class KetronMidi:
         tab_value = self.tab_midis[tab_name]
         state_value = KETRON_SYSEX_ON_VALUE if on_state else KETRON_SYSEX_OFF_VALUE
         
-        # Ketron SysEx format for tab commands:
-        # F0 43 [device_id] [command_byte] [state_value] F7
+        # Ketron SysEx format for tab commands (based on working CircuitPython implementation):
+        # F0 26 7C [command_byte] [state_value] F7
+        # Manufacturer ID: [0x26, 0x7C] (2-byte manufacturer ID for tabs)
         # state_value: 0x7F (127) for ON, 0x00 (0) for OFF
-        sysex_data = [
-            KETRON_SYSEX_MANUFACTURER_ID,
-            KETRON_SYSEX_DEVICE_ID,
-            tab_value,
-            state_value
-        ]
+        sysex_data = list(KETRON_SYSEX_MANUFACTURER_ID_TAB)  # [0x26, 0x7C]
+        sysex_data.append(tab_value)
+        sysex_data.append(state_value)
         
         return sysex_data
     
