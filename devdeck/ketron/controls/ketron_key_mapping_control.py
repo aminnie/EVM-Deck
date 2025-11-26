@@ -290,7 +290,7 @@ class KetronKeyMappingControl(BaseDeckControl):
         """
         # Get configuration values with defaults
         repeat_delay_ms = self.settings.get('volume_key_repeat_delay_ms', 500)
-        repeat_interval_ms = self.settings.get('volume_key_repeat_interval_ms', 100)
+        repeat_interval_ms = self.settings.get('volume_key_repeat_interval_ms', 50)
         
         # Convert milliseconds to seconds
         repeat_delay = repeat_delay_ms / 1000.0
