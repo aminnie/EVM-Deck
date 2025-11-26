@@ -462,7 +462,7 @@ python -m pytest tests/
 
 #### List MIDI Ports
 ```bash
-python scripts/list/list_midi_ports.py
+python tests/list_midi_ports.py
 ```
 
 #### Test MIDI Connectivity

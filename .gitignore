@@ -30,6 +30,7 @@ Thumbs.db
 # Logs
 *.log
 devdeck.log
+logs/
 
 # Temporary files
 *.tmp

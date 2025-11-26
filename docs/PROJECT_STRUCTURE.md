@@ -94,7 +94,7 @@ devdeck-main/
 │   ├── generate/          # Code generation scripts
 │   │   └── generate_key_mappings.py
 │   ├── list/              # Listing utilities
-│   │   └── list_midi_ports.py
+│   └── list_midi_ports.py
 │   └── run/               # Run scripts
 │       ├── run-devdeck.bat
 │       ├── run-devdeck.ps1
@@ -234,7 +234,7 @@ from devdeck.midi import MidiManager
 ### Running Scripts
 ```bash
 # List MIDI ports
-python scripts/list/list_midi_ports.py
+python tests/list_midi_ports.py
 
 # Check MIDI identity
 python scripts/check/check_app_midi_identity.py

@@ -51,7 +51,7 @@ The Ketron EVM Stream Deck Controller is a custom Stream Deck application design
    - Ensure MIDI libraries are installed (mido, python-rtmidi)
 
 3. **Verify MIDI Connection**
-   - Run `python scripts/list/list_midi_ports.py` to see available MIDI ports
+   - Run `python tests/list_midi_ports.py` to see available MIDI ports
    - Run `python tests/devdeck/ketron/test_ketron_sysex.py` to test MIDI communication
 
 4. **Run the Application**
@@ -345,7 +345,7 @@ The second page uses an offset of 15, meaning:
 **Problem**: Pressing keys doesn't trigger Ketron functions.
 
 **Solutions**:
-1. Run `python scripts/list/list_midi_ports.py` to verify MIDI ports
+1. Run `python tests/list_midi_ports.py` to verify MIDI ports
 2. Run `python tests/devdeck/ketron/test_ketron_sysex.py` to test MIDI communication
 3. Check that your Ketron device is powered on and connected
 4. Verify the MIDI port name in logs matches your device
@@ -448,7 +448,7 @@ Use the provided test scripts:
 
 1. **List MIDI Ports**
    ```bash
-   python scripts/list/list_midi_ports.py
+   python tests/list_midi_ports.py
    ```
 
 2. **Test Basic MIDI**
@@ -478,7 +478,7 @@ Use the provided test scripts:
 
 ### Scripts and Utilities
 
-- **scripts/list/list_midi_ports.py**: List available MIDI ports
+- **tests/list_midi_ports.py**: List available MIDI ports
 - **tests/devdeck/midi/test_midi.py**: Test basic MIDI connectivity
 - **tests/devdeck/ketron/test_ketron_sysex.py**: Test Ketron SysEx messages
 - **scripts/check/check_app_midi_identity.py**: Check application MIDI port identity

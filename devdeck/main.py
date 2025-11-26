@@ -35,7 +35,11 @@ def main() -> None:
     error_handler.setFormatter(formatter)
     root.addHandler(error_handler)
 
-    log_file = devdeck_dir / 'devdeck.log'
+    # Get project root and create logs directory
+    project_root = Path(__file__).parent.parent
+    logs_dir = project_root / 'logs'
+    logs_dir.mkdir(exist_ok=True)
+    log_file = logs_dir / 'devdeck.log'
     fileHandler = RotatingFileHandler(str(log_file), maxBytes=100000, backupCount=5)
     fileHandler.setFormatter(formatter)
     root.addHandler(fileHandler)

@@ -619,7 +619,7 @@ cd ~/devdeck
 source venv/bin/activate
 
 # List all available MIDI ports
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 
 # This will show output like:
 # Available MIDI output ports:
@@ -694,7 +694,7 @@ cd ~/devdeck
 source venv/bin/activate
 
 # Test MIDI port listing (must be run from project root)
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 
 # Test MIDI communication
 python3 tests/devdeck/ketron/test_ketron_sysex.py
@@ -710,7 +710,7 @@ cd ~/devdeck
 source venv/bin/activate
 
 # Run MIDI port listing script (must be run from project root)
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 
 # Note the exact port name for your Ketron device
 # Example: "MidiView 1" or "Ketron EVM MIDI 1"
@@ -747,7 +747,7 @@ amidi -l
 # 4. Use Python to list ports (application method)
 cd ~/devdeck
 source venv/bin/activate
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 # Shows ports in the format your application uses
 
 # 5. Detect Ketron Event using MIDI Identity Request (most reliable)
@@ -2810,7 +2810,7 @@ cd ~/devdeck
 source venv/bin/activate
 
 # List MIDI ports (must be run from project root)
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 
 # Test Ketron SysEx
 python3 tests/devdeck/ketron/test_ketron_sysex.py "Your MIDI Port Name"
@@ -3087,7 +3087,7 @@ If MIDI messages aren't leaving the Raspberry Pi:
 2. **Check Port Name is Correct**:
    ```bash
    # List all ports
-   python3 scripts/list/list_midi_ports.py
+   python3 tests/list_midi_ports.py
    
    # Use the exact port name (case-sensitive)
    python3 scripts/test/test_midi_output.py "Exact Port Name"
@@ -3281,7 +3281,7 @@ python3 -m devdeck.main
 - `lsusb` shows no Ketron device
 - `aconnect -l` shows no Ketron MIDI client
 - `amidi -l` shows no MIDI devices
-- Only "Midi Through" port appears in `python3 scripts/list/list_midi_ports.py`
+- Only "Midi Through" port appears in `python3 tests/list_midi_ports.py`
 
 **Diagnostic Steps**:
 
@@ -3389,7 +3389,7 @@ If you have an Adafruit MacroPad (or other CircuitPython device) that can commun
 
 1. **Connect MacroPad to Raspberry Pi via USB**:
    - The MacroPad should appear as a standard USB MIDI device
-   - Check with: `lsusb`, `aconnect -l`, `python3 scripts/list/list_midi_ports.py`
+   - Check with: `lsusb`, `aconnect -l`, `python3 tests/list_midi_ports.py`
 
 2. **Configure Application to Use MacroPad Port**:
    - The MacroPad will forward MIDI messages to the Ketron EVM
@@ -3404,7 +3404,7 @@ If you have an Adafruit MacroPad (or other CircuitPython device) that can commun
    # With MacroPad connected to Raspberry Pi
    lsusb | grep -i "adafruit\|rp2040\|circuitpython"
    aconnect -l
-   python3 scripts/list/list_midi_ports.py
+   python3 tests/list_midi_ports.py
    ```
 
 **Solution 2: Use USB MIDI Interface**
@@ -3417,7 +3417,7 @@ If you have a standard USB MIDI interface (e.g., Roland UM-ONE, M-Audio Uno):
 
 2. **Connect Interface to Raspberry Pi via USB**:
    - The interface should appear as a standard USB MIDI device
-   - Check with: `lsusb`, `aconnect -l`, `python3 scripts/list/list_midi_ports.py`
+   - Check with: `lsusb`, `aconnect -l`, `python3 tests/list_midi_ports.py`
 
 3. **Configure Application to Use Interface Port**:
    - Add the interface's MIDI port name to `settings.yml`
@@ -3434,7 +3434,7 @@ If no hardware bridge is available:
 
 1. **Application Creates Virtual MIDI Port**:
    - The application will create "EVM Stream Deck Controller" virtual port
-   - This port appears in `aconnect -l` and `python3 scripts/list/list_midi_ports.py`
+   - This port appears in `aconnect -l` and `python3 tests/list_midi_ports.py`
 
 2. **Use MIDI Routing Software**:
    - Install `qjackctl` or similar MIDI routing tool
@@ -3449,7 +3449,7 @@ If no hardware bridge is available:
 
 lsusb | grep -i "adafruit\|rp2040"
 aconnect -l
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 
 # If MacroPad appears, note the port name and add it to settings.yml
 ```
@@ -3734,7 +3734,7 @@ source venv/bin/activate
 python3 -c "import sys; sys.path.insert(0, '.'); from devdeck.midi import MidiManager; print('✓ Module import OK')"
 
 # Now run scripts from project root
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 ```
 
 **Important**: All scripts must be run from the project root directory (`~/devdeck`) with the virtual environment activated. The scripts add the project root to Python's path, but they assume you're running from that directory.
@@ -3963,7 +3963,7 @@ cd ~/devdeck
 source venv/bin/activate
 
 # Verify MIDI port name (must be run from project root)
-python3 scripts/list/list_midi_ports.py
+python3 tests/list_midi_ports.py
 
 # Test MIDI directly
 python3 tests/devdeck/ketron/test_ketron_sysex.py "Port Name"
@@ -4354,7 +4354,7 @@ sudo journalctl -u devdeck.service -f
 # MIDI testing
 aconnect -l
 amidi -l
-cd ~/devdeck && source venv/bin/activate && python3 scripts/list/list_midi_ports.py
+cd ~/devdeck && source venv/bin/activate && python3 tests/list_midi_ports.py
 
 # USB debugging
 lsusb

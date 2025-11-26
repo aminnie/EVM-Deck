@@ -4,15 +4,15 @@ List all available MIDI output ports.
 This script helps identify MIDI port names, including the Ketron EVM/Event port.
 
 Usage:
-    python scripts/list/list_midi_ports.py
+    python tests/list_midi_ports.py
 """
 
 import sys
 import os
 from pathlib import Path
 
-# Add project root to path (two levels up from scripts/list/)
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root to path (one level up from tests/)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from devdeck.midi import MidiManager
