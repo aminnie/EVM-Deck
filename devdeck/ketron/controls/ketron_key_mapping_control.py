@@ -8,6 +8,8 @@ MIDI messages (pedal, tab, or CC) when a Stream Deck key is pressed.
 import json
 import logging
 import os
+import threading
+import time
 from pathlib import Path
 
 from devdeck_core.controls.deck_control import DeckControl
@@ -48,6 +50,15 @@ class KetronKeyMappingControl(BaseDeckControl):
         self.midi_manager = MidiManager()
         self.volume_manager = KetronVolumeManager()
         self.key_mapping = None
+        
+        # Volume key repeat state tracking
+        self._volume_key_pressed_time = None
+        self._volume_key_repeat_thread = None
+        self._volume_key_repeat_stop = threading.Event()
+        self._volume_key_held = False
+        self._volume_key_type = None  # "UP" or "DOWN"
+        self._volume_key_repeat_lock = threading.Lock()
+        
         super().__init__(key_no, **kwargs)
     
     @classmethod
@@ -270,6 +281,87 @@ class KetronKeyMappingControl(BaseDeckControl):
         
         return None
     
+    def _start_volume_key_repeat(self):
+        """
+        Background thread that handles volume key repeat functionality.
+        
+        Waits for initial delay, then repeatedly calls increment/decrement
+        at the configured interval until the key is released.
+        """
+        # Get configuration values with defaults
+        repeat_delay_ms = self.settings.get('volume_key_repeat_delay_ms', 500)
+        repeat_interval_ms = self.settings.get('volume_key_repeat_interval_ms', 100)
+        
+        # Convert milliseconds to seconds
+        repeat_delay = repeat_delay_ms / 1000.0
+        repeat_interval = repeat_interval_ms / 1000.0
+        
+        port_name = self.settings.get('port')
+        
+        # Wait for initial delay
+        if self._volume_key_repeat_stop.wait(timeout=repeat_delay):
+            # Stop event was set during initial delay, exit
+            return
+        
+        # Check if key is still held after initial delay
+        with self._volume_key_repeat_lock:
+            if not self._volume_key_held:
+                return
+            key_type = self._volume_key_type
+        
+        # Start repeating increment/decrement actions
+        while not self._volume_key_repeat_stop.is_set():
+            # Check if key is still held
+            with self._volume_key_repeat_lock:
+                if not self._volume_key_held:
+                    break
+                current_key_type = self._volume_key_type
+            
+            # Only proceed if key type matches (handles case where key is released and different key pressed)
+            if current_key_type != key_type:
+                break
+            
+            # Perform increment or decrement based on key type
+            try:
+                if key_type == "UP":
+                    new_volume = self.volume_manager.increment_last_pressed_volume(port_name=port_name)
+                    if new_volume is None:
+                        self.__logger.warning("Volume Up repeat: no last pressed volume key set")
+                        break
+                elif key_type == "DOWN":
+                    new_volume = self.volume_manager.decrement_last_pressed_volume(port_name=port_name)
+                    if new_volume is None:
+                        self.__logger.warning("Volume Down repeat: no last pressed volume key set")
+                        break
+            except Exception as e:
+                self.__logger.error(f"Error during volume key repeat: {e}", exc_info=True)
+                break
+            
+            # Wait for repeat interval (or until stop event is set)
+            if self._volume_key_repeat_stop.wait(timeout=repeat_interval):
+                # Stop event was set, exit
+                break
+    
+    def _stop_volume_key_repeat(self):
+        """
+        Stop the volume key repeat thread and clean up resources.
+        """
+        with self._volume_key_repeat_lock:
+            self._volume_key_held = False
+            self._volume_key_type = None
+        
+        # Signal thread to stop
+        self._volume_key_repeat_stop.set()
+        
+        # Wait for thread to finish (with timeout)
+        if self._volume_key_repeat_thread is not None and self._volume_key_repeat_thread.is_alive():
+            self._volume_key_repeat_thread.join(timeout=0.5)
+            if self._volume_key_repeat_thread.is_alive():
+                self.__logger.warning("Volume key repeat thread did not stop within timeout")
+        
+        # Clean up thread reference
+        self._volume_key_repeat_thread = None
+    
     def pressed(self):
         """Send MIDI message when key is pressed"""
         # Re-fetch the mapping in case offset_key_no was set after initialize()
@@ -299,21 +391,59 @@ class KetronKeyMappingControl(BaseDeckControl):
         # Special handling for Volume Up, Volume Down, and Mute buttons
         # These work regardless of source_list_name
         if key_name.upper() == "VOLUME UP":
-            # Increment the last pressed volume
+            # Stop any existing repeat thread (in case of rapid key presses)
+            self._stop_volume_key_repeat()
+            
+            # Record press timestamp and set state
+            with self._volume_key_repeat_lock:
+                self._volume_key_pressed_time = time.time()
+                self._volume_key_held = True
+                self._volume_key_type = "UP"
+                self._volume_key_repeat_stop.clear()
+            
+            # Start repeat thread
+            self._volume_key_repeat_thread = threading.Thread(
+                target=self._start_volume_key_repeat,
+                daemon=True
+            )
+            self._volume_key_repeat_thread.start()
+            
+            # Execute initial increment immediately
             new_volume = self.volume_manager.increment_last_pressed_volume(port_name=port_name)
             if new_volume is None:
                 self.__logger.warning("Volume Up pressed but no last pressed volume key set")
                 self._render_error("NO\nVOLUME\nSELECTED")
+                # Stop repeat thread if initial action failed
+                self._stop_volume_key_repeat()
             else:
                 self.__logger.info(f"Volume Up: incremented to {new_volume}")
             return
         
         elif key_name.upper() == "VOLUME DOWN":
-            # Decrement the last pressed volume
+            # Stop any existing repeat thread (in case of rapid key presses)
+            self._stop_volume_key_repeat()
+            
+            # Record press timestamp and set state
+            with self._volume_key_repeat_lock:
+                self._volume_key_pressed_time = time.time()
+                self._volume_key_held = True
+                self._volume_key_type = "DOWN"
+                self._volume_key_repeat_stop.clear()
+            
+            # Start repeat thread
+            self._volume_key_repeat_thread = threading.Thread(
+                target=self._start_volume_key_repeat,
+                daemon=True
+            )
+            self._volume_key_repeat_thread.start()
+            
+            # Execute initial decrement immediately
             new_volume = self.volume_manager.decrement_last_pressed_volume(port_name=port_name)
             if new_volume is None:
                 self.__logger.warning("Volume Down pressed but no last pressed volume key set")
                 self._render_error("NO\nVOLUME\nSELECTED")
+                # Stop repeat thread if initial action failed
+                self._stop_volume_key_repeat()
             else:
                 self.__logger.info(f"Volume Down: decremented to {new_volume}")
             return
@@ -432,7 +562,19 @@ class KetronKeyMappingControl(BaseDeckControl):
             self._render_error("ERROR")
     
     def released(self):
-        """Re-render on key release to ensure image stays visible"""
+        """Handle key release, including stopping volume key repeat if applicable"""
+        # Re-fetch the mapping to check if this is a Volume Up/Down key
+        lookup_key = getattr(self, 'offset_key_no', self.key_no)
+        self.key_mapping = self._get_key_mapping()
+        
+        if self.key_mapping is not None:
+            key_name = self.key_mapping.get('key_name', '').strip()
+            
+            # Stop repeat thread for Volume Up/Down keys
+            if key_name.upper() in ("VOLUME UP", "VOLUME DOWN"):
+                self._stop_volume_key_repeat()
+        
+        # Re-render on key release to ensure image stays visible
         self._render()
     
     def settings_schema(self):
@@ -463,6 +605,16 @@ class KetronKeyMappingControl(BaseDeckControl):
                 'required': False,
                 'min': 1,
                 'max': 16
+            },
+            'volume_key_repeat_delay_ms': {
+                'type': 'integer',
+                'required': False,
+                'min': 0
+            },
+            'volume_key_repeat_interval_ms': {
+                'type': 'integer',
+                'required': False,
+                'min': 1
             },
             # Allow TextControl settings for backward compatibility (they're ignored)
             'text': {
