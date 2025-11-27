@@ -88,11 +88,14 @@ class KetronVolumeManager:
             "STYLE": "style",
             "Style": "style",
             "DRUM": "drum",
+            "DRUMS": "drum",  # Uppercase plural for "Drums"
             "Drums": "drum",
             "CHORD": "chord",
+            "CHORDS": "chord",  # Uppercase plural for "Chords"
             "Chords": "chord",
             "REALCHORD": "realchord",
             "REAL CHORD": "realchord",  # For "REAL CHORD" in cc_midis
+            "REAL CHORDS": "realchord",  # Uppercase plural for "Real Chords"
             "Real Chords": "realchord",
             "BASS": "bass",
             "Bass": "bass",
