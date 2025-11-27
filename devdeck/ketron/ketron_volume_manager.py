@@ -93,7 +93,7 @@ class KetronVolumeManager:
             "Chords": "chord",
             "REALCHORD": "realchord",
             "REAL CHORD": "realchord",  # For "REAL CHORD" in cc_midis
-            "Real CHords": "realchord",
+            "Real Chords": "realchord",
             "BASS": "bass",
             "Bass": "bass",
             "MASTER VOLUME": "master",
