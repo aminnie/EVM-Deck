@@ -65,7 +65,7 @@ class MidiControl(BaseDeckControl):
         """Render the control icon or text"""
         with self.deck_context() as context:
             with context.renderer() as r:
-                # Convert color if needed (for custom colors like 'offwhite')
+                # Convert color if needed (for custom colors like 'white')
                 if background_color:
                     standard_colors = {'blue', 'green', 'red', 'yellow', 'orange', 'purple', 'white', 'black', 'grey', 'gray', 'cyan', 'magenta', 'pink', 'brown', 'teal', 'navy', 'maroon', 'lime', 'silver', 'gold', 'lightblue', 'lightgreen', 'lightgray', 'darkblue', 'darkgreen', 'darkred'}
                     if background_color.lower() not in standard_colors:
@@ -113,7 +113,7 @@ class MidiControl(BaseDeckControl):
         Flash the key with a specified background color for a duration.
         
         Args:
-            flash_color: Color to flash (e.g., 'offwhite', 'red')
+            flash_color: Color to flash (e.g., 'white', 'red')
             flash_duration_ms: Duration of flash in milliseconds (default: 100)
         """
         # Render with flash color
@@ -205,8 +205,8 @@ class MidiControl(BaseDeckControl):
             # Flash with red background for failure (error message will be shown during flash)
             self._flash_key_with_error('red', "SEND\nFAILED")
         else:
-            # Flash with offwhite background for success
-            self._flash_key('offwhite')
+            # Flash with white background for success
+            self._flash_key('white')
     
     def _send_sysex(self, port_name):
         """Send a MIDI SysEx message"""
@@ -251,8 +251,8 @@ class MidiControl(BaseDeckControl):
             # Flash with red background for failure (error message will be shown during flash)
             self._flash_key_with_error('red', "SEND\nFAILED")
         else:
-            # Flash with offwhite background for success
-            self._flash_key('offwhite')
+            # Flash with white background for success
+            self._flash_key('white')
     
     def settings_schema(self):
         """Define the settings schema for MidiControl"""

@@ -51,7 +51,7 @@ class BaseDeckControl(Base):
         that preserves the control's content (icon/text) while changing the background.
         
         Args:
-            flash_color: Color to flash (e.g., 'offwhite', 'red')
+            flash_color: Color to flash (e.g., 'white', 'red')
             flash_duration_ms: Duration of flash in milliseconds (default: 100)
         """
         # Default implementation: subclasses should override to provide proper flash

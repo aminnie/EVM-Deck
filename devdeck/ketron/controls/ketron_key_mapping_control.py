@@ -264,7 +264,7 @@ class KetronKeyMappingControl(BaseDeckControl):
         Flash the key with a specified background color for a duration.
         
         Args:
-            flash_color: Color to flash (e.g., 'offwhite', 'red')
+            flash_color: Color to flash (e.g., 'white', 'red')
             flash_duration_ms: Duration of flash in milliseconds (default: 100)
         """
         # Render with flash color
@@ -537,8 +537,8 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self._flash_key_with_error('red', "SEND\nFAILED")
                 else:
                     self.__logger.info(f"Sent pedal command '{matched_key}' for key {self.key_no}")
-                    # Flash with offwhite background for success
-                    self._flash_key('offwhite')
+                    # Flash with white background for success
+                    self._flash_key('white')
             
             elif source_list_name == 'tab_midis':
                 # Find the matching key (case-insensitive)
@@ -556,8 +556,8 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self._flash_key_with_error('red', "SEND\nFAILED")
                 else:
                     self.__logger.info(f"Sent tab command '{matched_key}' for key {self.key_no}")
-                    # Flash with offwhite background for success
-                    self._flash_key('offwhite')
+                    # Flash with white background for success
+                    self._flash_key('white')
             
             elif source_list_name == 'cc_midis':
                 # For CC buttons, find the matching key (case-insensitive)
@@ -599,8 +599,8 @@ class KetronKeyMappingControl(BaseDeckControl):
                         self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value} (current {volume_name} volume), channel=16 for key {self.key_no}")
                     else:
                         self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value}, channel={cc_channel} for key {self.key_no}")
-                    # Flash with offwhite background for success
-                    self._flash_key('offwhite')
+                    # Flash with white background for success
+                    self._flash_key('white')
             
             else:
                 self.__logger.error(f"Invalid source_list_name '{source_list_name}' for key {self.key_no}")
