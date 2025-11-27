@@ -323,14 +323,21 @@ class MidiManager:
             
             # Send message
             port.send(msg)
-            self.__logger.debug(f"Sent CC: channel={channel}, control={control}, value={value}")
+            
+            # Log exact MIDI CC message bytes
+            # MIDI CC message format: Status byte (0xB0-0xBF for channels 0-15), Control, Value
+            status_byte = 0xB0 + channel
+            self.__logger.info(
+                f"MIDI CC: 0x{status_byte:02X} 0x{control:02X} 0x{value:02X} "
+                f"(channel={channel+1}, control={control}, value={value})"
+            )
             return True
             
         except Exception as e:
             self.__logger.error(f"Error sending CC message: {e}")
             return False
     
-    def send_sysex(self, data: List[int], port_name: Optional[str] = None) -> bool:
+    def send_sysex(self, data: List[int], port_name: Optional[str] = None, skip_log: bool = False) -> bool:
         """
         Send a MIDI System Exclusive (SysEx) message.
         
@@ -366,7 +373,14 @@ class MidiManager:
             
             # Send message
             port.send(msg)
-            self.__logger.debug(f"Sent SysEx: {len(data)} bytes")
+            
+            # Log exact SysEx message bytes (including F0 and F7) unless skip_log is True
+            if not skip_log:
+                sysex_bytes = [0xF0] + data + [0xF7]
+                sysex_hex = ' '.join([f'0x{b:02X}' for b in sysex_bytes])
+                self.__logger.info(
+                    f"MIDI SysEx: {sysex_hex} ({len(data)} data bytes)"
+                )
             return True
             
         except Exception as e:
@@ -400,7 +414,14 @@ class MidiManager:
         # Extract data (remove 0xF0 and 0xF7)
         data = raw_data[1:-1]
         
-        return self.send_sysex(data, port_name)
+        # Log exact SysEx message bytes before sending
+        sysex_hex = ' '.join([f'0x{b:02X}' for b in raw_data])
+        self.__logger.info(
+            f"MIDI SysEx: {sysex_hex} ({len(data)} data bytes)"
+        )
+        
+        # Skip logging in send_sysex since we already logged above
+        return self.send_sysex(data, port_name, skip_log=True)
     
     def _get_port(self, port_name: Optional[str] = None):
         """
