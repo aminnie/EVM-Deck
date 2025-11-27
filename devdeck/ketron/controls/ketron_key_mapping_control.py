@@ -59,6 +59,14 @@ class KetronKeyMappingControl(BaseDeckControl):
         self._volume_key_type = None  # "UP" or "DOWN"
         self._volume_key_repeat_lock = threading.Lock()
         
+        # Mute key long press state tracking
+        self._mute_key_pressed_time = None
+        self._mute_key_long_press_thread = None
+        self._mute_key_long_press_stop = threading.Event()
+        self._mute_key_is_long_press = False
+        self._mute_long_press_duration_ms = 500  # 500ms for long press
+        self._mute_key_long_press_lock = threading.Lock()
+        
         super().__init__(key_no, **kwargs)
     
     @classmethod
@@ -421,6 +429,41 @@ class KetronKeyMappingControl(BaseDeckControl):
         # Clean up thread reference
         self._volume_key_repeat_thread = None
     
+    def _detect_mute_long_press(self):
+        """
+        Background thread that detects if Mute key is held for long press duration (500ms).
+        Sets _mute_key_is_long_press flag if the duration is reached.
+        """
+        long_press_duration = self._mute_long_press_duration_ms / 1000.0  # Convert to seconds
+        
+        # Wait for long press duration (or until stop event is set)
+        if self._mute_key_long_press_stop.wait(timeout=long_press_duration):
+            # Stop event was set during wait (key was released early), exit
+            return
+        
+        # Long press duration reached - mark as long press
+        with self._mute_key_long_press_lock:
+            self._mute_key_is_long_press = True
+    
+    def _stop_mute_long_press_detection(self):
+        """
+        Stop the mute long press detection thread and clean up resources.
+        """
+        # Signal thread to stop
+        self._mute_key_long_press_stop.set()
+        
+        # Wait for thread to finish (with timeout)
+        if self._mute_key_long_press_thread is not None and self._mute_key_long_press_thread.is_alive():
+            self._mute_key_long_press_thread.join(timeout=0.1)
+            if self._mute_key_long_press_thread.is_alive():
+                self.__logger.warning("Mute long press detection thread did not stop within timeout")
+        
+        # Clean up thread reference and reset state
+        self._mute_key_long_press_thread = None
+        with self._mute_key_long_press_lock:
+            self._mute_key_is_long_press = False
+            self._mute_key_pressed_time = None
+    
     def pressed(self):
         """Send MIDI message when key is pressed"""
         # Re-fetch the mapping in case offset_key_no was set after initialize()
@@ -508,16 +551,23 @@ class KetronKeyMappingControl(BaseDeckControl):
             return
         
         elif key_name.upper() == "MUTE":
-            # Toggle mute for the last pressed volume
-            new_volume = self.volume_manager.toggle_mute_last_pressed_volume(port_name=port_name)
-            if new_volume is None:
-                self.__logger.warning("Mute pressed but no last pressed volume key set")
-                self._render_error("NO\nVOLUME\nSELECTED")
-            else:
-                if new_volume == 0:
-                    self.__logger.info(f"Mute: muted volume (set to {new_volume})")
-                else:
-                    self.__logger.info(f"Mute: unmuted volume (restored to {new_volume})")
+            # Stop any existing long press detection thread (in case of rapid key presses)
+            self._stop_mute_long_press_detection()
+            
+            # Record press timestamp and reset long press flag
+            with self._mute_key_long_press_lock:
+                self._mute_key_pressed_time = time.time()
+                self._mute_key_is_long_press = False
+                self._mute_key_long_press_stop.clear()
+            
+            # Start long press detection thread
+            self._mute_key_long_press_thread = threading.Thread(
+                target=self._detect_mute_long_press,
+                daemon=True
+            )
+            self._mute_key_long_press_thread.start()
+            
+            # Don't execute toggle here - wait for key release to determine if it's short or long press
             return
         
         try:
@@ -611,8 +661,8 @@ class KetronKeyMappingControl(BaseDeckControl):
             self._render_error("ERROR")
     
     def released(self):
-        """Handle key release, including stopping volume key repeat if applicable"""
-        # Re-fetch the mapping to check if this is a Volume Up/Down key
+        """Handle key release, including stopping volume key repeat if applicable, and handling Mute long press"""
+        # Re-fetch the mapping to check if this is a Volume Up/Down or Mute key
         lookup_key = getattr(self, 'offset_key_no', self.key_no)
         self.key_mapping = self._get_key_mapping()
         
@@ -622,6 +672,46 @@ class KetronKeyMappingControl(BaseDeckControl):
             # Stop repeat thread for Volume Up/Down keys
             if key_name.upper() in ("VOLUME UP", "VOLUME DOWN"):
                 self._stop_volume_key_repeat()
+            
+            # Handle Mute key release - determine if it was a long press or short press
+            elif key_name.upper() == "MUTE":
+                port_name = self.settings.get('port')
+                
+                # Stop long press detection thread
+                self._stop_mute_long_press_detection()
+                
+                # Calculate press duration
+                with self._mute_key_long_press_lock:
+                    press_time = self._mute_key_pressed_time
+                    is_long_press = self._mute_key_is_long_press
+                
+                if press_time is not None:
+                    press_duration = time.time() - press_time
+                    press_duration_ms = press_duration * 1000
+                    
+                    # Check if it was a long press (>= 500ms or flag was set)
+                    if is_long_press or press_duration_ms >= self._mute_long_press_duration_ms:
+                        # Long press: toggle all volumes
+                        self.__logger.info(f"Mute long press detected ({press_duration_ms:.0f}ms) - toggling all volumes")
+                        results = self.volume_manager.toggle_mute_all_volumes(port_name=port_name)
+                        self.__logger.info(f"Mute long press: toggled all volumes - {results}")
+                    else:
+                        # Short press: toggle last pressed volume (existing behavior)
+                        self.__logger.info(f"Mute short press detected ({press_duration_ms:.0f}ms) - toggling last pressed volume")
+                        new_volume = self.volume_manager.toggle_mute_last_pressed_volume(port_name=port_name)
+                        if new_volume is None:
+                            self.__logger.warning("Mute pressed but no last pressed volume key set")
+                            self._render_error("NO\nVOLUME\nSELECTED")
+                        else:
+                            if new_volume == 0:
+                                self.__logger.info(f"Mute: muted volume (set to {new_volume})")
+                            else:
+                                self.__logger.info(f"Mute: unmuted volume (restored to {new_volume})")
+                
+                # Clean up state
+                with self._mute_key_long_press_lock:
+                    self._mute_key_pressed_time = None
+                    self._mute_key_is_long_press = False
         
         # Re-render on key release to ensure image stays visible
         self._render()

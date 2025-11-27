@@ -1006,4 +1006,123 @@ class KetronVolumeManager:
             self.__logger.info(f"Muted {volume_name} (set to {new_volume})")
         
         return new_volume
+    
+    def _send_midi_cc_for_volume_direct(self, volume_name: str, volume_value: int, port_name: Optional[str] = None) -> bool:
+        """
+        Send MIDI CC command for a volume change directly, without relying on last_pressed_key_name.
+        
+        Args:
+            volume_name: Name of the volume variable ('lower', 'voice1', etc.)
+            volume_value: The new volume value (0-127)
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            True if CC was sent successfully, False otherwise
+        """
+        # Find the key_name that maps to this volume_name
+        matched_key = None
+        for key_name, mapped_volume in self._key_name_to_volume.items():
+            if mapped_volume == volume_name:
+                # Found a mapping, now find the exact key in cc_midis
+                for cc_key in self.ketron_midi.cc_midis.keys():
+                    if cc_key.upper() == key_name.upper():
+                        matched_key = cc_key
+                        break
+                if matched_key:
+                    break
+        
+        if matched_key is None:
+            self.__logger.warning(f"No key_name found in cc_midis for volume '{volume_name}', cannot send MIDI CC")
+            return False
+        
+        # Get the CC control number
+        cc_control = self.ketron_midi.cc_midis[matched_key]
+        
+        # All MIDI CC volume commands are sent on the configured MIDI output channel
+        # Convert from 1-16 (property) to 0-15 (MidiManager format)
+        midi_channel = self.midi_out_channel - 1  # Convert from 1-based (16) to 0-based (15)
+        
+        # Send the MIDI CC command
+        success = self.midi_manager.send_cc(cc_control, volume_value, midi_channel, port_name)
+        
+        if success:
+            self.__logger.info(
+                f"Sent MIDI CC: control={cc_control} (0x{cc_control:02X}), "
+                f"value={volume_value}, channel={self.midi_out_channel} "
+                f"for volume='{volume_name}' (key_name='{matched_key}')"
+            )
+        else:
+            # Check if mido is available - if not, this is expected in test environments
+            try:
+                import mido
+                mido_available = mido is not None
+            except ImportError:
+                mido_available = False
+            
+            if not mido_available:
+                # mido not installed - this is expected in test environments, use debug level
+                self.__logger.debug(
+                    f"MIDI CC not sent (mido library not available): control={cc_control}, "
+                    f"value={volume_value}, channel={self.midi_out_channel} for volume='{volume_name}'"
+                )
+            else:
+                # mido is available but send failed - this is a real error
+                self.__logger.error(
+                    f"Failed to send MIDI CC: control={cc_control}, value={volume_value}, "
+                    f"channel={self.midi_out_channel} for volume='{volume_name}'"
+                )
+        
+        return success
+    
+    def toggle_mute_all_volumes(self, port_name: Optional[str] = None) -> dict:
+        """
+        Toggle mute for all specified volumes (Voice 1, Voice 2, Drawbars, Lower, Styles, Bass, Drums, Chords, RealChords).
+        - If volume is 0 (muted), restore to 80
+        - If volume is not 0, mute it (set to 0)
+        
+        Args:
+            port_name: MIDI port name (optional, uses default if None)
+        
+        Returns:
+            Dictionary with results for each volume: {volume_name: new_volume_value}
+        """
+        # List of volumes to toggle
+        volumes_to_toggle = [
+            'voice1',    # Voice 1
+            'voice2',   # Voice 2
+            'drawbars', # Drawbars
+            'lower',     # Lower
+            'style',     # Styles
+            'bass',      # Bass
+            'drum',      # Drums
+            'chord',     # Chords
+            'realchord'  # RealChords
+        ]
+        
+        results = {}
+        
+        for volume_name in volumes_to_toggle:
+            # Get current volume
+            current_volume = self._get_volume(volume_name)
+            
+            # Toggle: if muted (0), restore to 80; otherwise mute (set to 0)
+            if current_volume == 0:
+                # Restore to 80
+                new_volume = 80
+                self._set_volume(volume_name, new_volume)
+                # Send MIDI CC command
+                self._send_midi_cc_for_volume_direct(volume_name, new_volume, port_name)
+                self.__logger.info(f"Unmuted {volume_name} (restored to {new_volume})")
+            else:
+                # Mute (set to 0)
+                new_volume = 0
+                self._set_volume(volume_name, new_volume)
+                # Send MIDI CC command
+                self._send_midi_cc_for_volume_direct(volume_name, new_volume, port_name)
+                self.__logger.info(f"Muted {volume_name} (set to {new_volume})")
+            
+            results[volume_name] = new_volume
+        
+        self.__logger.info(f"Toggled mute for all volumes: {results}")
+        return results
 
