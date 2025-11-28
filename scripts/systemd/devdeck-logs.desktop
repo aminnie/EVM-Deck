@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=DevDeck Service Logs
+Comment=Open terminal showing DevDeck service logs
+Exec=bash -c 'sleep 5 && cd ~/devdeck && bash scripts/systemd/show-logs-terminal.sh'
+Icon=utilities-terminal
+Terminal=false
+Categories=System;Utility;
+StartupNotify=true
+X-GNOME-Autostart-enabled=true
+

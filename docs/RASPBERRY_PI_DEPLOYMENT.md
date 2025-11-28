@@ -2713,6 +2713,33 @@ sudo systemctl enable devdeck.service
 
 **Note**: Even though the service runs in the background, you can easily stop it using `sudo systemctl stop devdeck.service` from any terminal.
 
+### Step 5: Auto-Open Terminal with Logs (Optional)
+
+If you want a terminal window to automatically open showing the service logs when you log in to the desktop, you can install an autostart entry:
+
+```bash
+cd ~/devdeck
+bash scripts/systemd/install-logs-autostart.sh
+```
+
+This will:
+- Create a desktop autostart entry
+- Automatically open a terminal window 5 seconds after login
+- Show the devdeck service logs in real-time
+- Keep the terminal open so you can see the logs
+
+**To disable the autostart:**
+```bash
+rm ~/.config/autostart/devdeck-logs.desktop
+```
+
+**To re-enable:**
+```bash
+bash ~/devdeck/scripts/systemd/install-logs-autostart.sh
+```
+
+**Note**: This feature requires a desktop environment (Raspberry Pi OS Desktop). It won't work on headless systems.
+
 ---
 
 ## Alternative: Running in a Terminal Session (Screen/Tmux)

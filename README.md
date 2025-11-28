@@ -113,6 +113,12 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
 - Deck controller system for multi-page layouts
 - Navigation controls for deck switching
 
+### 6. Raspberry Pi Autostart
+- Systemd service integration for automatic startup on boot
+- Service management scripts for easy control
+- Update scripts for seamless code deployment
+- Development workflow support for local development and Pi testing
+
 ## Installation
 
 ### Prerequisites
@@ -168,6 +174,113 @@ On first run, DevDeck will:
 3. Populate it with basic clock controls for each device
 
 **Note**: Ensure the official Stream Deck application is closed before running DevDeck, as only one application can control a Stream Deck at a time.
+
+### Raspberry Pi Autostart
+
+DevDeck can be configured to automatically start on boot using a systemd service. This is ideal for headless Raspberry Pi deployments.
+
+#### Quick Setup
+
+**Option 1: Automated Installation (Recommended)**
+
+```bash
+cd ~/devdeck
+bash scripts/systemd/install-service.sh
+```
+
+This script will:
+- Detect your username and project path automatically
+- Create and install the systemd service file
+- Enable autostart on boot
+- Optionally start the service immediately
+
+**Option 2: Manual Installation**
+
+```bash
+# Copy the service template
+sudo cp scripts/systemd/devdeck.service /etc/systemd/system/devdeck.service
+
+# Edit the service file (update username and paths)
+sudo nano /etc/systemd/system/devdeck.service
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable devdeck.service
+sudo systemctl start devdeck.service
+```
+
+#### Service Management
+
+Use the provided management script for easy service control:
+
+```bash
+# Restart service
+bash scripts/manage/manage-service.sh restart
+
+# Toggle autostart on boot
+bash scripts/manage/manage-service.sh toggle
+
+# View logs in real-time
+bash scripts/manage/manage-service.sh logs
+
+# Check service status
+bash scripts/manage/manage-service.sh status
+```
+
+**Useful Commands:**
+
+You can also use systemctl commands directly:
+
+```bash
+# Start service
+sudo systemctl start devdeck.service
+
+# Stop service
+sudo systemctl stop devdeck.service
+
+# Restart service
+sudo systemctl restart devdeck.service
+
+# Check status
+sudo systemctl status devdeck.service
+
+# View logs
+sudo journalctl -u devdeck.service -f
+```
+
+#### Updating Code
+
+After making changes locally and pushing to git, update on Raspberry Pi:
+
+```bash
+cd ~/devdeck
+bash scripts/update/update-devdeck.sh
+```
+
+This script will:
+- Pull the latest code from git
+- Warn about uncommitted changes
+- Automatically restart the service
+
+#### Auto-Open Logs Terminal (Optional)
+
+To automatically open a terminal window showing service logs when you log in to the desktop:
+
+```bash
+cd ~/devdeck
+bash scripts/systemd/install-logs-autostart.sh
+```
+
+This creates a desktop autostart entry that opens a terminal with logs 5 seconds after login.
+
+**To disable:**
+```bash
+rm ~/.config/autostart/devdeck-logs.desktop
+```
+
+**Note**: Requires a desktop environment (won't work on headless systems).
+
+For detailed Raspberry Pi deployment instructions, see [docs/RASPBERRY_PI_DEPLOYMENT.md](docs/RASPBERRY_PI_DEPLOYMENT.md).
 
 ## Configuration
 
@@ -391,7 +504,10 @@ devdeck-main/
 │   ├── check/              # Verification scripts
 │   ├── generate/           # Code generation
 │   ├── list/               # Listing utilities
-│   └── run/                # Run scripts
+│   ├── manage/             # Service management scripts
+│   ├── run/                # Run scripts
+│   ├── systemd/            # Systemd service files
+│   └── update/             # Update scripts
 │
 └── tests/                  # Test suite
     └── devdeck/            # Package tests
@@ -577,7 +693,7 @@ Copy-Item "C:\hidapi-win\x64\hidapi.dll" -Destination "venv\Scripts\hidapi.dll" 
 - **[USER_GUIDE.md](docs/USER_GUIDE.md)**: User documentation and usage examples
 - **[MIDI_IMPLEMENTATION.md](docs/MIDI_IMPLEMENTATION.md)**: Detailed MIDI implementation guide
 - **[PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)**: Project organization and file structure
-- **[RASPBERRY_PI_DEPLOYMENT.md](docs/RASPBERRY_PI_DEPLOYMENT.md)**: Deployment guide for Raspberry Pi
+- **[RASPBERRY_PI_DEPLOYMENT.md](docs/RASPBERRY_PI_DEPLOYMENT.md)**: Deployment guide for Raspberry Pi, including autostart setup and development workflow
 
 ## Contributing
 

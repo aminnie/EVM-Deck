@@ -82,6 +82,34 @@ bash scripts/manage/manage-service.sh logs
 bash scripts/manage/manage-service.sh status
 ```
 
+## Autostart Scripts
+
+### install-logs-autostart.sh
+
+Installs a desktop autostart entry that automatically opens a terminal window showing devdeck service logs when you log in to the desktop.
+
+**Location:** `scripts/systemd/install-logs-autostart.sh`
+
+**Usage:**
+
+```bash
+cd ~/devdeck
+bash scripts/systemd/install-logs-autostart.sh
+```
+
+**What it does:**
+1. Creates a desktop autostart entry in `~/.config/autostart/`
+2. Opens a terminal window 5 seconds after login
+3. Shows devdeck service logs in real-time
+4. Keeps the terminal open for monitoring
+
+**To disable:**
+```bash
+rm ~/.config/autostart/devdeck-logs.desktop
+```
+
+**Note**: This feature requires a desktop environment (Raspberry Pi OS Desktop). It won't work on headless systems.
+
 ## Utility Scripts
 
 ### generate_key_mappings.py

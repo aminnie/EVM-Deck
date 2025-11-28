@@ -10,9 +10,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Check if service exists
+# Check if service exists (multiple methods for robustness)
 service_exists() {
-    systemctl list-unit-files | grep -q "^${SERVICE_NAME}"
+    # Check if service file exists
+    [ -f "/etc/systemd/system/${SERVICE_NAME}" ] || \
+    systemctl list-unit-files 2>/dev/null | grep -q "^${SERVICE_NAME}" || \
+    systemctl list-units --all 2>/dev/null | grep -q "${SERVICE_NAME}"
 }
 
 # Show usage
@@ -39,17 +42,34 @@ show_usage() {
     echo "  $0 logs               # Follow logs in real-time"
 }
 
-# Check if service is installed
-if ! service_exists; then
-    echo -e "${RED}ERROR: Service ${SERVICE_NAME} is not installed.${NC}"
-    echo ""
-    echo "To install the service, run:"
-    echo "  bash scripts/systemd/install-service.sh"
-    exit 1
+# Commands that require the service to be installed
+REQUIRES_SERVICE="start stop restart enable disable toggle"
+
+# Check if service is installed (only for commands that require it)
+COMMAND="${1:-help}"
+
+# Check if this command requires the service
+if echo "$REQUIRES_SERVICE" | grep -q "\b${COMMAND}\b"; then
+    if ! service_exists; then
+        echo -e "${RED}ERROR: Service ${SERVICE_NAME} is not installed.${NC}"
+        echo ""
+        echo "To install the service, run:"
+        echo "  bash scripts/systemd/install-service.sh"
+        echo ""
+        echo "Or if you're on a system without systemd, you can still view logs using:"
+        echo "  sudo journalctl -u ${SERVICE_NAME} -f"
+        exit 1
+    fi
+elif [ "$COMMAND" != "help" ] && [ "$COMMAND" != "--help" ] && [ "$COMMAND" != "-h" ]; then
+    # For read-only commands (logs, status), warn but allow
+    if ! service_exists; then
+        echo -e "${YELLOW}WARNING: Service ${SERVICE_NAME} may not be installed.${NC}"
+        echo "Attempting to proceed anyway (logs may be empty if service never ran)..."
+        echo ""
+    fi
 fi
 
-# Get command from arguments
-COMMAND="${1:-help}"
+# Command is already set above
 
 case "$COMMAND" in
     start)
@@ -134,19 +154,53 @@ case "$COMMAND" in
     logs)
         echo "Showing logs for ${SERVICE_NAME} (Press Ctrl+C to exit)..."
         echo ""
-        sudo journalctl -u "$SERVICE_NAME" -f
+        # For follow mode, we can't easily check beforehand, so just try it
+        # journalctl will show an error if the unit doesn't exist
+        sudo journalctl -u "$SERVICE_NAME" -f || {
+            echo ""
+            echo -e "${RED}Failed to show logs for ${SERVICE_NAME}.${NC}"
+            echo "The service may not be installed or may have never run."
+            echo ""
+            echo "To install the service, run:"
+            echo "  bash scripts/systemd/install-service.sh"
+            exit 1
+        }
         ;;
     
     logs-last)
         echo "Last 50 log lines for ${SERVICE_NAME}:"
         echo ""
-        sudo journalctl -u "$SERVICE_NAME" -n 50
+        # Try to show logs
+        OUTPUT=$(sudo journalctl -u "$SERVICE_NAME" -n 50 2>&1)
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ] || [ -z "$OUTPUT" ]; then
+            echo -e "${RED}No logs found for ${SERVICE_NAME}.${NC}"
+            echo "The service may not be installed or may have never run."
+            echo ""
+            echo "To install the service, run:"
+            echo "  bash scripts/systemd/install-service.sh"
+            exit 1
+        else
+            echo "$OUTPUT"
+        fi
         ;;
     
     logs-boot)
         echo "Logs since last boot for ${SERVICE_NAME}:"
         echo ""
-        sudo journalctl -u "$SERVICE_NAME" -b
+        # Try to show logs
+        OUTPUT=$(sudo journalctl -u "$SERVICE_NAME" -b 2>&1)
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ] || [ -z "$OUTPUT" ]; then
+            echo -e "${RED}No logs found for ${SERVICE_NAME}.${NC}"
+            echo "The service may not be installed or may have never run."
+            echo ""
+            echo "To install the service, run:"
+            echo "  bash scripts/systemd/install-service.sh"
+            exit 1
+        else
+            echo "$OUTPUT"
+        fi
         ;;
     
     help|--help|-h)
