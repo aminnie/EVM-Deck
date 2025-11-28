@@ -4321,9 +4321,14 @@ To get files from your development machine to Raspberry Pi:
 
 **Method 1: Git** (Recommended):
 ```bash
-# On Raspberry Pi
+# On Raspberry Pi - Use the update script (recommended)
+cd ~/devdeck
+bash scripts/update/update-devdeck.sh
+
+# Or manually:
 cd ~/devdeck
 git pull origin main
+sudo systemctl restart devdeck.service
 ```
 
 **Method 2: SCP** (Secure Copy):
@@ -4339,6 +4344,237 @@ See the [Samba Configuration section](#samba-configuration-windows-network-acces
 - Copy files to USB drive
 - Mount on Raspberry Pi
 - Copy files to application directory
+
+## Development Workflow
+
+When developing the application, you'll typically work on your main computer and test on the Raspberry Pi. This section explains the recommended workflow for updating code and managing the service.
+
+### Overview
+
+The recommended development workflow is:
+
+1. **Develop locally** on your main computer (Windows/Mac/Linux) using your preferred IDE
+2. **Commit and push** changes to your git repository
+3. **Update on Raspberry Pi** using the provided update script
+4. **Test and verify** the changes work correctly
+5. **Manage the service** as needed during development
+
+### Updating Code on Raspberry Pi
+
+After making changes locally and pushing to git, update the code on your Raspberry Pi:
+
+**Using the Update Script (Recommended):**
+
+```bash
+# On Raspberry Pi
+cd ~/devdeck
+bash scripts/update/update-devdeck.sh
+```
+
+This script will:
+- Pull the latest code from git
+- Warn you if there are uncommitted local changes
+- Automatically restart the service
+- Show the service status
+
+**Manual Update:**
+
+If you prefer to update manually:
+
+```bash
+# On Raspberry Pi
+cd ~/devdeck
+
+# Pull latest code
+git pull origin main
+
+# Restart the service
+sudo systemctl restart devdeck.service
+
+# Check status
+sudo systemctl status devdeck.service
+```
+
+### Managing the Service During Development
+
+The `manage-service.sh` script provides easy commands to control the service:
+
+**Basic Service Control:**
+
+```bash
+# Restart service (after code updates)
+bash scripts/manage/manage-service.sh restart
+
+# Start service
+bash scripts/manage/manage-service.sh start
+
+# Stop service
+bash scripts/manage/manage-service.sh stop
+
+# Check service status
+bash scripts/manage/manage-service.sh status
+```
+
+**Managing Autostart:**
+
+During development, you may want to temporarily disable autostart to test manually:
+
+```bash
+# Disable autostart (service won't start on boot)
+bash scripts/manage/manage-service.sh disable
+
+# Enable autostart (service will start on boot)
+bash scripts/manage/manage-service.sh enable
+
+# Toggle autostart (convenient for switching)
+bash scripts/manage/manage-service.sh toggle
+```
+
+**Viewing Logs:**
+
+```bash
+# Follow logs in real-time (Press Ctrl+C to exit)
+bash scripts/manage/manage-service.sh logs
+
+# View last 50 log lines
+bash scripts/manage/manage-service.sh logs-last
+
+# View logs since last boot
+bash scripts/manage/manage-service.sh logs-boot
+```
+
+### Complete Development Workflow Example
+
+Here's a complete example of the development workflow:
+
+**1. On your development machine:**
+
+```bash
+# Make code changes in your IDE
+# ... edit files ...
+
+# Commit changes
+git add .
+git commit -m "Add new feature"
+git push origin main
+```
+
+**2. On Raspberry Pi:**
+
+```bash
+# Update code and restart service
+cd ~/devdeck
+bash scripts/update/update-devdeck.sh
+```
+
+**3. Verify the changes:**
+
+```bash
+# Check service status
+bash scripts/manage/manage-service.sh status
+
+# View logs to verify it's working
+bash scripts/manage/manage-service.sh logs
+```
+
+### Working with Uncommitted Changes
+
+If you have uncommitted changes on the Raspberry Pi, the update script will warn you:
+
+```bash
+$ bash scripts/update/update-devdeck.sh
+WARNING: You have uncommitted changes in your working directory.
+These changes may be overwritten by git pull.
+Continue anyway? (y/n)
+```
+
+**Options:**
+
+- **Save your changes first:**
+  ```bash
+  git stash  # Temporarily save changes
+  bash scripts/update/update-devdeck.sh
+  git stash pop  # Restore changes if needed
+  ```
+
+- **Commit your changes:**
+  ```bash
+  git add .
+  git commit -m "Local changes"
+  bash scripts/update/update-devdeck.sh
+  ```
+
+- **Discard changes:**
+  ```bash
+  git reset --hard HEAD  # WARNING: This discards all uncommitted changes
+  bash scripts/update/update-devdeck.sh
+  ```
+
+### Testing Without Service
+
+If you want to test the application manually without the service running:
+
+```bash
+# Stop and disable the service
+bash scripts/manage/manage-service.sh stop
+bash scripts/manage/manage-service.sh disable
+
+# Run manually
+cd ~/devdeck
+source venv/bin/activate
+python -m devdeck.main
+
+# When done, re-enable autostart
+bash scripts/manage/manage-service.sh enable
+bash scripts/manage/manage-service.sh start
+```
+
+### Troubleshooting Development Issues
+
+**Service won't restart after update:**
+
+```bash
+# Check service status
+bash scripts/manage/manage-service.sh status
+
+# View error logs
+bash scripts/manage/manage-service.sh logs-last
+
+# Check for Python errors
+cd ~/devdeck
+source venv/bin/activate
+python -m devdeck.main  # Run manually to see errors
+```
+
+**Git pull conflicts:**
+
+If you have conflicts during `git pull`, resolve them manually:
+
+```bash
+cd ~/devdeck
+git pull origin main
+# Resolve conflicts in the files shown
+git add .
+git commit -m "Resolve merge conflicts"
+sudo systemctl restart devdeck.service
+```
+
+**Service keeps restarting (crash loop):**
+
+```bash
+# Disable service temporarily
+bash scripts/manage/manage-service.sh disable
+bash scripts/manage/manage-service.sh stop
+
+# Run manually to see the error
+cd ~/devdeck
+source venv/bin/activate
+python -m devdeck.main
+
+# Fix the issue, then re-enable
+bash scripts/manage/manage-service.sh enable
+bash scripts/manage/manage-service.sh start
+```
 
 ## Additional Resources
 
