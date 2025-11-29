@@ -263,23 +263,20 @@ This script will:
 - Warn about uncommitted changes
 - Automatically restart the service
 
-#### Auto-Open Logs Terminal (Optional)
+#### Viewing Logs Manually
 
-To automatically open a terminal window showing service logs when you log in to the desktop:
+To view service logs in a terminal window manually:
 
 ```bash
 cd ~/devdeck
-bash scripts/systemd/install-logs-autostart.sh
+bash scripts/systemd/show-logs-terminal.sh
 ```
 
-This creates a desktop autostart entry that opens a terminal with logs 5 seconds after login.
+Or use the management script:
 
-**To disable:**
 ```bash
-rm ~/.config/autostart/devdeck-logs.desktop
+bash scripts/manage/manage-service.sh logs
 ```
-
-**Note**: Requires a desktop environment (won't work on headless systems).
 
 For detailed Raspberry Pi deployment instructions, see [docs/RASPBERRY_PI_DEPLOYMENT.md](docs/RASPBERRY_PI_DEPLOYMENT.md).
 

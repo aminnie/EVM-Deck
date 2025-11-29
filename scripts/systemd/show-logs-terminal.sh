@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to open a terminal window showing devdeck service logs
-# This is typically called from a desktop autostart entry
+# This can be run manually to view logs in a terminal window
 
 # Get project directory from environment variable or default to ~/devdeck
 PROJECT_DIR="${PROJECT_DIR:-$HOME/devdeck}"
@@ -44,7 +44,7 @@ log_message() {
         logger -t devdeck-logs "$msg" 2>/dev/null || true
     fi
     # Also try to write to a log file for debugging
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $msg" >> "$PROJECT_DIR/logs/autostart.log" 2>/dev/null || true
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $msg" >> "$PROJECT_DIR/logs/terminal-logs.log" 2>/dev/null || true
 }
 
 # Detect the terminal emulator and open it
