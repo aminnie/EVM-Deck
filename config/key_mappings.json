@@ -117,7 +117,7 @@
       "key_name": "Lowers",
       "source_list_name": "cc_midis",
       "text_color": "black",
-      "background_color": "lightyellow"
+      "background_color": "#FFB84D"
     },
     {
       "key_no": 17,
@@ -138,7 +138,7 @@
       "key_name": "Draw Organ",
       "source_list_name": "cc_midis",
       "text_color": "black",
-      "background_color": "offwhite"
+      "background_color": "#F5F5F5"
     },
     {
       "key_no": 20,
