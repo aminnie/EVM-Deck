@@ -49,7 +49,7 @@ cat > "$DESKTOP_FILE" << EOF
 Type=Application
 Name=DevDeck Service Logs
 Comment=Open terminal showing DevDeck service logs
-Exec=bash -c 'sleep 5 && cd $PROJECT_DIR && bash scripts/systemd/show-logs-terminal.sh'
+Exec=bash -c 'sleep 5 && export PROJECT_DIR="$PROJECT_DIR" && cd "$PROJECT_DIR" && bash scripts/systemd/show-logs-terminal.sh'
 Icon=utilities-terminal
 Terminal=false
 Categories=System;Utility;

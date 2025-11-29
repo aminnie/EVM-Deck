@@ -20,6 +20,7 @@ DevDeck is a Python-based control system for Elgato Stream Deck devices that ena
 - [Development](#development)
 - [Testing](#testing)
 - [Known Issues](#known-issues)
+- [Checking System Logs for Errors](#checking-system-logs-for-errors)
 - [Documentation](#documentation)
 
 ## Overview
@@ -687,6 +688,53 @@ Copy-Item "C:\hidapi-win\x64\hidapi.dll" -Destination "venv\Scripts\hidapi.dll" 
 **Issue**: Factory default images appear or devdeck controls don't work.
 
 **Fix**: Close the official Stream Deck application completely before running devdeck. Only one application can control a Stream Deck at a time.
+
+## Checking System Logs for Errors
+
+When troubleshooting issues, especially on Raspberry Pi deployments, you may want to check the system logs for errors. Here are useful commands to check for errors in the logs:
+
+### Check DevDeck Service Logs Since Last Boot
+
+**View logs with errors only:**
+```bash
+sudo journalctl -u devdeck.service -b -p err -o cat
+```
+
+**View logs with warnings and errors:**
+```bash
+sudo journalctl -u devdeck.service -b -o cat | grep -i "error\|warning\|exception\|traceback\|failed"
+```
+
+**View all logs since last boot:**
+```bash
+bash scripts/manage/manage-service.sh logs-boot
+```
+
+**View last 50 lines with priority >= warning:**
+```bash
+sudo journalctl -u devdeck.service -n 50 -p warning -o cat
+```
+
+### Check for Specific Error Patterns
+
+**Search for common error keywords:**
+```bash
+sudo journalctl -u devdeck.service -b -o cat | grep -E "(ERROR|CRITICAL|Exception|Traceback|Failed|failed)"
+```
+
+### Quick Status Check
+
+**Check if the service is running:**
+```bash
+bash scripts/manage/manage-service.sh status
+```
+
+**Or directly:**
+```bash
+sudo systemctl status devdeck.service
+```
+
+**Note**: The `-o cat` flag suppresses journald's timestamp prefix, showing only the application's timestamp with millisecond precision (e.g., `2025-11-29 06:51:34,934`).
 
 ## Documentation
 
