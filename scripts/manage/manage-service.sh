@@ -154,9 +154,10 @@ case "$COMMAND" in
     logs)
         echo "Showing logs for ${SERVICE_NAME} (Press Ctrl+C to exit)..."
         echo ""
+        # Use -o cat to suppress journald's timestamp, showing only the application's timestamp with milliseconds
         # For follow mode, we can't easily check beforehand, so just try it
         # journalctl will show an error if the unit doesn't exist
-        sudo journalctl -u "$SERVICE_NAME" -f || {
+        sudo journalctl -u "$SERVICE_NAME" -f -o cat || {
             echo ""
             echo -e "${RED}Failed to show logs for ${SERVICE_NAME}.${NC}"
             echo "The service may not be installed or may have never run."
@@ -170,8 +171,9 @@ case "$COMMAND" in
     logs-last)
         echo "Last 50 log lines for ${SERVICE_NAME}:"
         echo ""
+        # Use -o cat to suppress journald's timestamp, showing only the application's timestamp with milliseconds
         # Try to show logs
-        OUTPUT=$(sudo journalctl -u "$SERVICE_NAME" -n 50 2>&1)
+        OUTPUT=$(sudo journalctl -u "$SERVICE_NAME" -n 50 -o cat 2>&1)
         EXIT_CODE=$?
         if [ $EXIT_CODE -ne 0 ] || [ -z "$OUTPUT" ]; then
             echo -e "${RED}No logs found for ${SERVICE_NAME}.${NC}"
@@ -188,8 +190,9 @@ case "$COMMAND" in
     logs-boot)
         echo "Logs since last boot for ${SERVICE_NAME}:"
         echo ""
+        # Use -o cat to suppress journald's timestamp, showing only the application's timestamp with milliseconds
         # Try to show logs
-        OUTPUT=$(sudo journalctl -u "$SERVICE_NAME" -b 2>&1)
+        OUTPUT=$(sudo journalctl -u "$SERVICE_NAME" -b -o cat 2>&1)
         EXIT_CODE=$?
         if [ $EXIT_CODE -ne 0 ] || [ -z "$OUTPUT" ]; then
             echo -e "${RED}No logs found for ${SERVICE_NAME}.${NC}"

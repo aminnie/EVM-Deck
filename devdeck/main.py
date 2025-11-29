@@ -22,6 +22,7 @@ def main() -> None:
     root = logging.getLogger('devdeck')
     root.setLevel(logging.DEBUG)
 
+    # Formatter with milliseconds (default %(asctime)s includes milliseconds: YYYY-MM-DD HH:MM:SS,mmm)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     info_handler = logging.StreamHandler(sys.stdout)
