@@ -138,7 +138,7 @@
       "key_name": "Draw Organ",
       "source_list_name": "cc_midis",
       "text_color": "black",
-      "background_color": "#F5F5F5"
+      "background_color": "#FFF8F0"
     },
     {
       "key_no": 20,
@@ -152,7 +152,7 @@
       "key_name": "Bass",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "orange"
+      "background_color": "#FFB84D"
     },
     {
       "key_no": 22,
