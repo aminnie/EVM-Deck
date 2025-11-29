@@ -165,15 +165,15 @@
       "key_no": 23,
       "key_name": "Chords",
       "source_list_name": "cc_midis",
-      "text_color": "black",
-      "background_color": "lightyellow"
+      "text_color": "white",
+      "background_color": "ketron_blue"
     },
     {
       "key_no": 24,
       "key_name": "Real Chords",
       "source_list_name": "cc_midis",
-      "text_color": "black",
-      "background_color": "lightyellow"
+      "text_color": "white",
+      "background_color": "ketron_blue"
     },
     {
       "key_no": 25,
@@ -194,21 +194,21 @@
       "key_name": "Volume Down",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "ketron_blue"
+      "background_color": "blue"
     },
     {
       "key_no": 28,
       "key_name": "Volume Up",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "ketron_blue"
+      "background_color": "blue"
     },
     {
       "key_no": 29,
       "key_name": "Style",
       "source_list_name": "cc_midis",
       "text_color": "white",
-      "background_color": "purple"
+      "background_color": "ketron_blue"
     }
   ]
 }
