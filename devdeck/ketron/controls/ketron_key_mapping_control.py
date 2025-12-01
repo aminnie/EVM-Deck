@@ -216,6 +216,9 @@ class KetronKeyMappingControl(BaseDeckControl):
     
     def _render(self, background_color_override=None):
         """Render the control with text and colors from key_mappings.json"""
+        # Refresh key_mapping to ensure we have the latest data (cache invalidation handled in _load_key_mappings)
+        self.key_mapping = self._get_key_mapping()
+        
         with self.deck_context() as context:
             with context.renderer() as r:
                 if self.key_mapping is None:
