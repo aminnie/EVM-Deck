@@ -36,6 +36,7 @@ class KetronVolumeManager:
     _lock = threading.Lock()
     _MIN_VOLUME = 0
     _MAX_VOLUME = 127
+    _DEFAULT_VOLUME = 96  # Default volume for initialization and unmute restore
     
     def __new__(cls):
         """Singleton pattern implementation"""
@@ -54,17 +55,17 @@ class KetronVolumeManager:
         self.__logger = logging.getLogger('devdeck')
         self._volume_lock = threading.Lock()
         
-        # Initialize all volumes to 80 by default
-        self._lower = 80
-        self._voice1 = 80
-        self._voice2 = 80
-        self._drawbars = 80
-        self._style = 80
-        self._drum = 80
-        self._chord = 80
-        self._realchord = 80
-        self._bass = 80
-        self._master = 80  # Master volume
+        # Initialize all volumes to default volume
+        self._lower = self._DEFAULT_VOLUME
+        self._voice1 = self._DEFAULT_VOLUME
+        self._voice2 = self._DEFAULT_VOLUME
+        self._drawbars = self._DEFAULT_VOLUME
+        self._style = self._DEFAULT_VOLUME
+        self._drum = self._DEFAULT_VOLUME
+        self._chord = self._DEFAULT_VOLUME
+        self._realchord = self._DEFAULT_VOLUME
+        self._bass = self._DEFAULT_VOLUME
+        self._master = self._DEFAULT_VOLUME  # Master volume
         
         # Initialize MIDI output channel (1-16, default: 16)
         self._midi_out_channel = 16
@@ -963,14 +964,14 @@ class KetronVolumeManager:
     def toggle_mute_last_pressed_volume(self, port_name: Optional[str] = None) -> Optional[int]:
         """
         Toggle mute for the last pressed volume key.
-        - If volume is 0 (muted), restore to 80
+        - If volume is 0 (muted), restore to default volume
         - If volume is not 0, mute it (set to 0)
         
         Args:
             port_name: MIDI port name (optional, uses default if None)
         
         Returns:
-            New volume value (0 or 80) if successful, None if no last pressed key or invalid key
+            New volume value (0 or default volume) if successful, None if no last pressed key or invalid key
         """
         key_name = self.last_pressed_key_name
         if not key_name:
@@ -986,10 +987,10 @@ class KetronVolumeManager:
         # Get current volume
         current_volume = self._get_volume(volume_name)
         
-        # Toggle: if muted (0), restore to 80; otherwise mute (set to 0)
+        # Toggle: if muted (0), restore to default volume; otherwise mute (set to 0)
         if current_volume == 0:
-            # Restore to 80
-            new_volume = 80
+            # Restore to default volume
+            new_volume = self._DEFAULT_VOLUME
             self._set_volume(volume_name, new_volume)
             # Special handling for master volume (uses Expression CC)
             if volume_name == "master":
