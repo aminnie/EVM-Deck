@@ -42,6 +42,7 @@ class Colors:
     LIGHTYELLOW = 0xFFFF80  # RGB(255, 255, 128) - Bright light yellow
     TEAL = 0x004040
     OFFWHITE = 0xA47474
+    BEIGE = 0xF1E1C3  # RGB(241, 225, 195) - Beige color
 
 # Color mapping dictionary
 COLOR_MAP = {
@@ -56,7 +57,8 @@ COLOR_MAP = {
     'orange': Colors.ORANGE,
     'white': Colors.WHITE,
     'teal': Colors.TEAL,
-    'offwhite': Colors.OFFWHITE
+    'offwhite': Colors.OFFWHITE,
+    'beige': Colors.BEIGE
 }
 
 class KetronMidi:
