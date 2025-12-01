@@ -137,8 +137,8 @@
       "key_no": 19,
       "key_name": "Draw Organ",
       "source_list_name": "cc_midis",
-      "text_color": "black",
-      "background_color": "#FFF3DA"
+      "text_color": "white",
+      "background_color": "green"
     },
     {
       "key_no": 20,
