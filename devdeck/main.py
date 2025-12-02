@@ -9,9 +9,11 @@ from StreamDeck.DeviceManager import DeviceManager
 
 from devdeck.deck_manager import DeckManager
 from devdeck.filters import InfoFilter
+from devdeck.midi import MidiManager
 from devdeck.settings.devdeck_settings import DevDeckSettings
 from devdeck.settings.migration import SettingsMigrator
 from devdeck.settings.validation_error import ValidationError
+from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
 
 
 def main() -> None:
@@ -44,6 +46,78 @@ def main() -> None:
     fileHandler = RotatingFileHandler(str(log_file), maxBytes=100000, backupCount=5)
     fileHandler.setFormatter(formatter)
     root.addHandler(fileHandler)
+
+    # Validate required USB devices before proceeding
+    root.info("Checking for required USB devices...")
+    
+    # Check for Elgato Stream Deck
+    elgato_connected, elgato_device = check_elgato_stream_deck()
+    if not elgato_connected:
+        root.error("=" * 60)
+        root.error("ERROR: Elgato Stream Deck not detected!")
+        root.error("=" * 60)
+        root.error("Please ensure your Elgato Stream Deck is connected via USB.")
+        root.error("On Linux/Raspberry Pi, verify with: lsusb | grep -i elgato")
+        root.error("=" * 60)
+        print("\n" + "=" * 60)
+        print("ERROR: Elgato Stream Deck not detected!")
+        print("=" * 60)
+        print("Please ensure your Elgato Stream Deck is connected via USB.")
+        print("On Linux/Raspberry Pi, verify with: lsusb | grep -i elgato")
+        print("=" * 60 + "\n")
+        sys.exit(1)
+    else:
+        if elgato_device:
+            root.info(f"Elgato Stream Deck detected: {elgato_device.description} (ID: {elgato_device.vendor_id}:{elgato_device.product_id})")
+        else:
+            root.info("Elgato Stream Deck detection passed (Windows - using library detection)")
+    
+    # Check for MIDI output USB device
+    midi_connected, midi_device = check_midi_output_device()
+    if not midi_connected:
+        root.error("=" * 60)
+        root.error("ERROR: MIDI output USB device not detected!")
+        root.error("=" * 60)
+        root.error("Please ensure a MIDI output USB device is connected.")
+        root.error("On Linux/Raspberry Pi, verify with: lsusb | grep -i midi")
+        root.error("=" * 60)
+        print("\n" + "=" * 60)
+        print("ERROR: MIDI output USB device not detected!")
+        print("=" * 60)
+        print("Please ensure a MIDI output USB device is connected.")
+        print("On Linux/Raspberry Pi, verify with: lsusb | grep -i midi")
+        print("=" * 60 + "\n")
+        sys.exit(1)
+    else:
+        if midi_device:
+            root.info(f"MIDI output device detected: {midi_device.description} (ID: {midi_device.vendor_id}:{midi_device.product_id})")
+        else:
+            root.info("MIDI device detection passed (Windows - using port enumeration)")
+    
+    # Automatically connect to MIDI hardware port
+    root.info("Initializing MIDI manager and auto-connecting to hardware port...")
+    midi_manager = MidiManager()
+    if midi_manager.auto_connect_hardware_port():
+        open_ports = midi_manager.get_open_ports()
+        if open_ports:
+            root.info(f"Successfully connected to MIDI port: {open_ports[0]}")
+        else:
+            root.warning("MIDI port connection reported success but no ports are open")
+    else:
+        root.error("=" * 60)
+        root.error("ERROR: Failed to connect to MIDI hardware port!")
+        root.error("=" * 60)
+        root.error("Please ensure a MIDI output device is connected and accessible.")
+        root.error("Available MIDI ports can be checked with: python -m devdeck.midi.midi_manager")
+        root.error("=" * 60)
+        print("\n" + "=" * 60)
+        print("ERROR: Failed to connect to MIDI hardware port!")
+        print("=" * 60)
+        print("Please ensure a MIDI output device is connected and accessible.")
+        print("=" * 60 + "\n")
+        sys.exit(1)
+    
+    root.info("Device validation complete. Proceeding with Stream Deck initialization...")
 
     streamdecks = DeviceManager().enumerate()
 

@@ -616,4 +616,99 @@ class MidiManager:
                     return True
             
             return False
+    
+    def auto_connect_hardware_port(self) -> bool:
+        """
+        Automatically detect and connect to the first available hardware MIDI output port.
+        
+        This method:
+        - Lists all available MIDI output ports
+        - Filters out virtual ports and "Midi Through" ports
+        - Connects to the first available hardware MIDI port
+        - Prefers ports with known MIDI device names
+        
+        Returns:
+            True if a hardware port was successfully connected, False otherwise
+        """
+        if mido is None:
+            self.__logger.error("mido library not available. Cannot auto-connect MIDI port.")
+            return False
+        
+        # Check if a port is already open
+        if len(self._output_ports) > 0:
+            self.__logger.info("MIDI port already open, skipping auto-connect")
+            return True
+        
+        try:
+            available_ports = mido.get_output_names()
+            
+            if not available_ports:
+                self.__logger.error("No MIDI output ports available for auto-connect")
+                return False
+            
+            self.__logger.info(f"Available MIDI ports: {available_ports}")
+            
+            # Filter out virtual ports and "Midi Through"
+            # Virtual ports typically have specific names or can be detected by trying to open them
+            hardware_ports = []
+            
+            for port_name in available_ports:
+                # Skip "Midi Through" ports
+                if 'Midi Through' in port_name or 'midi through' in port_name.lower():
+                    self.__logger.debug(f"Skipping Midi Through port: {port_name}")
+                    continue
+                
+                # Skip Microsoft GS Wavetable Synth (Windows software synth)
+                if 'GS Wavetable Synth' in port_name or 'gs wavetable synth' in port_name.lower():
+                    self.__logger.debug(f"Skipping GS Wavetable Synth: {port_name}")
+                    continue
+                
+                # Try to determine if it's a virtual port
+                # On Linux, virtual ports are typically created by applications
+                # We'll try to open the port and check if it's virtual
+                try:
+                    # Try to open the port to check if it's hardware
+                    test_port = mido.open_output(port_name)
+                    is_virtual = getattr(test_port, 'is_virtual', False)
+                    test_port.close()
+                    
+                    if not is_virtual:
+                        hardware_ports.append(port_name)
+                        self.__logger.debug(f"Found hardware MIDI port: {port_name}")
+                    else:
+                        self.__logger.debug(f"Skipping virtual port: {port_name}")
+                except Exception as e:
+                    # If we can't open it, skip it
+                    self.__logger.debug(f"Could not test port {port_name}: {e}")
+                    # Still add it as a potential hardware port (might be a permission issue)
+                    hardware_ports.append(port_name)
+            
+            if not hardware_ports:
+                self.__logger.error("No hardware MIDI output ports found (only virtual ports or Midi Through available)")
+                return False
+            
+            # Prefer ports with known MIDI device names (USB MIDI devices, etc.)
+            preferred_names = ['USB MIDI', 'CH345', 'MIDI', 'Roland', 'M-Audio', 'Yamaha', 'Korg']
+            preferred_port = None
+            
+            for preferred_name in preferred_names:
+                for port in hardware_ports:
+                    if preferred_name.lower() in port.lower():
+                        preferred_port = port
+                        self.__logger.info(f"Found preferred MIDI port: {preferred_port}")
+                        break
+                if preferred_port:
+                    break
+            
+            # Use preferred port if found, otherwise use first hardware port
+            port_to_connect = preferred_port if preferred_port else hardware_ports[0]
+            
+            self.__logger.info(f"Auto-connecting to MIDI hardware port: {port_to_connect}")
+            
+            # Connect to the selected port
+            return self.open_port(port_to_connect, use_virtual=False)
+            
+        except Exception as e:
+            self.__logger.error(f"Error in auto_connect_hardware_port: {e}", exc_info=True)
+            return False
 
