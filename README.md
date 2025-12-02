@@ -12,6 +12,7 @@ DevDeck is a Python-based control system for Elgato Stream Deck devices that ena
 - [Technical Architecture](#technical-architecture)
 - [Key Features](#key-features)
 - [Installation](#installation)
+- [Building and Installing](#building-and-installing)
 - [Configuration](#configuration)
 - [Built-in Controls](#built-in-controls)
 - [MIDI Support](#midi-support)
@@ -202,6 +203,66 @@ On first run, DevDeck will:
 **Device Detection Errors**: If you see errors about missing devices:
 - **Elgato Stream Deck**: Verify USB connection and check with `lsusb | grep -i elgato` (Linux/Raspberry Pi)
 - **MIDI Device**: Ensure MIDI adapter is connected and check with `lsusb | grep -i midi` (Linux/Raspberry Pi)
+
+## Building and Installing
+
+DevDeck uses modern Python packaging with `pyproject.toml`. You can build and install it as a package for system-wide use.
+
+### Building the Package
+
+**Build a source distribution:**
+```bash
+pip install build
+python -m build
+```
+
+This creates distribution files in the `dist/` directory:
+- `devdeck-X.X.X.tar.gz` - Source distribution
+- `devdeck-X.X.X-py3-none-any.whl` - Wheel distribution
+
+**Version Management:**
+The package version is automatically determined from git tags using `setuptools-scm`. If no git tags exist, it falls back to version `0.1.0`.
+
+### Installing as a Package
+
+**Install in development mode (editable):**
+```bash
+pip install -e .
+```
+
+This installs the package in editable mode, so changes to the source code are immediately available without reinstalling.
+
+**Install from source:**
+```bash
+pip install .
+```
+
+**Install from a built distribution:**
+```bash
+pip install dist/devdeck-*.whl
+# or
+pip install dist/devdeck-*.tar.gz
+```
+
+### Console Script
+
+After installation, the `devdeck` console script will be available in your PATH:
+
+```bash
+devdeck
+```
+
+This is equivalent to running `python -m devdeck.main`.
+
+### Package Metadata
+
+The package is configured in `pyproject.toml` with:
+- **Name**: `devdeck`
+- **License**: MIT
+- **Author**: James Ridgway
+- **Homepage**: https://github.com/jamesridgway/devdeck
+- **Dependencies**: All dependencies from `requirements.txt`
+- **Console Script**: `devdeck = devdeck.main:main`
 
 ### Raspberry Pi Autostart
 
