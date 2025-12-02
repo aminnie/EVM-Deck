@@ -779,6 +779,15 @@ Copy-Item "C:\hidapi-win\x64\hidapi.dll" -Destination "venv\Scripts\hidapi.dll" 
 
 When troubleshooting issues, especially on Raspberry Pi deployments, you may want to check the system logs for errors. Here are useful commands to check for errors in the logs:
 
+### Check Wayvnc Service Status (Raspberry Pi)
+
+**Check if Wayvnc is running:**
+```bash
+systemctl status wayvnc.service
+```
+
+This will show whether the Wayvnc VNC server is active and running on your Raspberry Pi.
+
 ### Check DevDeck Service Logs Since Last Boot
 
 **View logs with errors only:**

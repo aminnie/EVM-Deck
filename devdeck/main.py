@@ -68,7 +68,9 @@ def main() -> None:
         sys.exit(1)
     else:
         if elgato_device:
-            root.info(f"Elgato Stream Deck detected: {elgato_device.description} (ID: {elgato_device.vendor_id}:{elgato_device.product_id})")
+            root.info(f"Elgato Stream Deck USB connection: {elgato_device.description} "
+                     f"(Bus {elgato_device.bus}, Device {elgato_device.device}, "
+                     f"ID {elgato_device.vendor_id}:{elgato_device.product_id})")
         else:
             root.info("Elgato Stream Deck detection passed (Windows - using library detection)")
     
@@ -90,7 +92,9 @@ def main() -> None:
         sys.exit(1)
     else:
         if midi_device:
-            root.info(f"MIDI output device detected: {midi_device.description} (ID: {midi_device.vendor_id}:{midi_device.product_id})")
+            root.info(f"MIDI output USB device detected: {midi_device.description} "
+                     f"(Bus {midi_device.bus}, Device {midi_device.device}, "
+                     f"ID {midi_device.vendor_id}:{midi_device.product_id})")
         else:
             root.info("MIDI device detection passed (Windows - using port enumeration)")
     
@@ -100,7 +104,12 @@ def main() -> None:
     if midi_manager.auto_connect_hardware_port():
         open_ports = midi_manager.get_open_ports()
         if open_ports:
-            root.info(f"Successfully connected to MIDI port: {open_ports[0]}")
+            selected_port = open_ports[0]
+            root.info(f"Selected MIDI USB port: {selected_port}")
+            # Try to match the MIDI port with the USB device for additional details
+            if midi_device:
+                root.info(f"MIDI port '{selected_port}' corresponds to USB device: "
+                         f"{midi_device.description} (Bus {midi_device.bus}, Device {midi_device.device})")
         else:
             root.warning("MIDI port connection reported success but no ports are open")
     else:
