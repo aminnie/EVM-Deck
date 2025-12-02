@@ -31,8 +31,6 @@ def main() -> None:
     info_handler.setLevel(logging.INFO)
     info_handler.setFormatter(formatter)
     info_handler.addFilter(InfoFilter())
-    # Ensure immediate output for systemd
-    info_handler.stream.reconfigure(line_buffering=True) if hasattr(info_handler.stream, 'reconfigure') else None
     root.addHandler(info_handler)
 
     error_handler = logging.StreamHandler(sys.stderr)
@@ -51,7 +49,6 @@ def main() -> None:
 
     # Validate required USB devices before proceeding
     root.info("Checking for required USB devices...")
-    sys.stdout.flush()  # Ensure immediate output for systemd
     
     # Check for Elgato Stream Deck
     elgato_connected, elgato_device = check_elgato_stream_deck()
@@ -115,9 +112,6 @@ def main() -> None:
                          f"{midi_device.description} (Bus {midi_device.bus}, Device {midi_device.device})")
         else:
             root.warning("MIDI port connection reported success but no ports are open")
-    
-    # Flush stdout to ensure all startup messages are visible in systemd logs
-    sys.stdout.flush()
     else:
         root.error("=" * 60)
         root.error("ERROR: Failed to connect to MIDI hardware port!")

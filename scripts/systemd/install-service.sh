@@ -50,7 +50,6 @@ Type=simple
 User=$CURRENT_USER
 WorkingDirectory=$PROJECT_DIR
 Environment="PATH=$PROJECT_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="PYTHONUNBUFFERED=1"
 ExecStart=$PROJECT_DIR/venv/bin/python -m devdeck.main
 Restart=always
 RestartSec=10

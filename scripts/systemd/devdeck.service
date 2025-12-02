@@ -10,7 +10,6 @@ User=admin
 # IMPORTANT: Replace '/home/admin/devdeck' with your actual project path
 WorkingDirectory=/home/admin/devdeck
 Environment="PATH=/home/admin/devdeck/venv/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="PYTHONUNBUFFERED=1"
 ExecStart=/home/admin/devdeck/venv/bin/python -m devdeck.main
 Restart=always
 RestartSec=10
