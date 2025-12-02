@@ -1,9 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm>=7.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "devdeck-main"
-version = "0.1.0"
-description = "Stream Deck control software for software developers"
+name = "devdeck"
+dynamic = ["version"]  # Version determined from git tags via setuptools-scm
+description = "A developer's approach to using a Stream Deck."
 readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "James Ridgway"}
+]
+urls = {
+    Homepage = "https://github.com/jamesridgway/devdeck"
+}
 dependencies = [
     "assertpy",
     "cerberus",
@@ -11,7 +22,7 @@ dependencies = [
     "emoji",
     "jsonschema",
     "mido",
-    "pillow",
+    "pillow<10.0.0",  # Pin to avoid textsize() removal issue
     "pulsectl",
     "python-rtmidi",
     "pytest",
@@ -19,3 +30,21 @@ dependencies = [
     "requests",
     "streamdeck",
 ]
+
+[project.scripts]
+devdeck = "devdeck.main:main"
+
+[tool.setuptools]
+packages = ["devdeck"]
+# Version is automatically handled by setuptools-scm via dynamic = ["version"] in [project]
+
+[tool.setuptools.package-data]
+devdeck = [
+    "assets/font-awesome/*",
+]
+
+[tool.setuptools-scm]
+# Use git tags for versioning (similar to setup.py's get_version())
+# Falls back to "0.1.0" if no git tags are found
+fallback_version = "0.1.0"
+write_to = "devdeck/_version.py"

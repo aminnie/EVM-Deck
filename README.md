@@ -44,6 +44,11 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
 │   main.py       │  Entry point, device enumeration, settings loading
 └────────┬────────┘
          │
+         ├──► USB Device Checker ───► Device Validation
+         │         │                        │
+         │         │                        ├── Elgato Stream Deck (USB)
+         │         │                        └── MIDI Output Devices (USB)
+         │         │
          ├──► DeckManager ───► DeckController ───► Controls
          │         │                  │                │
          │         │                  │                ├── ClockControl
@@ -56,6 +61,7 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
          │
          └──► MIDI Manager (Singleton)
                     │
+                    ├──► Auto-Connect Hardware Port
                     └──► MIDI Port Management
                          ├── CC Messages
                          └── SysEx Messages
@@ -611,7 +617,7 @@ python -m devdeck.main
 ### Running Tests
 
 ```bash
-./run-tests.sh  # Linux/macOS
+./scripts/run/run-tests.sh  # Linux/macOS
 # or
 python -m pytest tests/
 ```

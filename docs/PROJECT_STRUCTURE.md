@@ -122,10 +122,9 @@ devdeck-main/
 ├── .gitignore            # Git ignore rules
 ├── LICENSE               # License file
 ├── MANIFEST.in           # Package manifest
-├── pyproject.toml         # Python project configuration
+├── pyproject.toml         # Python project configuration (package metadata, build system)
 ├── README.md             # Main project documentation
 ├── requirements.txt      # Python dependencies
-├── setup.py              # Package setup script
 └── setup.sh              # Setup script for development
 ```
 
