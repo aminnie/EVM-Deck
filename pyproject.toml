@@ -5,15 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "devdeck"
 dynamic = ["version"]  # Version determined from git tags via setuptools-scm
-description = "A developer's approach to using a Stream Deck."
+description = "Using a Stream Deck with the Ketron EVM as a MIDI Controller."
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "James Ridgway"}
+    {name = "Anton Minnie"}
 ]
 urls = {
-    Homepage = "https://github.com/jamesridgway/devdeck"
+    Homepage = "https://github.com/jamesridgway/devdeck",
+    Fork = "https://github.com/aminnie/EVM-MIDI_DECK/network/dependencies"
 }
 dependencies = [
     "assertpy",
