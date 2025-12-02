@@ -91,6 +91,7 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
 - **System Exclusive (SysEx) Messages**: Custom MIDI commands for specialized devices
 - **Cross-Platform MIDI**: Works on Windows, Linux, macOS, and Raspberry Pi
 - **Port Management**: Automatic or manual MIDI port selection
+- **Automatic MIDI Connection**: Automatically detects and connects to hardware MIDI output devices at startup
 - **Thread-Safe**: Safe concurrent MIDI message sending
 - **Visual Feedback**: Keys flash for 100ms after sending MIDI messages:
   - **White background** for successful sends
@@ -114,7 +115,15 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
 - Deck controller system for multi-page layouts
 - Navigation controls for deck switching
 
-### 6. Raspberry Pi Autostart
+### 6. Automatic Device Detection
+- **USB Device Validation**: Automatically checks for required USB devices at startup
+  - **Elgato Stream Deck**: Validates Stream Deck connection via USB (Linux/Raspberry Pi)
+  - **MIDI Output Devices**: Detects MIDI USB adapters and interfaces (CH345, Roland, M-Audio, etc.)
+- **Automatic MIDI Connection**: Connects to the first available hardware MIDI port on startup
+- **Error Handling**: Clear error messages if required devices are missing
+- **Cross-Platform**: Windows uses library detection, Linux/Raspberry Pi uses USB-level checks
+
+### 7. Raspberry Pi Autostart
 - Systemd service integration for automatic startup on boot
 - Service management scripts for easy control
 - Update scripts for seamless code deployment
@@ -170,11 +179,23 @@ DevDeck provides a flexible framework for controlling Stream Deck hardware throu
 ### First Run
 
 On first run, DevDeck will:
-1. Detect connected Stream Deck devices
-2. Generate a default `config/settings.yml` file
-3. Populate it with basic clock controls for each device
+1. **Validate USB Devices**: Check for Elgato Stream Deck and MIDI output devices
+   - On Linux/Raspberry Pi: Validates via USB device detection (`lsusb`)
+   - On Windows: Uses Stream Deck library and MIDI port enumeration
+   - Exits with clear error messages if devices are missing
+2. **Auto-Connect MIDI**: Automatically detects and connects to the first available hardware MIDI output port
+   - Filters out virtual ports and "Midi Through" ports
+   - Prefers ports with known MIDI device names (USB MIDI, CH345, etc.)
+   - Logs connection status for troubleshooting
+3. **Detect Stream Deck Devices**: Enumerate connected Stream Deck devices
+4. **Generate Settings**: Create a default `config/settings.yml` file if none exists
+5. **Populate Controls**: Add basic clock controls for each device
 
 **Note**: Ensure the official Stream Deck application is closed before running DevDeck, as only one application can control a Stream Deck at a time.
+
+**Device Detection Errors**: If you see errors about missing devices:
+- **Elgato Stream Deck**: Verify USB connection and check with `lsusb | grep -i elgato` (Linux/Raspberry Pi)
+- **MIDI Device**: Ensure MIDI adapter is connected and check with `lsusb | grep -i midi` (Linux/Raspberry Pi)
 
 ### Raspberry Pi Autostart
 
@@ -387,6 +408,7 @@ DevDeck includes comprehensive MIDI support through the `MidiManager` singleton 
 The `MidiManager` provides:
 - Thread-safe MIDI port management
 - Automatic port connection/disconnection
+- **Automatic Hardware Port Connection**: `auto_connect_hardware_port()` method detects and connects to hardware MIDI devices at startup
 - Support for multiple MIDI ports
 - CC and SysEx message sending
 
