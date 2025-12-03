@@ -193,7 +193,6 @@ class KetronKeyMappingControl(BaseDeckControl):
             # Convert from 1-16 to 1-16 (validate range)
             if 1 <= midi_channel <= 16:
                 self.volume_manager.set_midi_out_channel(midi_channel)
-                self.__logger.info(f"Configured MIDI output channel to {midi_channel} (from settings)")
             else:
                 self.__logger.warning(f"Invalid MIDI channel {midi_channel}, must be 1-16. Using default channel 16.")
         
