@@ -888,7 +888,6 @@ class KetronVolumeManager:
         channel = self._clamp_channel(channel)
         with self._volume_lock:
             self._midi_out_channel = channel
-        self.__logger.info(f"Set MIDI output channel to {channel}")
         return channel
     
     def increment_last_pressed_volume(self, amount: int = 1, port_name: Optional[str] = None) -> Optional[int]:
