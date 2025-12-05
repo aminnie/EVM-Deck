@@ -1,0 +1,601 @@
+{
+  "PIANO/CHROM": {
+    "PAGE_1": [
+      "GRAND_PIANO",
+      "ROCK&ROLL",
+      "VINTAGE",
+      "JAZZ_PIANO",
+      "CLASSIC_FM",
+      "STAGE",
+      "REAL_MARK",
+      "WURLI"
+    ],
+    "PAGE_2": [
+      "BRIGHT_GRAND",
+      "MARK_70 (sbk)",
+      "80's_MIX",
+      "HARPSICHORD",
+      "POP_ROCK",
+      "DIGITAL",
+      "CLAVINET",
+      "FM CULT"
+    ],
+    "PAGE_3": [
+      "VIBRAPHONE",
+      "GM PIANO",
+      "ROCK PIANO",
+      "SMOOTH_GRAND",
+      "PIANO&STRINGS",
+      "ELECTROTAB",
+      "DX_PIANO",
+      "TX"
+    ],
+    "PAGE_4": [
+      "MAGIC_TOUCH",
+      "UPRIGHT",
+      "PIANISSIMO",
+      "SUITCASE",
+      "HONKY_TONK",
+      "LATIN",
+      "OPERATOR",
+      "STAGE_FM"
+    ],
+    "PAGE_5": [
+      "MK_PIANO",
+      "POP_CONCERT",
+      "MARIMBA",
+      "MEZZOFORTE",
+      "GLOCKENSPIEL",
+      "ROSEWOOD",
+      "CELESTA",
+      "XYLOPHONE"
+    ],
+    "PAGE_6": [
+      "MUSIC BOX",
+      "ORCH BELL",
+      "TUBULAR",
+      "KELON",
+      "TINKLE",
+      "XMAS_BELL",
+      "WINDCHIMES",
+      "VIBE"
+    ]
+  },
+  "STRINGS/CHOIR": {
+    "PAGE_1": [
+      "ENSEMBLE",
+      "DISCO_STRINGS",
+      "SYMPHONY",
+      "BOWEDS",
+      "STRADIVARIUS (Real)",
+      "PIZZICATO",
+      "SPICCATO",
+      "ANALOG STRINGS"
+    ],
+    "PAGE_2": [
+      "SYNSTRINGS",
+      "TZIVAGO",
+      "BAROQUE",
+      "JAZZ_VIOLIN (Real)",
+      "SOFT_STRINGS",
+      "FALL_STRINGS",
+      "HARP",
+      "OCTASTRING_1"
+    ],
+    "PAGE_3": [
+      "OCTASTRING_2",
+      "OCTASTRING_3",
+      "PLUCKEDS",
+      "MOVIE_STRINGS",
+      "PIANO&ORCH",
+      "MARCATO",
+      "1ST_VIOLIN (Real)",
+      "PHILARMONIC"
+    ],
+    "PAGE_4": [
+      "AAH_GIRLS",
+      "GOSPEL",
+      "DUUH",
+      "UUH",
+      "DOOH",
+      "OOH",
+      "TUUH",
+      "GIRL_TUUH (Real)"
+    ],
+    "PAGE_5": [
+      "CLASSIC_CHOIR",
+      "MEN_DAAH",
+      "SISTER_UUH",
+      "SISTER_AAH",
+      "MMMH",
+      "VOCAL_OOH",
+      "LAAH",
+      "SINGERS_AAH"
+    ],
+    "PAGE_6": [
+      "DAM (Real)",
+      "BAAH",
+      "DUUH",
+      "SOPRANO (Real)",
+      "SYNVOICE",
+      "SINGERS_UUH",
+      "CHORALE",
+      "POP_CHOIR"
+    ]
+  },
+  "ORGAN/ACCORDION": {
+    "PAGE_1": [
+      "JAZZ_ORGAN",
+      "WHITER",
+      "BLUES_ORGAN",
+      "BLOCK_CHORDS",
+      "FULL",
+      "VIBRATO_3RD",
+      "CHAPEL",
+      "ROCK"
+    ],
+    "PAGE_2": [
+      "GOSPEL",
+      "WHISTLE",
+      "POP",
+      "THEATRE",
+      "LOWER",
+      "16_8_5",
+      "PRINCIPALE",
+      "PRINCIPALE&OCT"
+    ],
+    "PAGE_3": [
+      "CHURCH",
+      "BOURDON",
+      "LITURGICAL",
+      "POSITIVE",
+      "PIPES",
+      "CHURCH&PEDAL",
+      "FARFISA_1",
+      "FARFISA_2"
+    ],
+    "PAGE_4": [
+      "VOX_1",
+      "VOX_2",
+      "VOX_3",
+      "MUSETTE_1",
+      "MUSETTE_2",
+      "ACCORDION",
+      "OBERKRAIN",
+      "PARISIENNE (Real)"
+    ],
+    "PAGE_5": [
+      "BANDONEON",
+      "CASSOTTO",
+      "BLUES_HARP",
+      "IRISH",
+      "MASTER",
+      "MELODICA",
+      "CHROMATIC",
+      "FRENCH"
+    ],
+    "PAGE_6": [
+      "JAZZ (Real)",
+      "CANTORA_CLARI",
+      "CANTORA_BANDO",
+      "CANTORA_MULTI",
+      "FRANCAISE",
+      "TANGO_1",
+      "TANGO_2",
+      "SWING"
+    ],
+    "PAGE_7": [
+      "TYROLER",
+      "BALKAN",
+      "BELLOW",
+      "HARMONICA",
+      "DIATONIC",
+      "ALPEN",
+      "STEIRISH",
+      "SUPER_MASTER (Real)"
+    ]
+  },
+  "BRASS": {
+    "PAGE_1": [
+      "BEBOP (Real)",
+      "FLUGHORN (Real)",
+      "GROWBRASS",
+      "TRUMPETS",
+      "SOFT_HORN",
+      "TROMBONES",
+      "MUTED",
+      "OCTABRASS"
+    ],
+    "PAGE_2": [
+      "SYNTH_BRASS1",
+      "SYNTH_BRASS2",
+      "TRUMPET_SWELL",
+      "FUNKY_BRASS",
+      "SMOOTH_HORNS",
+      "SOFT_TRUMPET (Real)",
+      "HARMON (Real)",
+      "MELODIC"
+    ],
+    "PAGE_3": [
+      "DAMPED (Real)",
+      "TIJUANA",
+      "DIXIE (Real)",
+      "FRENCH_HORN",
+      "SOFT_T_BONES",
+      "MEXICAN",
+      "TROMBONE",
+      "SOUL_SECTION"
+    ],
+    "PAGE_4": [
+      "ORCHESTR_TPT",
+      "MILES_TPT",
+      "MAGIC_HORNS",
+      "HORN_SWELL",
+      "BRASS&SAX",
+      "FALL_OFF",
+      "JAZZ_TRUMPET",
+      "T_BONE_FALL"
+    ],
+    "PAGE_5": [
+      "T_BONE_RAISE",
+      "TPT_FALL",
+      "TPT_SLIDE_UP",
+      "BLAST (Real)",
+      "TUBA_SHORT",
+      "BARITONE_TUBA",
+      "CORNET",
+      "NEW_ORLEANS (Real)"
+    ],
+    "PAGE_6": [
+      "OBERDUO",
+      "BRIGHT&BRASS",
+      "DEEP_BONES"
+    ]
+  },
+  "PAD": {
+    "PAGE_1": [
+      "NORTH_LIGHT",
+      "SPACE_HARP",
+      "AIR_DROPS",
+      "MALLET_VOICE",
+      "SWEEP",
+      "PROPHET",
+      "NICE_AREA",
+      "INSPIRE"
+    ],
+    "PAGE_2": [
+      "CHOIR_PAD",
+      "RELAX",
+      "SIDERAL",
+      "TENDERLY",
+      "FM_PAD",
+      "PROLOGUE",
+      "FANTASY",
+      "PLUCKED"
+    ],
+    "PAGE_3": [
+      "TINEPAD",
+      "ATMOSFERE",
+      "WIRE",
+      "AFROPAD",
+      "WAVES",
+      "DIGISTRINGS",
+      "HORN_PAD",
+      "WHORSHIP"
+    ],
+    "PAGE_4": [
+      "DIGIT",
+      "HUMAN",
+      "EMPEROR",
+      "FIFE_DREAM",
+      "LOVE_STORY",
+      "SILK_FINGER",
+      "MAGIC_FM",
+      "ALIENS"
+    ],
+    "PAGE_5": [
+      "GUITARPAD",
+      "LOWERING",
+      "NOTRE_DAME",
+      "RAPSODIE",
+      "BELLE EPOQUE",
+      "MARIACHI",
+      "LATIN_HARP",
+      "MUSETTE&ORCH"
+    ],
+    "PAGE_6": []
+  },
+  "SYNTH": {
+    "PAGE_1": [
+      "WHAHOO",
+      "JUPITER",
+      "TECHNO",
+      "SUPERSYNTH",
+      "MIRAGE",
+      "JX_BRASS",
+      "THEREMIN",
+      "POLYSYNTH"
+    ],
+    "PAGE_2": [
+      "AMAZING",
+      "ATTACK",
+      "CHARANG",
+      "JUNO",
+      "LEAD_1",
+      "LEAD_2",
+      "OBX",
+      "MINIMUG"
+    ],
+    "PAGE_3": [
+      "SYNGUITAR",
+      "TOMITAL",
+      "SYNTAX",
+      "ETHNO",
+      "SOLOSYNT",
+      "VANGELOS",
+      "HARD_PULSE",
+      "SHAKU"
+    ],
+    "PAGE_4": [
+      "POPCORN",
+      "SQUARE",
+      "TECHNOLEAD",
+      "IPERSYNTH",
+      "IL FARO",
+      "RECYCLE",
+      "WHAU",
+      "FLANGING"
+    ],
+    "PAGE_5": [
+      "JUICY",
+      "SYNTH SAWSINE",
+      "SEQUENCE",
+      "PUNCHY",
+      "CALLIOPE",
+      "CHIFF",
+      "SOLOIST",
+      "TRANCE"
+    ],
+    "PAGE_6": [
+      "SMOOTH_LEAD",
+      "TRAVELING",
+      "PLUCK IN",
+      "CATY",
+      "HOUSE_1",
+      "HOUSE_2",
+      "CHUCK",
+      "SYNTORGAN"
+    ]
+  },
+  "GUITAR": {
+    "PAGE_1": [
+      "NYLON_PICKED",
+      "NYLON_FINGER",
+      "CLEAN_STRAT",
+      "JAZZ_GUITAR",
+      "ROCKABILLY",
+      "BLUES_DARK",
+      "FUZZ_ROCK",
+      "ACOUSTIC_FOLK"
+    ],
+    "PAGE_2": [
+      "FINGERFOLK",
+      "DJANGO",
+      "CLEAR",
+      "CTRY_STEEL",
+      "CUSTOM_DELUXE",
+      "POWERED",
+      "DISTORTED",
+      "FUNKY"
+    ],
+    "PAGE_3": [
+      "12_STRINGS",
+      "TWANG",
+      "VINTAGE",
+      "STEREO_CLEAR",
+      "SOLIDBODY",
+      "VALVE",
+      "SMOOTH_JAZZ",
+      "DYNAFOLK"
+    ],
+    "PAGE_4": [
+      "FLAMENCO",
+      "MUTE_TAP",
+      "HARD_ROCK",
+      "KEYTAR",
+      "HAWAIAN",
+      "OCTAJAZZ",
+      "OVERDRIVE",
+      "ROCK_LEAD_1"
+    ],
+    "PAGE_5": [
+      "ROCK_LEAD_2",
+      "SIGNATURE",
+      "THIN_FOLK",
+      "SUNBURST",
+      "STRATO",
+      "POWER",
+      "SPANISH",
+      "POP_CHOCK"
+    ],
+    "PAGE_6": [
+      "BANJO&GUIT",
+      "CNTRY_PICKED",
+      "TELECAST",
+      "CLEAN",
+      "PEDAL_STEEL",
+      "ITALFOLK",
+      "JAZZ_FUNK",
+      "BLUES_STRAT"
+    ]
+  },
+  "SAX": {
+    "PAGE_1": [
+      "JAZZ_TENOR (Real)",
+      "ALTO_FOLK (Real)",
+      "BLOWED (Real)",
+      "SWING_ALTO (Real)",
+      "FOLK_TENOR (Real)",
+      "BRASS&SAX",
+      "SAX&CLARINETS",
+      "SAX_UNISON (Real)"
+    ],
+    "PAGE_2": [
+      "CLARINET",
+      "BREATH_TENOR",
+      "JAZZ_ALTO",
+      "LOUNGE_TENOR",
+      "ROCKSAX",
+      "SOPRANO (Real)",
+      "OCTASAX",
+      "GROWL_SAX"
+    ],
+    "PAGE_3": [
+      "CIRCUS SAX",
+      "CONTRALTO (Real)",
+      "ALTOSOFT (Real)",
+      "DRY TENOR",
+      "BIG_BAND",
+      "FOLK CLARINET",
+      "FLUTE",
+      "CLASS_FLUTE (Real)"
+    ],
+    "PAGE_4": [
+      "ANDES",
+      "POP_FLUTE",
+      "RECORDER",
+      "SFORZATO (Real)",
+      "EAST_FLUTE",
+      "LATIN_FLUTE",
+      "OCARINA",
+      "PICCOLO"
+    ],
+    "PAGE_5": [
+      "OBOE (Real)",
+      "SHAKU",
+      "IRISH",
+      "VOICE_FLUTE",
+      "WHISTLE",
+      "PIPE",
+      "PAN_FLUTE",
+      "LIP_FLUTE"
+    ],
+    "PAGE_6": [
+      "FIFE",
+      "ENGLISH_HORN",
+      "SAX_SECTION_1",
+      "SAX_SECTION_2",
+      "SAX_SECTION_3",
+      "SAX_SECTION_4",
+      "SAX_SECTION_5",
+      "SAX_SECTION_6"
+    ]
+  },
+  "BASS": {
+    "PAGE_1": [
+      "CONTRABASS",
+      "STUDIO",
+      "FRETLESS",
+      "JAZZ_ACOUSTIC",
+      "WARMBASS",
+      "FUSION",
+      "PRECISION",
+      "FINGER"
+    ],
+    "PAGE_2": [
+      "FUNK",
+      "JAZZMAN",
+      "PICKED",
+      "SLAP",
+      "STOPPED",
+      "SMOOTH",
+      "THUMB",
+      "KNOCK_BASS"
+    ],
+    "PAGE_3": [
+      "OBERBASS",
+      "UPRIGHT",
+      "SUBBASS_1",
+      "SUBBASS_2",
+      "SYNBAS_1",
+      "SYNBAS_2",
+      "SYNBAS_3",
+      "SYNBAS_4"
+    ],
+    "PAGE_4": [
+      "DEEP_1",
+      "DEEP_2",
+      "CHURCH_BASS",
+      "B3_BASS",
+      "RAVE",
+      "FISA_BASS",
+      "BASS&GUIT",
+      "SINUS"
+    ],
+    "PAGE_5": [],
+    "PAGE_6": []
+  },
+  "ETHNIC": {
+    "PAGE_1": [
+      "BANJO",
+      "GREEK_MANDOL",
+      "TZIGANO (Real)",
+      "BAGPIPE",
+      "BOUZUKY",
+      "BOUZ_TREMOLO",
+      "CYMBALOM",
+      "CYMBAL_TRILL"
+    ],
+    "PAGE_2": [
+      "DULCIMER",
+      "MANDOL_SHORT",
+      "IT_MANDOLIN",
+      "PARAGUAYAN",
+      "SITAR",
+      "HARP_GLISS",
+      "BAGLAMA",
+      "BAGLA_TREMOLO"
+    ],
+    "PAGE_3": [
+      "KALIMBA",
+      "HACKBRETT",
+      "TRES",
+      "TURKISH_STRGS",
+      "OUD",
+      "KANOUN",
+      "KANUN_TREMOLO",
+      "NAY"
+    ],
+    "PAGE_4": [
+      "NAY_TRILL",
+      "YALI_TAMBUR",
+      "ZURNA_1",
+      "ZURNA_2",
+      "GARMAN",
+      "DEVAN",
+      "DEVAN_VIBRATO",
+      "KAMANCHE"
+    ],
+    "PAGE_5": [
+      "KOTO",
+      "LUTE",
+      "MANDOLA",
+      "SHANAI",
+      "STEEL_DRUM",
+      "SHAMISEN",
+      "BRACI",
+      "FIDDLE"
+    ],
+    "PAGE_6": [
+      "KANUN_MANDALO",
+      "DEVAN_LICKS",
+      "CYMBALOM_MUTE",
+      "BANJO_4STRG",
+      "NAY_FALL",
+      "TINKLES",
+      "BAGLAMA_SLIDE",
+      "CHINESE_BELL"
+    ]
+  }
+}
+
