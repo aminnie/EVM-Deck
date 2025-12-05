@@ -2,6 +2,7 @@ assertpy
 cerberus
 devdeck-core==1.0.7
 emoji
+hid
 jsonschema
 mido
 pillow<10.0.0  # Pin to avoid textsize() removal issue
