@@ -7,7 +7,6 @@ from pathlib import Path
 
 from StreamDeck.DeviceManager import DeviceManager
 
-from devdeck.boot_logo_updater import BootLogoUpdater
 from devdeck.deck_manager import DeckManager
 from devdeck.filters import InfoFilter
 from devdeck.midi import MidiManager
@@ -176,20 +175,8 @@ def main() -> None:
             deck.close()
             continue
 
-        # Get deck settings dictionary
-        deck_settings_dict = deck_settings.settings()
-        
-        # Update boot logo if available (for Module 15/32)
-        try:
-            boot_logo_updater = BootLogoUpdater(root)
-            # Check for custom boot logo path in settings
-            boot_logo_path_str = deck_settings_dict.get('boot_logo_path')
-            boot_logo_path = Path(boot_logo_path_str) if boot_logo_path_str else None
-            boot_logo_updater.update_boot_logo_if_exists(boot_logo_path)
-        except Exception as e:
-            root.warning(f"Failed to update boot logo: {e}")
-
         # Get screen saver timeout from settings (optional, defaults to 15 seconds)
+        deck_settings_dict = deck_settings.settings()
         screen_saver_timeout = deck_settings_dict.get('screen_saver_timeout')
         
         deck_manager = DeckManager(deck, screen_saver_timeout=screen_saver_timeout)
