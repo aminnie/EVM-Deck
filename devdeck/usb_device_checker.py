@@ -147,6 +147,7 @@ def check_midi_output_device() -> Tuple[bool, Optional[USBDevice]]:
         '0a92',  # Akai
         '17cc',  # Novation
         '1235',  # Focusrite
+        '157b',  # Ketron
     }
     
     # Check for known MIDI vendor IDs
@@ -162,5 +163,40 @@ def check_midi_output_device() -> Tuple[bool, Optional[USBDevice]]:
             return (True, device)
     
     logger.error("No MIDI output USB device detected")
+    return (False, None)
+
+
+def check_midi_input_device() -> Tuple[bool, Optional[USBDevice]]:
+    """
+    Check if a MIDI input USB device is connected.
+    
+    This function looks for USB devices that are MIDI input devices, such as
+    Adafruit MacroPad (vendor ID 239a) used for Stream Deck input.
+    
+    Returns:
+        Tuple of (is_connected, device_info). On Windows, returns (True, None) since
+        we rely on MIDI port enumeration instead.
+    """
+    logger = logging.getLogger('devdeck')
+    
+    # On Windows, skip USB-level check and rely on MIDI port enumeration
+    if platform.system() == 'Windows':
+        logger.debug("Windows detected - skipping USB-level MIDI input check (using port enumeration)")
+        return (True, None)
+    
+    devices = get_usb_devices()
+    
+    # Known MIDI input device vendor IDs
+    midi_input_vendor_ids = {
+        '239a',  # Adafruit (MacroPad for Stream Deck input)
+    }
+    
+    # Check for known MIDI input vendor IDs
+    for device in devices:
+        if device.vendor_id in midi_input_vendor_ids:
+            logger.info(f"MIDI input device detected (by vendor ID): {device}")
+            return (True, device)
+    
+    logger.debug("No MIDI input USB device detected")
     return (False, None)
 

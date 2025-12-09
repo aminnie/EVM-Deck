@@ -13,7 +13,7 @@ from devdeck.midi import MidiManager
 from devdeck.settings.devdeck_settings import DevDeckSettings
 from devdeck.settings.migration import SettingsMigrator
 from devdeck.settings.validation_error import ValidationError
-from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
+from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device, check_midi_input_device
 
 
 def main() -> None:
@@ -97,6 +97,18 @@ def main() -> None:
                      f"ID {midi_device.vendor_id}:{midi_device.product_id})")
         else:
             root.info("MIDI device detection passed (Windows - using port enumeration)")
+    
+    # Check for MIDI input USB device (optional, e.g., Adafruit MacroPad)
+    midi_input_connected, midi_input_device = check_midi_input_device()
+    if midi_input_connected:
+        if midi_input_device:
+            root.info(f"MIDI input USB device detected: {midi_input_device.description} "
+                     f"(Bus {midi_input_device.bus}, Device {midi_input_device.device}, "
+                     f"ID {midi_input_device.vendor_id}:{midi_input_device.product_id})")
+        else:
+            root.info("MIDI input device detection passed (Windows - using port enumeration)")
+    else:
+        root.debug("No MIDI input USB device detected (optional device)")
     
     # Automatically connect to MIDI hardware port
     root.info("Initializing MIDI manager and auto-connecting to hardware port...")
