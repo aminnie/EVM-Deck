@@ -51,3 +51,52 @@ The main thing to ensure is that `libusb` is installed on macOS (via Homebrew) f
 - The MIDI manager already has platform detection for macOS support
 - All Python dependencies are cross-platform and support macOS ARM64
 
+
+
+---------------------------
+
+## Extracted from the Mac Mini terminal logs. This reflects what we had to do really get the app up and runnung
+
+brew install python
+pip3 install virtualenv
+mkdir evmdeck
+rm -r evmdeck
+mkdir evmdeck
+virtualenv -p python3 evmdeck
+source evmdeck/bin/activate
+cd evmdeck
+source bin/activate
+git clone git@github.com:aminnie/EVM-Deck.git evmdeck
+cd evmdeck
+git init
+python3 -m pip install -r requirements.txt
+xcode-select --install
+python3 -m pip install wheel
+python3 -m pip install -r requirements.txt
+python3 -m pip install --upgrade pip
+python3 -m pip install wheel
+python3 -m pip install -r requirements.txt
+python3 -m pip install pillow
+python3 -m pip install -r requirements.txt
+python3 -m pip install pillow
+python3 -m pip install wheel
+nano  requirements.txt
+python3 -m pip install -r requirements.txt
+ls
+python3 -m pip install --force-reinstall streamdeck
+pip list | grep streamdeck
+python3 -m devdeck.main
+lsusb
+brew install libusb
+brew install usbutils
+lsusb
+python3 -m devdeck.main
+cd evmdeck
+source bin/activate
+python3 -m devdeck.main
+lsusb
+
+----
+
+
+
