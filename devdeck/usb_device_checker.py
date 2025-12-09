@@ -54,13 +54,18 @@ def get_usb_devices() -> List[USBDevice]:
         
         devices = []
         # Parse lsusb output format: "Bus 001 Device 002: ID 1a86:752d QinHeng Electronics CH345 MIDI adapter"
-        pattern = r'Bus (\d+)\s+Device (\d+):\s+ID\s+([0-9a-fA-F]{4}):([0-9a-fA-F]{4})\s+(.+)'
+        # Description is optional (some devices may not have one)
+        pattern = r'Bus (\d+)\s+Device (\d+):\s+ID\s+([0-9a-fA-F]{4}):([0-9a-fA-F]{4})(?:\s+(.+))?'
         
         for line in result.stdout.strip().split('\n'):
+            if not line.strip():  # Skip empty lines
+                continue
             match = re.match(pattern, line)
             if match:
                 bus, device, vendor_id, product_id, description = match.groups()
-                devices.append(USBDevice(bus, device, vendor_id.lower(), product_id.lower(), description.strip()))
+                # Handle case where description might be None
+                description = description.strip() if description else "Unknown device"
+                devices.append(USBDevice(bus, device, vendor_id.lower(), product_id.lower(), description))
         
         return devices
     
@@ -101,6 +106,14 @@ def check_elgato_stream_deck() -> Tuple[bool, Optional[USBDevice]]:
         return (True, None)
     
     devices = get_usb_devices()
+    
+    # Log all detected USB devices for debugging
+    if devices:
+        logger.info(f"Detected {len(devices)} USB device(s):")
+        for device in devices:
+            logger.info(f"  - {device}")
+    else:
+        logger.warning("No USB devices detected via lsusb")
     
     # Elgato Stream Deck vendor ID
     elgato_vendor_id = '0fd9'
