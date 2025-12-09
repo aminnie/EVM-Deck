@@ -37,7 +37,8 @@ def get_usb_devices() -> List[USBDevice]:
     # Only works on Linux/Unix systems
     if platform.system() != 'Linux':
         return []
-    
+
+        logger = logging.getLogger('devdeck')
     try:
         # Run lsusb command
         result = subprocess.run(
@@ -48,8 +49,16 @@ def get_usb_devices() -> List[USBDevice]:
             check=False
         )
         
+        logger.debug(f"lsusb return code: {result.returncode}")
+        logger.debug(f"lsusb stdout length: {len(result.stdout)}")
+        logger.debug(f"lsusb stderr: {result.stderr}")
+        
         if result.returncode != 0:
-            logging.getLogger('devdeck').warning(f"lsusb command failed: {result.stderr}")
+            logger.warning(f"lsusb command failed with return code {result.returncode}: {result.stderr}")
+            return []
+        
+        if not result.stdout.strip():
+            logger.warning("lsusb returned empty output")
             return []
         
         devices = []
@@ -57,7 +66,10 @@ def get_usb_devices() -> List[USBDevice]:
         # Description is optional (some devices may not have one)
         pattern = r'Bus (\d+)\s+Device (\d+):\s+ID\s+([0-9a-fA-F]{4}):([0-9a-fA-F]{4})(?:\s+(.+))?'
         
-        for line in result.stdout.strip().split('\n'):
+        lines = result.stdout.strip().split('\n')
+        logger.debug(f"Parsing {len(lines)} lines from lsusb output")
+        
+        for line_num, line in enumerate(lines, 1):
             if not line.strip():  # Skip empty lines
                 continue
             match = re.match(pattern, line)
@@ -66,7 +78,11 @@ def get_usb_devices() -> List[USBDevice]:
                 # Handle case where description might be None
                 description = description.strip() if description else "Unknown device"
                 devices.append(USBDevice(bus, device, vendor_id.lower(), product_id.lower(), description))
+                logger.debug(f"Parsed line {line_num}: {line} -> vendor_id={vendor_id.lower()}")
+            else:
+                logger.debug(f"Failed to parse line {line_num}: {line}")
         
+        logger.debug(f"Total devices parsed: {len(devices)}")
         return devices
     
     except FileNotFoundError:
