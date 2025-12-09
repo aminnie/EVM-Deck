@@ -34,11 +34,12 @@ def get_usb_devices() -> List[USBDevice]:
     Returns:
         List of USBDevice objects. Returns empty list on Windows or if lsusb is not available.
     """
-    # Only works on Linux/Unix systems
-    if platform.system() != 'Linux':
+    # Works on Linux and macOS (Darwin) systems
+    system = platform.system()
+    if system not in ('Linux', 'Darwin'):
         return []
 
-        logger = logging.getLogger('devdeck')
+    logger = logging.getLogger('devdeck')
     try:
         # Run lsusb command
         result = subprocess.run(
