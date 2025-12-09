@@ -28,7 +28,7 @@ def main() -> None:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     info_handler = logging.StreamHandler(sys.stdout)
-    info_handler.setLevel(logging.INFO)
+    info_handler.setLevel(logging.DEBUG)  # Changed to DEBUG to see debug messages
     info_handler.setFormatter(formatter)
     info_handler.addFilter(InfoFilter())
     root.addHandler(info_handler)
