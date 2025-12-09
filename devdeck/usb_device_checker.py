@@ -132,11 +132,13 @@ def check_elgato_stream_deck() -> Tuple[bool, Optional[USBDevice]]:
     else:
         logger.warning("No USB devices detected via lsusb")
     
-    # Elgato Stream Deck vendor ID
+    # Elgato Stream Deck detection: vendor ID or name string
     elgato_vendor_id = '0fd9'
     
     for device in devices:
-        if device.vendor_id == elgato_vendor_id:
+        # Check by vendor ID or by name string in description
+        if (device.vendor_id == elgato_vendor_id or 
+            'elgato' in device.description.lower()):
             logger.info(f"Elgato Stream Deck detected: {device}")
             return (True, device)
     
@@ -167,9 +169,8 @@ def check_midi_output_device() -> Tuple[bool, Optional[USBDevice]]:
     
     devices = get_usb_devices()
     
-    # Known MIDI-related vendor IDs
+    # Known MIDI-related vendor IDs (excluding CH345 and Ketron which are checked separately)
     midi_vendor_ids = {
-        '1a86',  # QinHeng Electronics (CH345 MIDI adapter)
         '0582',  # Roland
         '0763',  # M-Audio
         '0b0e',  # Yamaha
@@ -177,11 +178,21 @@ def check_midi_output_device() -> Tuple[bool, Optional[USBDevice]]:
         '0a92',  # Akai
         '17cc',  # Novation
         '1235',  # Focusrite
-        '157b',  # Ketron
     }
     
-    # Check for known MIDI vendor IDs
+    # Check for specific devices by vendor ID or name string
     for device in devices:
+        # CH345: vendor ID 1a86 or "CH345" in description
+        if (device.vendor_id == '1a86' or 'ch345' in device.description.lower()):
+            logger.info(f"MIDI device detected (CH345): {device}")
+            return (True, device)
+        
+        # Ketron: vendor ID 157b or "Ketron" in description
+        if (device.vendor_id == '157b' or 'ketron' in device.description.lower()):
+            logger.info(f"MIDI device detected (Ketron): {device}")
+            return (True, device)
+        
+        # Other known MIDI vendor IDs
         if device.vendor_id in midi_vendor_ids:
             logger.info(f"MIDI device detected (by vendor ID): {device}")
             return (True, device)
