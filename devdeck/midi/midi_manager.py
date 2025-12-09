@@ -29,6 +29,10 @@ class MidiManager:
     to send MIDI CC and SysEx messages.
     """
     
+    # Supported USB-to-MIDI device vendor IDs for auto-detection
+    # This list can be expanded for future USB-to-MIDI devices
+    SUPPORTED_MIDI_VENDOR_IDS = ['1a86']  # CH345 USB-to-MIDI adapter
+    
     _instance = None
     _lock = threading.Lock()
     
@@ -142,6 +146,94 @@ class MidiManager:
             return None
         except Exception as e:
             self.__logger.error(f"Error finding port by partial name: {e}")
+            return None
+    
+    def find_port_by_vendor_id_list(self, vendor_ids: List[str]) -> Optional[str]:
+        """
+        Find a MIDI port by matching vendor IDs (macOS) or device patterns (Linux/Raspberry Pi).
+        
+        On macOS, MIDI port names contain vendor IDs (e.g., "1a86" for CH345).
+        On Linux/Raspberry Pi, ports are identified by device name patterns (e.g., "CH345").
+        
+        Args:
+            vendor_ids: List of vendor IDs to search for (e.g., ['1a86'] for CH345)
+        
+        Returns:
+            Full port name if found, None otherwise
+        """
+        if mido is None:
+            return None
+        
+        try:
+            available_ports = mido.get_output_names()
+            system = platform.system()
+            
+            if system == 'Darwin':  # macOS
+                # On macOS, port names contain vendor IDs (e.g., "1a86")
+                # Search for ports containing any of the vendor IDs
+                for vendor_id in vendor_ids:
+                    vendor_id_lower = vendor_id.lower()
+                    for port in available_ports:
+                        if vendor_id_lower in port.lower():
+                            self.__logger.info(f"Found MIDI port by vendor ID {vendor_id}: {port}")
+                            return port
+                self.__logger.debug(f"No MIDI port found containing vendor IDs: {vendor_ids}")
+                return None
+            else:
+                # On Linux/Raspberry Pi, use device name patterns
+                # For CH345 (vendor ID 1a86), search for "CH345" in port name
+                device_patterns = {
+                    '1a86': 'CH345',  # CH345 USB-to-MIDI adapter
+                    # Add more mappings here for future devices
+                }
+                
+                for vendor_id in vendor_ids:
+                    if vendor_id.lower() in device_patterns:
+                        pattern = device_patterns[vendor_id.lower()]
+                        matched_port = self.find_port_by_partial_name(pattern)
+                        if matched_port:
+                            self.__logger.info(f"Found MIDI port by device pattern '{pattern}' (vendor ID {vendor_id}): {matched_port}")
+                            return matched_port
+                
+                self.__logger.debug(f"No MIDI port found for vendor IDs: {vendor_ids}")
+                return None
+                
+        except Exception as e:
+            self.__logger.error(f"Error finding port by vendor ID list: {e}")
+            return None
+    
+    def auto_detect_midi_port(self) -> Optional[str]:
+        """
+        Automatically detect MIDI port using supported vendor IDs.
+        
+        This method:
+        - Uses SUPPORTED_MIDI_VENDOR_IDS to find matching ports
+        - On macOS: searches for ports containing vendor IDs
+        - On Linux/Raspberry Pi: searches for ports by device name patterns
+        - Falls back to existing auto_connect_hardware_port() if no match found
+        
+        Returns:
+            Port name if found, None otherwise
+        """
+        if mido is None:
+            self.__logger.error("mido library not available. Cannot auto-detect MIDI port.")
+            return None
+        
+        try:
+            # Try to find port by vendor ID list
+            detected_port = self.find_port_by_vendor_id_list(self.SUPPORTED_MIDI_VENDOR_IDS)
+            if detected_port:
+                self.__logger.info(f"Auto-detected MIDI port: {detected_port}")
+                return detected_port
+            
+            # Fallback: use existing auto-connect logic
+            self.__logger.debug("No port found by vendor ID, falling back to auto-connect hardware port")
+            # Note: auto_connect_hardware_port() opens the port, but we just want the name
+            # So we'll use a different approach - just return None and let the caller handle it
+            return None
+            
+        except Exception as e:
+            self.__logger.error(f"Error in auto_detect_midi_port: {e}", exc_info=True)
             return None
     
     def open_port(self, port_name: Optional[str] = None, use_virtual: bool = True) -> bool:

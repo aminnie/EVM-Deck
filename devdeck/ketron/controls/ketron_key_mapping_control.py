@@ -196,19 +196,55 @@ class KetronKeyMappingControl(BaseDeckControl):
             else:
                 self.__logger.warning(f"Invalid MIDI channel {midi_channel}, must be 1-16. Using default channel 16.")
         
-        # Open MIDI port if specified or if no ports are open
+        # Open MIDI port - auto-detect if not specified or not found
         port_name = self.settings.get('port')
         
-        if not self.midi_manager.is_port_open(port_name):
-            if port_name:
-                self.__logger.info(f"Opening MIDI port: {port_name}")
+        # If port is specified, try to use it (backward compatibility)
+        if port_name:
+            # Check if the specified port is already open
+            if self.midi_manager.is_port_open(port_name):
+                self.__logger.info(f"MIDI port already open: {port_name}")
             else:
-                self.__logger.info("Opening first available MIDI port")
-            
-            if not self.midi_manager.open_port(port_name):
-                self.__logger.error("Failed to open MIDI port")
-                self._render_error("MIDI\nPORT\nERROR")
-                return
+                # Try to open the specified port (with partial matching)
+                self.__logger.info(f"Attempting to open specified MIDI port: {port_name}")
+                if self.midi_manager.open_port(port_name):
+                    self.__logger.info(f"Successfully opened specified MIDI port: {port_name}")
+                else:
+                    # Port not found, try auto-detection
+                    self.__logger.warning(f"Specified MIDI port '{port_name}' not found, attempting auto-detection")
+                    detected_port = self.midi_manager.auto_detect_midi_port()
+                    if detected_port:
+                        port_name = detected_port
+                        self.__logger.info(f"Auto-detected MIDI port: {port_name}")
+                        if not self.midi_manager.open_port(port_name):
+                            self.__logger.error("Failed to open auto-detected MIDI port")
+                            self._render_error("MIDI\nPORT\nERROR")
+                            return
+                    else:
+                        # Fallback to auto-connect
+                        self.__logger.info("Auto-detection failed, using auto-connect fallback")
+                        if not self.midi_manager.auto_connect_hardware_port():
+                            self.__logger.error("Failed to auto-connect to MIDI port")
+                            self._render_error("MIDI\nPORT\nERROR")
+                            return
+        else:
+            # No port specified, use auto-detection
+            self.__logger.info("No MIDI port specified, attempting auto-detection")
+            detected_port = self.midi_manager.auto_detect_midi_port()
+            if detected_port:
+                port_name = detected_port
+                self.__logger.info(f"Auto-detected MIDI port: {port_name}")
+                if not self.midi_manager.open_port(port_name):
+                    self.__logger.error("Failed to open auto-detected MIDI port")
+                    self._render_error("MIDI\nPORT\nERROR")
+                    return
+            else:
+                # Fallback to auto-connect
+                self.__logger.info("Auto-detection failed, using auto-connect fallback")
+                if not self.midi_manager.auto_connect_hardware_port():
+                    self.__logger.error("Failed to auto-connect to MIDI port")
+                    self._render_error("MIDI\nPORT\nERROR")
+                    return
         
         # Render the control
         self._render()
