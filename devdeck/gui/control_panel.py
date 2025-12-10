@@ -38,6 +38,7 @@ class DevDeckControlPanel:
         self.app_thread: Optional[threading.Thread] = None
         self.app_running = False
         self.app_stop_event = threading.Event()
+        self.app_process = None  # For tracking the application process if needed
         
         # MIDI monitoring state
         self.midi_input_thread: Optional[threading.Thread] = None
@@ -194,11 +195,28 @@ class DevDeckControlPanel:
             except KeyboardInterrupt:
                 self.logger.info("Application interrupted by user")
             except Exception as e:
-                self.logger.error(f"Error in application thread: {e}", exc_info=True)
-                self.root.after(0, lambda: self._update_status("Error", "red"))
+                error_msg = str(e)
+                # Check if it's a device already open error
+                if "Could not open HID device" in error_msg or "TransportError" in error_msg:
+                    self.logger.warning("Stream Deck device appears to be locked. This may happen if:")
+                    self.logger.warning("1. The device wasn't properly closed from a previous run")
+                    self.logger.warning("2. Another application is using the device")
+                    self.logger.warning("3. The device needs a moment to be released")
+                    # Show user-friendly error in GUI
+                    self.root.after(0, lambda: self._update_status("Error: Device locked", "red"))
+                    self.root.after(0, lambda: self.status_label.config(
+                        text="Status: Error - Device locked (try unplugging/replugging)", 
+                        foreground="red"
+                    ))
+                else:
+                    self.logger.error(f"Error in application thread: {e}", exc_info=True)
+                    self.root.after(0, lambda: self._update_status("Error", "red"))
             finally:
                 self.app_running = False
-                self.root.after(0, lambda: self._update_status("Stopped", "red"))
+                # Only update status if it's not already set to a specific error
+                current_status = self.status_label.cget("text")
+                if "Error" not in current_status:
+                    self.root.after(0, lambda: self._update_status("Stopped", "red"))
                 self.root.after(0, self._update_buttons)
         
         self.app_thread = threading.Thread(target=run_app, daemon=True)
@@ -212,35 +230,50 @@ class DevDeckControlPanel:
         if not self.app_running:
             return
         
-        # Set stop event (application would need to check this)
-        self.app_stop_event.set()
-        
-        # Note: The main() function doesn't currently support graceful shutdown
-        # You may need to modify it to check for stop events or use process termination
-        # For now, we'll just update the UI state
-        self.app_running = False
         self._update_status("Stopping...", "orange")
         self._update_buttons()
         
+        # Set stop event
+        self.app_stop_event.set()
+        
+        # Note: The main() function doesn't currently support graceful shutdown
+        # We need to wait for the thread to finish, which should close devices
         # Wait a bit for thread to finish (non-blocking)
         def check_thread():
             if self.app_thread and self.app_thread.is_alive():
+                # Thread still running, check again
                 self.root.after(100, check_thread)
             else:
+                # Thread finished, mark as stopped
+                self.app_running = False
                 self._update_status("Stopped", "red")
                 self._update_buttons()
+                # Give the system a moment to release the device
+                self.logger.info("Application stopped, waiting for device release...")
         
         self.root.after(100, check_thread)
     
     def _restart_application(self):
         """Restart the DevDeck application"""
-        self._stop_application()
-        
-        def start_after_stop():
-            if not self.app_running:
-                self._start_application()
-        
-        self.root.after(500, start_after_stop)
+        if self.app_running:
+            # First stop the application
+            self._stop_application()
+            
+            # Wait longer for device to be released before restarting
+            # Stream Deck devices need time to be released by the OS
+            def start_after_stop():
+                if not self.app_running:
+                    self.logger.info("Attempting to restart application...")
+                    self._start_application()
+                else:
+                    # Still stopping, wait a bit more
+                    self.root.after(500, start_after_stop)
+            
+            # Wait 2 seconds for device release (longer delay for USB devices)
+            self.root.after(2000, start_after_stop)
+        else:
+            # Not running, just start it
+            self._start_application()
     
     def _update_status(self, status: str, color: str):
         """Update the status label"""
