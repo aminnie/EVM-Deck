@@ -117,9 +117,10 @@ class DevDeckControlPanel:
         control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
         control_frame.columnconfigure(0, weight=1)
         
-        # Control buttons
+        # Control buttons and status on same line
         button_frame = ttk.Frame(control_frame)
         button_frame.grid(row=0, column=0, sticky=(tk.W, tk.E))
+        button_frame.columnconfigure(2, weight=1)  # Allow status to expand
         
         self.start_button = ttk.Button(button_frame, text="Start", 
                                        command=self._start_application, width=12)
@@ -129,10 +130,10 @@ class DevDeckControlPanel:
                                      command=self._on_closing, width=12)
         self.exit_button.grid(row=0, column=1, padx=5)
         
-        # Status label
-        self.status_label = ttk.Label(control_frame, text="Status: Stopped", 
+        # Status label on same line
+        self.status_label = ttk.Label(button_frame, text="Status: Stopped", 
                                       foreground="red")
-        self.status_label.grid(row=1, column=0, pady=(10, 0))
+        self.status_label.grid(row=0, column=2, padx=(20, 0), sticky=tk.W)
         
         # USB Devices Section
         devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="10")
