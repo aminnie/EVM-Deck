@@ -137,26 +137,26 @@ class DevDeckControlPanel:
         # USB Devices Section
         devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="10")
         devices_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        devices_frame.columnconfigure(0, weight=1)
+        devices_frame.columnconfigure(1, weight=1)
         
         # USB Input Device (Elgato Stream Deck)
         ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 10, "bold")).grid(
-            row=0, column=0, sticky=tk.W, pady=(0, 5))
+            row=0, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_input_label = ttk.Label(devices_frame, text="None", 
                                           foreground="gray")
-        self.usb_input_label.grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
+        self.usb_input_label.grid(row=0, column=1, sticky=tk.W, pady=(0, 10))
         
         # USB Output Device (MIDI output)
         ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 10, "bold")).grid(
-            row=2, column=0, sticky=tk.W, pady=(0, 5))
+            row=1, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_output_label = ttk.Label(devices_frame, text="None", 
                                            foreground="gray")
-        self.usb_output_label.grid(row=3, column=0, sticky=tk.W)
+        self.usb_output_label.grid(row=1, column=1, sticky=tk.W)
         
         # Refresh button
         refresh_button = ttk.Button(devices_frame, text="Refresh Devices", 
                                     command=self._update_usb_devices)
-        refresh_button.grid(row=4, column=0, pady=(10, 0))
+        refresh_button.grid(row=2, column=0, columnspan=2, pady=(10, 0))
         
         # MIDI Key Monitor Section
         monitor_frame = ttk.LabelFrame(main_frame, text="Keys Monitor", padding="10")
@@ -380,7 +380,23 @@ class DevDeckControlPanel:
             return "Unknown"
         
         vendor_name = self._get_vendor_name(device.vendor_id)
-        device_desc = device.description or "Unknown Device"
+        device_desc = device.description or ""
+        
+        # If description is missing or is "Unknown device", use vendor name only
+        # or provide a default description based on vendor
+        if not device_desc or device_desc.lower() in ("unknown device", "unknown"):
+            # Use vendor-specific defaults
+            if vendor_name == "Elgato":
+                device_desc = "Stream Deck"
+            elif vendor_name == "Ketron":
+                device_desc = "MIDI Device"
+            elif vendor_name == "CH345":
+                device_desc = "MIDI Adapter"
+            elif vendor_name == "Adafruit":
+                device_desc = "Device"
+            else:
+                # For unknown vendors, just show vendor name
+                return vendor_name
         
         # Format: "Vendor Name - Device Description"
         return f"{vendor_name} - {device_desc}"
