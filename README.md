@@ -29,8 +29,10 @@ DevDeck is a Python-based control system for Elgato Stream Deck devices that ena
    source venv/bin/activate  # or `venv\Scripts\activate` on Windows
    pip install -r requirements.txt
    ```
-3. **Run**: `python -m devdeck.main`
+3. **Run**: `python -m devdeck.main` (starts with GUI by default)
 4. **Configure**: Edit `config/settings.yml` (auto-generated on first run)
+
+**Note**: The GUI control panel starts automatically. Use `--no-gui` flag to run without the GUI interface.
 
 **Note**: Close the official Stream Deck application before running DevDeck, as only one application can control a Stream Deck at a time.
 
@@ -39,6 +41,7 @@ DevDeck is a Python-based control system for Elgato Stream Deck devices that ena
 - **Multi-Device Support**: Manage multiple Stream Deck devices with independent configurations
 - **MIDI Integration**: Send MIDI Control Change (CC) and System Exclusive (SysEx) messages
 - **Ketron EVM Control**: Specialized integration for Ketron EVM/Event devices
+- **GUI Control Panel**: Simple graphical interface for application control and MIDI monitoring
 - **Visual Feedback**: Keys flash white (success) or red (failure) for 100ms after MIDI sends
 - **Automatic Device Detection**: Validates USB devices and auto-connects to MIDI hardware ports
 - **Extensible Architecture**: Plugin-based control system for custom functionality
@@ -124,6 +127,38 @@ Ketron key mappings can be imported from `config/key_mappings.json` and are auto
 
 For detailed configuration examples, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 
+## GUI Control Panel
+
+DevDeck includes a simple graphical user interface that provides:
+
+### Application Control
+- **Start/Stop/Restart Buttons**: Control the DevDeck application lifecycle
+- **Status Indicator**: Visual feedback showing application state (Running/Stopped)
+- **Thread-Safe Operation**: Application runs in a separate thread, keeping the GUI responsive
+
+### MIDI Monitoring
+- **Key Press Monitor**: Real-time display of MIDI Note ON/OFF messages
+- **Scrolling Log**: Shows the last ~50 MIDI key events with timestamps
+- **Start/Stop Monitoring**: Toggle MIDI input monitoring on demand
+- **Message Details**: Displays note number, velocity, and MIDI channel for each key press
+
+### Device Information
+- **MIDI Input Display**: Shows all connected MIDI input devices
+- **MIDI Output Display**: Shows connected MIDI output devices (highlights currently open ports)
+- **Refresh Button**: Update device list without restarting
+
+### Usage
+
+```bash
+# Start with GUI (default)
+python -m devdeck.main
+
+# Start without GUI
+python -m devdeck.main --no-gui
+```
+
+The GUI is built with tkinter (included with Python) and works on macOS, Raspberry Pi, and other platforms with Python GUI support.
+
 ## Built-in Controls
 
 ### General Controls
@@ -162,8 +197,11 @@ pip install -r requirements.txt
 ### Running
 
 ```bash
-# Development mode
+# Development mode (with GUI by default)
 python -m devdeck.main
+
+# Without GUI
+python -m devdeck.main --no-gui
 
 # Or use run scripts
 ./scripts/run/run-devdeck.sh  # Linux/macOS

@@ -213,4 +213,9 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    # GUI starts by default, use --no-gui to disable
+    if '--no-gui' in sys.argv:
+        main()
+    else:
+        from devdeck.gui import run_gui
+        run_gui()

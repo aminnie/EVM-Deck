@@ -96,6 +96,137 @@ source bin/activate
 python3 -m devdeck.main
 lsusb
 
+Note:
+1. On the Mac we were missing: libhidapi.dylib. 
+    Fixed by installing: brew install hidapi.
+
+    This is in addition to: 
+        brew install libusb
+        brew install usbutils
+
+2. We needed to manually change the file:
+
+If you need to keep a newer Pillow or the reinstall doesn't work, apply the same fix you used on Raspberry PI. 
+The file location on Mac will be:
+venv/lib/python3.*/site-packages/devdeck_core/rendering/text_renderer.py
+Find the file:
+find venv -name "text_renderer.py" -path "*/devdeck_core/*"
+Then edit it and replace line 51 (or wherever textsize is used):
+# OLD (line 51):
+label_w, label_h = draw.textsize('%s' % self.text, font=font)
+# NEW:
+# textsize() was deprecated and removed in Pillow 10.0.0, use textbbox() instead
+bbox = draw.textbbox((0, 0), '%s' % self.text, font=font)
+label_w = bbox[2] - bbox[0]  # right - left
+label_h = bbox[3] - bbox[1]  # bottom - top
+
+If you need to keep a newer Pillow or the reinstall doesn't work, apply the same fix you used on Raspberry PI. The file location on Mac will be:
+
+venv/lib/python3.*/site-packages/devdeck_core/rendering/text_renderer.py
+Find the file:
+find venv -name "text_renderer.py" -path "*/devdeck_core/*"
+Then edit it and replace line 51 (or wherever textsize is used):
+# OLD (line 51):
+label_w, label_h = draw.textsize('%s' % self.text, font=font)
+# NEW:
+# textsize() was deprecated and removed in Pillow 10.0.0, use textbbox() instead
+bbox = draw.textbbox((0, 0), '%s' % self.text, font=font)
+label_w = bbox[2] - bbox[0]  # right - left
+label_h = bbox[3] - bbox[1]  # bottom - top
+
+If you need to find /Library/Frameworks because it's a standard system folder, but sometimes hidden or moved; you can access it via Finder > Go > Go to Folder (Shift+Cmd+G) and type /Library/Frameworks, or use the specific path /System/Library/Frameworks
+
+----
+
+## Running the Updated Application with GUI
+
+### GUI Requirements
+
+The new GUI control panel uses **tkinter**, which is included with Python on macOS. No additional installation is required for the GUI itself.
+
+### Running the Application
+
+1. **Navigate to the project directory**:
+   ```bash
+   cd devdeck-main  # or wherever your project is located
+   ```
+
+2. **Activate your virtual environment** (if using one):
+   ```bash
+   source venv/bin/activate
+   ```
+
+3. **Run the application** (GUI starts by default):
+   ```bash
+   python3 -m devdeck.main
+   ```
+
+   The GUI control panel window will open automatically.
+
+4. **To run without GUI** (if needed):
+   ```bash
+   python3 -m devdeck.main --no-gui
+   ```
+
+### GUI Features on Mac
+
+The GUI provides:
+- **Application Control**: Start, Stop, and Restart buttons
+- **MIDI Device Display**: Shows connected MIDI input and output devices
+- **MIDI Key Monitor**: Real-time display of MIDI Note ON/OFF messages
+- **Status Indicators**: Visual feedback for application and MIDI states
+
+### Troubleshooting GUI on Mac
+
+**Issue**: GUI window doesn't appear or crashes immediately
+
+**Solutions**:
+1. **Check Python GUI support**:
+   ```bash
+   python3 -c "import tkinter; print('tkinter available')"
+   ```
+   If this fails, you may need to install Python with GUI support (most Python installations include it).
+
+2. **Check if running in a headless environment**:
+   - Make sure you're not SSH'd into the Mac without X11 forwarding
+   - The GUI requires a display (local or via X11/VNC)
+
+3. **Verify Python version**:
+   ```bash
+   python3 --version  # Should be 3.12 or higher
+   ```
+
+**Issue**: "No module named 'tkinter'" error
+
+**Solution**: On some macOS installations, tkinter may need to be installed separately:
+```bash
+# For Homebrew Python
+brew install python-tk
+
+# Or reinstall Python with GUI support
+brew reinstall python@3.12
+```
+
+**Note**: Most standard Python installations on macOS include tkinter by default.
+
+### First Run Checklist
+
+Before running the updated application:
+
+- [ ] System dependencies installed (`libusb`, `hidapi`)
+- [ ] Virtual environment activated
+- [ ] Python dependencies installed (`pip install -r requirements.txt`)
+- [ ] Stream Deck connected via USB
+- [ ] MIDI device connected (if using MIDI features)
+- [ ] Official Stream Deck application is closed
+
+### Quick Start Command
+
+```bash
+# One-liner to activate venv and run (if already set up)
+cd devdeck-main && source venv/bin/activate && python3 -m devdeck.main
+```
+
 ----
 
 
