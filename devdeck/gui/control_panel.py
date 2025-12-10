@@ -7,13 +7,15 @@ Provides a simple GUI interface to:
 - Display connected MIDI input and output devices
 """
 
+import json
 import logging
 import queue
 import threading
 import tkinter as tk
 from tkinter import ttk, scrolledtext
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
+from pathlib import Path
 
 try:
     import mido
@@ -22,6 +24,7 @@ except ImportError:
 
 from devdeck.midi import MidiManager
 from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
+from devdeck.gui.key_press_queue import get_queue
 
 
 class DevDeckControlPanel:
@@ -55,6 +58,11 @@ class DevDeckControlPanel:
         self.midi_monitoring = False
         self.midi_stop_event = threading.Event()
         self.midi_message_queue = queue.Queue()
+        
+        # Stream Deck key press monitoring
+        self.streamdeck_key_queue = get_queue()
+        self.key_mappings: Dict[int, str] = {}  # key_no -> key_name
+        self._load_key_mappings()
         
         # MIDI manager - lazy initialization to avoid GIL issues
         self._midi_manager = None
@@ -516,7 +524,7 @@ class DevDeckControlPanel:
             
             # Add status message to monitor
             timestamp = datetime.now().strftime("%H:%M:%S")
-            self.midi_message_queue.put(f"[{timestamp}] MIDI monitoring started on: {port_name}")
+            self.midi_message_queue.put(f"[{timestamp}] EVM Deck application ready")
             
         except Exception as e:
             self.logger.error(f"Error starting MIDI monitoring: {e}")
@@ -543,17 +551,81 @@ class DevDeckControlPanel:
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.midi_message_queue.put(f"[{timestamp}] MIDI monitoring stopped")
     
-    def _process_midi_messages(self):
-        """Process MIDI messages from the queue and update the text widget"""
+    def _load_key_mappings(self):
+        """Load key mappings from key_mappings.json"""
         try:
+            # Try to find key_mappings.json in config directory
+            project_root = Path(__file__).parent.parent.parent
+            key_mappings_file = project_root / 'config' / 'key_mappings.json'
+            
+            if not key_mappings_file.exists():
+                key_mappings_file = project_root / 'key_mappings.json'
+            
+            if key_mappings_file.exists():
+                with open(key_mappings_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Try UTF-16 first, then UTF-8
+                try:
+                    key_mappings_data = json.loads(content)
+                except json.JSONDecodeError:
+                    with open(key_mappings_file, 'r', encoding='utf-16') as f:
+                        content = f.read()
+                    key_mappings_data = json.loads(content)
+                
+                # Handle both named structure {"key_mappings": [...]} and direct array [...]
+                if isinstance(key_mappings_data, dict) and 'key_mappings' in key_mappings_data:
+                    key_mappings = key_mappings_data['key_mappings']
+                elif isinstance(key_mappings_data, list):
+                    key_mappings = key_mappings_data
+                else:
+                    key_mappings = []
+                
+                # Create mapping: key_no -> key_name
+                self.key_mappings = {
+                    mapping['key_no']: mapping.get('key_name', '').strip()
+                    for mapping in key_mappings
+                    if 'key_no' in mapping
+                }
+                self.logger.info(f"Loaded {len(self.key_mappings)} key mappings")
+            else:
+                self.logger.warning(f"Key mappings file not found: {key_mappings_file}")
+        except Exception as e:
+            self.logger.error(f"Error loading key mappings: {e}", exc_info=True)
+    
+    def _get_key_name(self, key_no: int) -> str:
+        """Get key name from key number"""
+        return self.key_mappings.get(key_no, f"Key {key_no}")
+    
+    def _process_midi_messages(self):
+        """Process MIDI messages and Stream Deck key presses from queues and update the text widget"""
+        try:
+            # Process MIDI messages
             while True:
                 try:
                     message = self.midi_message_queue.get_nowait()
                     self._add_midi_message(message)
                 except queue.Empty:
                     break
+            
+            # Process Stream Deck key presses
+            while True:
+                try:
+                    key_no, key_name = self.streamdeck_key_queue.get_nowait()
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    
+                    # Use provided key_name or look it up
+                    if key_name:
+                        display_name = key_name
+                    else:
+                        display_name = self._get_key_name(key_no)
+                    
+                    key_info = f"[{timestamp}] {display_name}"
+                    self._add_midi_message(key_info)
+                except queue.Empty:
+                    break
         except Exception as e:
-            self.logger.error(f"Error processing MIDI messages: {e}")
+            self.logger.error(f"Error processing messages: {e}")
         
         # Schedule next check
         self.root.after(100, self._process_midi_messages)
