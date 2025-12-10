@@ -32,7 +32,7 @@ class DevDeckControlPanel:
         '239a': 'Adafruit',
         '157b': 'Ketron',
         '0fd9': 'Elgato',
-        '1086': 'CH345',
+        '1a86': 'CH345',
     }
     
     def __init__(self, root: tk.Tk):
@@ -159,7 +159,7 @@ class DevDeckControlPanel:
         refresh_button.grid(row=4, column=0, pady=(10, 0))
         
         # MIDI Key Monitor Section
-        monitor_frame = ttk.LabelFrame(main_frame, text="MIDI Key Press Monitor", padding="10")
+        monitor_frame = ttk.LabelFrame(main_frame, text="Keys Monitor", padding="10")
         monitor_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         monitor_frame.columnconfigure(0, weight=1)
         monitor_frame.rowconfigure(0, weight=1)
@@ -169,11 +169,6 @@ class DevDeckControlPanel:
         self.midi_text = scrolledtext.ScrolledText(monitor_frame, height=3, 
                                                    wrap=tk.WORD, state=tk.DISABLED)
         self.midi_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        # Start MIDI monitoring button
-        self.midi_monitor_button = ttk.Button(monitor_frame, text="Start MIDI Monitor", 
-                                              command=self._toggle_midi_monitoring)
-        self.midi_monitor_button.grid(row=1, column=0, pady=(10, 0))
     
     def _start_application(self):
         """Start the EVMDeck application in a separate thread"""
@@ -225,6 +220,9 @@ class DevDeckControlPanel:
         self.app_thread = threading.Thread(target=run_app, daemon=True)
         self.app_thread.start()
         
+        # Automatically start MIDI monitoring when application starts
+        self._start_midi_monitoring()
+        
         self._update_status("Running", "green")
         self._update_buttons()
     
@@ -235,6 +233,9 @@ class DevDeckControlPanel:
         
         self._update_status("Stopping...", "orange")
         self._update_buttons()
+        
+        # Stop MIDI monitoring when application stops
+        self._stop_midi_monitoring()
         
         # Set stop event
         self.app_stop_event.set()
@@ -434,13 +435,6 @@ class DevDeckControlPanel:
             self.usb_output_label.config(text="Error: Click to retry", 
                                          foreground="red")
     
-    def _toggle_midi_monitoring(self):
-        """Start or stop MIDI input monitoring"""
-        if self.midi_monitoring:
-            self._stop_midi_monitoring()
-        else:
-            self._start_midi_monitoring()
-    
     def _start_midi_monitoring(self):
         """Start monitoring MIDI input"""
         if mido is None:
@@ -495,7 +489,6 @@ class DevDeckControlPanel:
             self.midi_input_thread = threading.Thread(target=monitor_midi, daemon=True)
             self.midi_input_thread.start()
             
-            self.midi_monitor_button.config(text="Stop MIDI Monitor")
             self.logger.info(f"Started MIDI monitoring on port: {port_name}")
             
             # Add status message to monitor
@@ -521,7 +514,6 @@ class DevDeckControlPanel:
                 pass
             self.midi_input_port = None
         
-        self.midi_monitor_button.config(text="Start MIDI Monitor")
         self.logger.info("Stopped MIDI monitoring")
         
         # Add status message to monitor
