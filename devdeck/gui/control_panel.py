@@ -21,6 +21,7 @@ except ImportError:
     mido = None
 
 from devdeck.midi import MidiManager
+from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
 
 
 class DevDeckControlPanel:
@@ -59,12 +60,12 @@ class DevDeckControlPanel:
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
         
-        # Don't auto-update MIDI devices on startup to avoid GIL/threading issues
+        # Don't auto-update USB devices on startup to avoid GIL/threading issues
         # User can click "Refresh Devices" button to manually update
         # Set initial placeholder text
-        self.midi_input_label.config(text="Click 'Refresh Devices' to scan", 
+        self.usb_input_label.config(text="Click 'Refresh Devices' to scan", 
                                     foreground="gray")
-        self.midi_output_label.config(text="Click 'Refresh Devices' to scan", 
+        self.usb_output_label.config(text="Click 'Refresh Devices' to scan", 
                                      foreground="gray")
         
         # Mark MIDI as ready after GUI is fully initialized
@@ -125,28 +126,28 @@ class DevDeckControlPanel:
                                       foreground="red")
         self.status_label.grid(row=1, column=0, pady=(10, 0))
         
-        # MIDI Devices Section
-        devices_frame = ttk.LabelFrame(main_frame, text="MIDI Devices", padding="10")
+        # USB Devices Section
+        devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="10")
         devices_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
         devices_frame.columnconfigure(0, weight=1)
         
-        # MIDI Input
-        ttk.Label(devices_frame, text="MIDI Input:", font=("Arial", 10, "bold")).grid(
+        # USB Input Device (Elgato Stream Deck)
+        ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 10, "bold")).grid(
             row=0, column=0, sticky=tk.W, pady=(0, 5))
-        self.midi_input_label = ttk.Label(devices_frame, text="None", 
+        self.usb_input_label = ttk.Label(devices_frame, text="None", 
                                           foreground="gray")
-        self.midi_input_label.grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
+        self.usb_input_label.grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
         
-        # MIDI Output
-        ttk.Label(devices_frame, text="MIDI Output:", font=("Arial", 10, "bold")).grid(
+        # USB Output Device (MIDI output)
+        ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 10, "bold")).grid(
             row=2, column=0, sticky=tk.W, pady=(0, 5))
-        self.midi_output_label = ttk.Label(devices_frame, text="None", 
+        self.usb_output_label = ttk.Label(devices_frame, text="None", 
                                            foreground="gray")
-        self.midi_output_label.grid(row=3, column=0, sticky=tk.W)
+        self.usb_output_label.grid(row=3, column=0, sticky=tk.W)
         
         # Refresh button
         refresh_button = ttk.Button(devices_frame, text="Refresh Devices", 
-                                    command=self._update_midi_devices)
+                                    command=self._update_usb_devices)
         refresh_button.grid(row=4, column=0, pady=(10, 0))
         
         # MIDI Key Monitor Section
@@ -341,78 +342,52 @@ class DevDeckControlPanel:
             self.logger.error(f"MIDI operation error: {e}")
             return default
     
-    def _update_midi_devices(self):
-        """Update the displayed MIDI input and output devices"""
-        # Safety check: Don't attempt MIDI operations until system is ready
-        if not self._midi_ready:
-            self.logger.debug("MIDI not ready yet, deferring device update")
-            self.root.after(500, self._update_midi_devices)
-            return
-        
-        if mido is None:
-            self.midi_input_label.config(text="MIDI library not available", 
-                                        foreground="red")
-            self.midi_output_label.config(text="MIDI library not available", 
-                                         foreground="red")
-            return
-        
+    def _update_usb_devices(self):
+        """Update the displayed USB input and output devices"""
         # Update UI to show we're scanning
-        self.midi_input_label.config(text="Scanning...", foreground="gray")
-        self.midi_output_label.config(text="Scanning...", foreground="gray")
+        self.usb_input_label.config(text="Scanning...", foreground="gray")
+        self.usb_output_label.config(text="Scanning...", foreground="gray")
         self.root.update_idletasks()  # Force UI update
         
         try:
-            # Get MIDI input ports - use safe wrapper for GIL safety
-            # Note: On macOS, rtmidi can have fatal GIL issues, so we wrap carefully
-            input_ports = self._safe_midi_call(lambda: mido.get_input_names(), default=[])
+            # Check for Elgato Stream Deck (USB Input Device)
+            elgato_connected, elgato_device = check_elgato_stream_deck()
             
-            if input_ports:
-                # Show all input ports, or first one if only one
-                if len(input_ports) == 1:
-                    input_text = input_ports[0]
+            if elgato_connected:
+                if elgato_device:
+                    # Show device description
+                    device_text = elgato_device.description
+                    self.usb_input_label.config(text=device_text, foreground="green")
                 else:
-                    input_text = f"{len(input_ports)} devices: {', '.join(input_ports[:3])}"
-                    if len(input_ports) > 3:
-                        input_text += "..."
-                self.midi_input_label.config(text=input_text, foreground="black")
+                    # Windows - device detected but no USB info available
+                    self.usb_input_label.config(text="Elgato Stream Deck (detected)", 
+                                               foreground="green")
             else:
-                self.midi_input_label.config(text="No MIDI input devices", 
-                                           foreground="gray")
+                self.usb_input_label.config(text="Not detected", 
+                                           foreground="red")
             
-            # Get MIDI output ports - use safe wrapper for GIL safety
-            output_ports = self._safe_midi_call(lambda: mido.get_output_names(), default=[])
-            open_ports = self._safe_midi_call(lambda: self.midi_manager.get_open_ports(), default=[])
+            # Check for MIDI output USB device
+            midi_connected, midi_device = check_midi_output_device()
             
-            if open_ports:
-                # Show the currently open port(s)
-                if len(open_ports) == 1:
-                    output_text = open_ports[0]
+            if midi_connected:
+                if midi_device:
+                    # Show device description
+                    device_text = midi_device.description
+                    self.usb_output_label.config(text=device_text, foreground="green")
                 else:
-                    output_text = f"{len(open_ports)} open: {', '.join(open_ports[:2])}"
-                    if len(open_ports) > 2:
-                        output_text += "..."
-                self.midi_output_label.config(text=output_text, foreground="green")
-            elif output_ports:
-                # Show available ports if none are open
-                if len(output_ports) == 1:
-                    output_text = output_ports[0]
-                else:
-                    output_text = f"{len(output_ports)} available: {', '.join(output_ports[:2])}"
-                    if len(output_ports) > 2:
-                        output_text += "..."
-                self.midi_output_label.config(text=output_text, foreground="orange")
+                    # Windows - device detected but no USB info available
+                    self.usb_output_label.config(text="MIDI Output Device (detected)", 
+                                                foreground="green")
             else:
-                self.midi_output_label.config(text="No MIDI output devices", 
-                                             foreground="gray")
-        except SystemExit:
-            # Re-raise SystemExit to allow normal shutdown
-            raise
+                self.usb_output_label.config(text="Not detected", 
+                                            foreground="red")
+                
         except Exception as e:
-            # Catch any other exceptions (including fatal errors from C extensions)
-            self.logger.error(f"Error updating MIDI devices: {e}", exc_info=True)
-            self.midi_input_label.config(text="Error: Click to retry", 
+            # Catch any exceptions
+            self.logger.error(f"Error updating USB devices: {e}", exc_info=True)
+            self.usb_input_label.config(text="Error: Click to retry", 
                                        foreground="red")
-            self.midi_output_label.config(text="Error: Click to retry", 
+            self.usb_output_label.config(text="Error: Click to retry", 
                                          foreground="red")
     
     def _toggle_midi_monitoring(self):
