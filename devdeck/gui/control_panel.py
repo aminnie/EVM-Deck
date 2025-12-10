@@ -112,15 +112,25 @@ class DevDeckControlPanel:
                                 font=("Arial", 14, "bold"))
         title_label.grid(row=0, column=0, pady=(0, 5))
         
-        # Application Control Section
-        control_frame = ttk.LabelFrame(main_frame, text="Application Control", padding="5")
+        # Application Control Section with status on title line
+        control_frame = ttk.LabelFrame(main_frame, padding="5")
         control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
-        control_frame.columnconfigure(0, weight=1)
+        control_frame.columnconfigure(1, weight=1)
         
-        # Control buttons and status on same line
+        # Title and status on same line
+        title_frame = ttk.Frame(control_frame)
+        title_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
+        title_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(title_frame, text="Application Control", font=("Arial", 10, "bold")).grid(
+            row=0, column=0, sticky=tk.W)
+        self.status_label = ttk.Label(title_frame, text="Status: Stopped", 
+                                      foreground="red", font=("Arial", 9))
+        self.status_label.grid(row=0, column=1, padx=(20, 0), sticky=tk.W)
+        
+        # Control buttons and refresh button on same line
         button_frame = ttk.Frame(control_frame)
-        button_frame.grid(row=0, column=0, sticky=(tk.W, tk.E))
-        button_frame.columnconfigure(2, weight=1)  # Allow status to expand
+        button_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E))
         
         self.start_button = ttk.Button(button_frame, text="Start", 
                                        command=self._start_application, width=12)
@@ -130,10 +140,10 @@ class DevDeckControlPanel:
                                      command=self._on_closing, width=12)
         self.exit_button.grid(row=0, column=1, padx=5)
         
-        # Status label on same line
-        self.status_label = ttk.Label(button_frame, text="Status: Stopped", 
-                                      foreground="red")
-        self.status_label.grid(row=0, column=2, padx=(20, 0), sticky=tk.W)
+        # Refresh Devices button on same line
+        refresh_button = ttk.Button(button_frame, text="Refresh Devices", 
+                                    command=self._update_usb_devices, width=15)
+        refresh_button.grid(row=0, column=2, padx=5)
         
         # USB Devices Section
         devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="5")
@@ -153,11 +163,6 @@ class DevDeckControlPanel:
         self.usb_output_label = ttk.Label(devices_frame, text="None", 
                                            foreground="gray", font=("Arial", 9))
         self.usb_output_label.grid(row=1, column=1, sticky=tk.W)
-        
-        # Refresh button
-        refresh_button = ttk.Button(devices_frame, text="Refresh Devices", 
-                                    command=self._update_usb_devices)
-        refresh_button.grid(row=2, column=0, columnspan=2, pady=(5, 0))
         
         # MIDI Key Monitor Section (no title)
         monitor_frame = ttk.Frame(main_frame, padding="5")
