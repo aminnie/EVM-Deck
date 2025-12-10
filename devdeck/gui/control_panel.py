@@ -627,9 +627,9 @@ class DevDeckControlPanel:
                     else:
                         display_name = self._get_key_name(key_no)
                     
-                    # Format message with MIDI hex if available
+                    # Format message with MIDI hex if available (wrapped in square brackets)
                     if midi_hex:
-                        key_info = f"[{timestamp}] Pressed {display_name} {midi_hex}"
+                        key_info = f"[{timestamp}] Pressed {display_name} [{midi_hex}]"
                     else:
                         key_info = f"[{timestamp}] Pressed {display_name}"
                     self._add_midi_message(key_info)
