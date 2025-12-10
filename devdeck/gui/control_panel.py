@@ -620,7 +620,7 @@ class DevDeckControlPanel:
                     else:
                         display_name = self._get_key_name(key_no)
                     
-                    key_info = f"[{timestamp}] {display_name}"
+                    key_info = f"[{timestamp}] Pressed {display_name}"
                     self._add_midi_message(key_info)
                 except queue.Empty:
                     break
