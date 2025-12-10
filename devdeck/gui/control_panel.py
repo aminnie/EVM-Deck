@@ -236,22 +236,37 @@ class DevDeckControlPanel:
         # Set stop event
         self.app_stop_event.set()
         
-        # Note: The main() function doesn't currently support graceful shutdown
-        # We need to wait for the thread to finish, which should close devices
-        # Wait a bit for thread to finish (non-blocking)
+        # Note: The main() function blocks on thread.join() which can't be interrupted
+        # We'll wait a short time, then mark as stopped even if thread is still running
+        # The thread is daemon=True so it will be killed when GUI exits
+        stop_timeout_ms = 2000  # 2 seconds timeout
+        check_interval = 100  # Check every 100ms
+        max_checks = stop_timeout_ms // check_interval
+        check_count = [0]  # Use list to allow modification in nested function
+        
         def check_thread():
+            check_count[0] += 1
+            
             if self.app_thread and self.app_thread.is_alive():
-                # Thread still running, check again
-                self.root.after(100, check_thread)
+                if check_count[0] < max_checks:
+                    # Thread still running, check again
+                    self.root.after(check_interval, check_thread)
+                else:
+                    # Timeout reached - thread didn't exit cleanly
+                    # This is expected since main() blocks on join() with no timeout
+                    self.logger.warning("Application thread did not exit within timeout - marking as stopped")
+                    self.app_running = False
+                    self._update_status("Stopped", "red")
+                    self._update_buttons()
+                    self.logger.info("Application marked as stopped (daemon thread will be cleaned up on exit)")
             else:
-                # Thread finished, mark as stopped
+                # Thread finished cleanly
                 self.app_running = False
                 self._update_status("Stopped", "red")
                 self._update_buttons()
-                # Give the system a moment to release the device
-                self.logger.info("Application stopped, waiting for device release...")
+                self.logger.info("Application stopped cleanly")
         
-        self.root.after(100, check_thread)
+        self.root.after(check_interval, check_thread)
     
     def _restart_application(self):
         """Restart the DevDeck application"""
@@ -259,18 +274,35 @@ class DevDeckControlPanel:
             # First stop the application
             self._stop_application()
             
-            # Wait longer for device to be released before restarting
-            # Stream Deck devices need time to be released by the OS
-            def start_after_stop():
-                if not self.app_running:
-                    self.logger.info("Attempting to restart application...")
-                    self._start_application()
-                else:
-                    # Still stopping, wait a bit more
-                    self.root.after(500, start_after_stop)
+            # Wait for stop to complete, then restart
+            # We need to wait for both the stop operation and device release
+            restart_delay_ms = 3000  # 3 seconds total (2s for stop timeout + 1s for device release)
+            check_interval = 200  # Check every 200ms
+            max_checks = restart_delay_ms // check_interval
+            check_count = [0]  # Use list to allow modification in nested function
             
-            # Wait 2 seconds for device release (longer delay for USB devices)
-            self.root.after(2000, start_after_stop)
+            def wait_and_restart():
+                check_count[0] += 1
+                
+                if self.app_running:
+                    # Still stopping, wait a bit more
+                    if check_count[0] < max_checks:
+                        self.root.after(check_interval, wait_and_restart)
+                    else:
+                        # Timeout - force stop and restart anyway
+                        self.logger.warning("Restart timeout - forcing stop and restart")
+                        self.app_running = False
+                        self._update_status("Stopped", "red")
+                        self._update_buttons()
+                        # Wait a moment for device release, then restart
+                        self.logger.info("Waiting for device release before restart...")
+                        self.root.after(1500, lambda: self._start_application())
+                else:
+                    # Stopped, wait a moment for device release, then restart
+                    self.logger.info("Application stopped, waiting for device release before restart...")
+                    self.root.after(1500, lambda: self._start_application())
+            
+            self.root.after(check_interval, wait_and_restart)
         else:
             # Not running, just start it
             self._start_application()
