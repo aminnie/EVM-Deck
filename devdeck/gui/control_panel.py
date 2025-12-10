@@ -1,5 +1,5 @@
 """
-GUI Control Panel for DevDeck Application
+GUI Control Panel for EVMDeck Application
 
 Provides a simple GUI interface to:
 - Control application start, stop, and restart
@@ -24,11 +24,11 @@ from devdeck.midi import MidiManager
 
 
 class DevDeckControlPanel:
-    """Main GUI control panel for DevDeck application"""
+    """Main GUI control panel for EVMDeck application"""
     
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("DevDeck Control Panel")
+        self.root.title("EVMDeck Control Panel")
         self.root.geometry("500x600")
         self.root.resizable(True, True)
         
@@ -99,7 +99,7 @@ class DevDeckControlPanel:
         main_frame.columnconfigure(0, weight=1)
         
         # Title
-        title_label = ttk.Label(main_frame, text="DevDeck Control Panel", 
+        title_label = ttk.Label(main_frame, text="EVMDeck Control Panel", 
                                 font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, pady=(0, 20))
         
@@ -116,15 +116,9 @@ class DevDeckControlPanel:
                                        command=self._start_application, width=12)
         self.start_button.grid(row=0, column=0, padx=5)
         
-        self.stop_button = ttk.Button(button_frame, text="Stop", 
-                                     command=self._stop_application, width=12,
-                                     state=tk.DISABLED)
-        self.stop_button.grid(row=0, column=1, padx=5)
-        
-        self.restart_button = ttk.Button(button_frame, text="Restart", 
-                                         command=self._restart_application, width=12,
-                                         state=tk.DISABLED)
-        self.restart_button.grid(row=0, column=2, padx=5)
+        self.exit_button = ttk.Button(button_frame, text="Exit", 
+                                     command=self._on_closing, width=12)
+        self.exit_button.grid(row=0, column=1, padx=5)
         
         # Status label
         self.status_label = ttk.Label(control_frame, text="Status: Stopped", 
@@ -173,7 +167,7 @@ class DevDeckControlPanel:
         self.midi_monitor_button.grid(row=1, column=0, pady=(10, 0))
     
     def _start_application(self):
-        """Start the DevDeck application in a separate thread"""
+        """Start the EVMDeck application in a separate thread"""
         if self.app_running:
             return
         
@@ -182,7 +176,7 @@ class DevDeckControlPanel:
         
         def run_app():
             try:
-                self.logger.info("Starting DevDeck application in background thread...")
+                self.logger.info("Starting EVMDeck application in background thread...")
                 # Import here to avoid circular import and blocking during GUI init
                 # Use a fresh import to avoid any cached state
                 import importlib
@@ -226,7 +220,7 @@ class DevDeckControlPanel:
         self._update_buttons()
     
     def _stop_application(self):
-        """Stop the DevDeck application"""
+        """Stop the EVMDeck application"""
         if not self.app_running:
             return
         
@@ -269,7 +263,7 @@ class DevDeckControlPanel:
         self.root.after(check_interval, check_thread)
     
     def _restart_application(self):
-        """Restart the DevDeck application"""
+        """Restart the EVMDeck application"""
         if self.app_running:
             # First stop the application
             self._stop_application()
@@ -315,12 +309,8 @@ class DevDeckControlPanel:
         """Update button states based on application state"""
         if self.app_running:
             self.start_button.config(state=tk.DISABLED)
-            self.stop_button.config(state=tk.NORMAL)
-            self.restart_button.config(state=tk.NORMAL)
         else:
             self.start_button.config(state=tk.NORMAL)
-            self.stop_button.config(state=tk.DISABLED)
-            self.restart_button.config(state=tk.DISABLED)
     
     def _safe_midi_call(self, func, default=None):
         """
