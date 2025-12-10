@@ -27,6 +27,14 @@ from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_outp
 class DevDeckControlPanel:
     """Main GUI control panel for EVMDeck application"""
     
+    # Vendor ID to vendor name lookup table
+    VENDOR_ID_LOOKUP = {
+        '239a': 'Adafruit',
+        '157b': 'Ketron',
+        '0fd9': 'Elgato',
+        '1086': 'CH345',
+    }
+    
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("EVMDeck Control Panel")
@@ -342,6 +350,40 @@ class DevDeckControlPanel:
             self.logger.error(f"MIDI operation error: {e}")
             return default
     
+    def _get_vendor_name(self, vendor_id: str) -> str:
+        """
+        Look up vendor name from vendor ID.
+        
+        Args:
+            vendor_id: Vendor ID string (e.g., '0fd9')
+        
+        Returns:
+            Vendor name if found, otherwise returns the vendor_id
+        """
+        if vendor_id:
+            vendor_id_lower = vendor_id.lower()
+            return self.VENDOR_ID_LOOKUP.get(vendor_id_lower, vendor_id)
+        return vendor_id or "Unknown"
+    
+    def _format_device_display(self, device) -> str:
+        """
+        Format device information for display with vendor name.
+        
+        Args:
+            device: USBDevice object with vendor_id and description attributes
+        
+        Returns:
+            Formatted string with vendor name and device description
+        """
+        if not device:
+            return "Unknown"
+        
+        vendor_name = self._get_vendor_name(device.vendor_id)
+        device_desc = device.description or "Unknown Device"
+        
+        # Format: "Vendor Name - Device Description"
+        return f"{vendor_name} - {device_desc}"
+    
     def _update_usb_devices(self):
         """Update the displayed USB input and output devices"""
         # Update UI to show we're scanning
@@ -355,12 +397,14 @@ class DevDeckControlPanel:
             
             if elgato_connected:
                 if elgato_device:
-                    # Show device description
-                    device_text = elgato_device.description
+                    # Show vendor name and device description
+                    device_text = self._format_device_display(elgato_device)
                     self.usb_input_label.config(text=device_text, foreground="green")
                 else:
                     # Windows - device detected but no USB info available
-                    self.usb_input_label.config(text="Elgato Stream Deck (detected)", 
+                    # Use vendor lookup for Elgato (0fd9)
+                    vendor_name = self._get_vendor_name('0fd9')
+                    self.usb_input_label.config(text=f"{vendor_name} - Stream Deck (detected)", 
                                                foreground="green")
             else:
                 self.usb_input_label.config(text="Not detected", 
@@ -371,8 +415,8 @@ class DevDeckControlPanel:
             
             if midi_connected:
                 if midi_device:
-                    # Show device description
-                    device_text = midi_device.description
+                    # Show vendor name and device description
+                    device_text = self._format_device_display(midi_device)
                     self.usb_output_label.config(text=device_text, foreground="green")
                 else:
                     # Windows - device detected but no USB info available
