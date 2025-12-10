@@ -110,7 +110,7 @@ class DevDeckControlPanel:
         # Title
         title_label = ttk.Label(main_frame, text="EVMDeck Control Panel", 
                                 font=("Arial", 14, "bold"))
-        title_label.grid(row=0, column=0, pady=(0, 5))
+        title_label.grid(row=0, column=0, pady=(0, 2))
         
         # Application Control Section with status on title line
         control_frame = ttk.LabelFrame(main_frame, padding="5")
@@ -122,7 +122,7 @@ class DevDeckControlPanel:
         title_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
         title_frame.columnconfigure(1, weight=1)
         
-        ttk.Label(title_frame, text="Application Control", font=("Arial", 10, "bold")).grid(
+        ttk.Label(title_frame, text="Application Control", font=("Arial", 12, "bold")).grid(
             row=0, column=0, sticky=tk.W)
         self.status_label = ttk.Label(title_frame, text="Status: Stopped", 
                                       foreground="red", font=("Arial", 9))
@@ -131,37 +131,38 @@ class DevDeckControlPanel:
         # Control buttons and refresh button on same line
         button_frame = ttk.Frame(control_frame)
         button_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E))
+        button_frame.columnconfigure(1, weight=1)  # Center column expands
         
         self.start_button = ttk.Button(button_frame, text="Start", 
                                        command=self._start_application, width=12)
         self.start_button.grid(row=0, column=0, padx=5)
         
-        self.exit_button = ttk.Button(button_frame, text="Exit", 
-                                     command=self._on_closing, width=12)
-        self.exit_button.grid(row=0, column=1, padx=5)
-        
-        # Refresh Devices button on same line
+        # Refresh Devices button centered
         refresh_button = ttk.Button(button_frame, text="Refresh Devices", 
                                     command=self._update_usb_devices, width=15)
-        refresh_button.grid(row=0, column=2, padx=5)
+        refresh_button.grid(row=0, column=1, padx=5)
         
-        # USB Devices Section
-        devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="5")
+        self.exit_button = ttk.Button(button_frame, text="Exit", 
+                                     command=self._on_closing, width=12)
+        self.exit_button.grid(row=0, column=2, padx=5)
+        
+        # USB Devices Section (no title)
+        devices_frame = ttk.Frame(main_frame, padding="5")
         devices_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         devices_frame.columnconfigure(1, weight=1)
         
         # USB Input Device (Elgato Stream Deck)
-        ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 9, "bold")).grid(
+        ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 11, "bold")).grid(
             row=0, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_input_label = ttk.Label(devices_frame, text="None", 
-                                          foreground="gray", font=("Arial", 9))
+                                          foreground="gray", font=("Arial", 10))
         self.usb_input_label.grid(row=0, column=1, sticky=tk.W, pady=(0, 3))
         
         # USB Output Device (MIDI output)
-        ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 9, "bold")).grid(
+        ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 11, "bold")).grid(
             row=1, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_output_label = ttk.Label(devices_frame, text="None", 
-                                           foreground="gray", font=("Arial", 9))
+                                           foreground="gray", font=("Arial", 10))
         self.usb_output_label.grid(row=1, column=1, sticky=tk.W)
         
         # MIDI Key Monitor Section (no title)
