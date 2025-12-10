@@ -11,6 +11,7 @@ import json
 import logging
 import queue
 import threading
+import time
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 from typing import Optional, List, Dict
@@ -678,6 +679,10 @@ class DevDeckControlPanel:
         try:
             self.logger.info("Clearing Stream Deck screen on exit...")
             
+            # Wait a short moment for the device to be released after stopping the application
+            # This helps avoid "No HID device" errors
+            time.sleep(0.5)
+            
             # Access Stream Deck using DeviceManager (similar to main())
             streamdecks = DeviceManager().enumerate()
             
@@ -685,53 +690,85 @@ class DevDeckControlPanel:
                 self.logger.debug("No Stream Deck detected for screen clear")
                 return
             
-            # Clear each detected deck
+            # Clear each detected deck with retry logic
             for deck in streamdecks:
                 deck_opened = False
-                try:
-                    # Try to open the deck (it might already be open if app is running)
+                max_retries = 3
+                retry_delay = 0.3
+                
+                for attempt in range(max_retries):
                     try:
-                        deck.open()
-                        deck_opened = True
-                    except Exception:
-                        # Deck might already be open, try to use it anyway
-                        self.logger.debug("Deck might already be open, attempting to clear anyway")
-                    
-                    # Create a minimal deck manager-like object for DeckContext
-                    # We only need the deck reference, not a full DeckManager
-                    class MinimalDeckManager:
-                        def __init__(self, deck):
-                            self.decks = []
-                            self._deck = deck
-                    
-                    minimal_manager = MinimalDeckManager(deck)
-                    context = DeckContext(minimal_manager, deck)
-                    
-                    # Clear all keys to black
-                    keys = deck.key_count()
-                    for key_no in range(keys):
-                        with context.renderer(key_no) as r:
-                            r.background_color('black')
-                            r.text('')\
-                                .font_size(100)\
-                                .color('black')\
-                                .center_vertically()\
-                                .center_horizontally()\
-                                .end()
-                    
-                    self.logger.info("Stream Deck screen cleared successfully")
-                    
-                    # Close the deck only if we opened it
-                    if deck_opened:
-                        deck.close()
-                except Exception as ex:
-                    self.logger.warning("Error clearing Stream Deck screen: %s", ex, exc_info=True)
-                    # Try to close the deck even if clearing failed (only if we opened it)
-                    if deck_opened:
+                        # Try to open the deck
                         try:
+                            deck.open()
+                            deck_opened = True
+                        except Exception as open_ex:
+                            error_msg = str(open_ex).lower()
+                            if "hid device" in error_msg or "could not open" in error_msg:
+                                if attempt < max_retries - 1:
+                                    # Wait and retry
+                                    self.logger.debug(f"Device not ready, retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})...")
+                                    time.sleep(retry_delay)
+                                    continue
+                                else:
+                                    # Last attempt failed, log and skip
+                                    self.logger.warning(f"Could not open Stream Deck after {max_retries} attempts: {open_ex}")
+                                    return
+                            else:
+                                # Different error, might be already open, try to use it anyway
+                                self.logger.debug("Deck might already be open, attempting to clear anyway")
+                        
+                        # Create a minimal deck manager-like object for DeckContext
+                        # We only need the deck reference, not a full DeckManager
+                        class MinimalDeckManager:
+                            def __init__(self, deck):
+                                self.decks = []
+                                self._deck = deck
+                        
+                        minimal_manager = MinimalDeckManager(deck)
+                        context = DeckContext(minimal_manager, deck)
+                        
+                        # Clear all keys to black
+                        keys = deck.key_count()
+                        for key_no in range(keys):
+                            with context.renderer(key_no) as r:
+                                r.background_color('black')
+                                r.text('')\
+                                    .font_size(100)\
+                                    .color('black')\
+                                    .center_vertically()\
+                                    .center_horizontally()\
+                                    .end()
+                        
+                        self.logger.info("Stream Deck screen cleared successfully")
+                        
+                        # Close the deck only if we opened it
+                        if deck_opened:
                             deck.close()
-                        except Exception:
-                            pass  # Ignore errors when closing
+                        
+                        # Success, break out of retry loop
+                        break
+                        
+                    except Exception as ex:
+                        error_msg = str(ex).lower()
+                        if ("hid device" in error_msg or "could not open" in error_msg) and attempt < max_retries - 1:
+                            # Retry on HID device errors
+                            self.logger.debug(f"Error accessing device, retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})...")
+                            time.sleep(retry_delay)
+                            continue
+                        else:
+                            # Other error or last attempt
+                            self.logger.warning("Error clearing Stream Deck screen: %s", ex, exc_info=True)
+                            # Try to close the deck even if clearing failed (only if we opened it)
+                            if deck_opened:
+                                try:
+                                    deck.close()
+                                except Exception:
+                                    pass  # Ignore errors when closing
+                            # If it's not a retryable error, break
+                            if "hid device" not in error_msg and "could not open" not in error_msg:
+                                break
+                            
         except Exception as ex:
             # Don't block GUI exit if screen clearing fails
             self.logger.warning("Failed to clear Stream Deck screen: %s", ex, exc_info=True)
