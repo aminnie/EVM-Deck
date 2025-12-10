@@ -70,14 +70,22 @@ class DevDeckControlPanel:
         # Use a longer delay to ensure Python runtime is fully ready
         self.root.after(500, lambda: setattr(self, '_midi_ready', True))
         
-        # Start MIDI message processing
-        self._process_midi_messages()
+        # Start MIDI message processing (defer to avoid blocking initialization)
+        self.root.after(100, self._process_midi_messages)
     
     @property
     def midi_manager(self):
         """Lazy initialization of MidiManager to avoid GIL issues during GUI init"""
         if self._midi_manager is None:
-            self._midi_manager = MidiManager()
+            try:
+                self._midi_manager = MidiManager()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize MidiManager: {e}", exc_info=True)
+                # Return a dummy object that has the methods we need
+                class DummyMidiManager:
+                    def get_open_ports(self):
+                        return []
+                self._midi_manager = DummyMidiManager()
         return self._midi_manager
     
     def _build_ui(self):
@@ -173,11 +181,18 @@ class DevDeckControlPanel:
         
         def run_app():
             try:
-                # Import here to avoid circular import
-                from devdeck.main import main as devdeck_main
+                self.logger.info("Starting DevDeck application in background thread...")
+                # Import here to avoid circular import and blocking during GUI init
+                # Use a fresh import to avoid any cached state
+                import importlib
+                main_module = importlib.import_module('devdeck.main')
+                devdeck_main = main_module.main
+                
                 # Note: This will run the main() function
                 # We may need to modify main() to check for stop events
                 devdeck_main()
+            except KeyboardInterrupt:
+                self.logger.info("Application interrupted by user")
             except Exception as e:
                 self.logger.error(f"Error in application thread: {e}", exc_info=True)
                 self.root.after(0, lambda: self._update_status("Error", "red"))
@@ -479,9 +494,26 @@ class DevDeckControlPanel:
 
 def run_gui():
     """Run the GUI control panel"""
-    root = tk.Tk()
-    app = DevDeckControlPanel(root)
-    root.mainloop()
+    import sys
+    logger = logging.getLogger('devdeck')
+    
+    try:
+        logger.info("Initializing GUI...")
+        root = tk.Tk()
+        logger.info("Creating control panel...")
+        app = DevDeckControlPanel(root)
+        logger.info("GUI initialized, starting main loop...")
+        # Start the main loop - this blocks until window is closed
+        root.mainloop()
+        logger.info("GUI main loop exited")
+    except KeyboardInterrupt:
+        logger.info("GUI interrupted by user")
+    except Exception as e:
+        logger.error(f"Fatal error starting GUI: {e}", exc_info=True)
+        print(f"Fatal error starting GUI: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
