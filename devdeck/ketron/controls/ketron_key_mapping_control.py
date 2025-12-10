@@ -522,6 +522,26 @@ class KetronKeyMappingControl(BaseDeckControl):
                 self._stop_volume_key_repeat()
             else:
                 self.__logger.info(f"Volume Up: incremented to {new_volume}")
+                # Notify GUI of key press with MIDI hex
+                if _GUI_AVAILABLE and put_key_press:
+                    try:
+                        # Get the last pressed volume key to determine CC control
+                        last_key = self.volume_manager.last_pressed_key_name
+                        if last_key:
+                            # Case-insensitive lookup in cc_midis
+                            cc_control = None
+                            for cc_key in self.ketron_midi.cc_midis.keys():
+                                if cc_key.upper() == last_key.upper():
+                                    cc_control = self.ketron_midi.cc_midis[cc_key]
+                                    break
+                            if cc_control is not None:
+                                # Format CC message: Bn CC VV where n is channel (15 = channel 16)
+                                cc_channel = 15  # Channel 16 (0-indexed: 15)
+                                cc_status = 0xB0 + cc_channel
+                                midi_hex = f'{cc_status:02X} {cc_control:02X} {new_volume:02X}'
+                                put_key_press(self.key_no, key_name, midi_hex)
+                    except Exception:
+                        pass  # GUI not available, continue normally
             return
         
         elif key_name.upper() == "VOLUME DOWN":
@@ -551,6 +571,26 @@ class KetronKeyMappingControl(BaseDeckControl):
                 self._stop_volume_key_repeat()
             else:
                 self.__logger.info(f"Volume Down: decremented to {new_volume}")
+                # Notify GUI of key press with MIDI hex
+                if _GUI_AVAILABLE and put_key_press:
+                    try:
+                        # Get the last pressed volume key to determine CC control
+                        last_key = self.volume_manager.last_pressed_key_name
+                        if last_key:
+                            # Case-insensitive lookup in cc_midis
+                            cc_control = None
+                            for cc_key in self.ketron_midi.cc_midis.keys():
+                                if cc_key.upper() == last_key.upper():
+                                    cc_control = self.ketron_midi.cc_midis[cc_key]
+                                    break
+                            if cc_control is not None:
+                                # Format CC message: Bn CC VV where n is channel (15 = channel 16)
+                                cc_channel = 15  # Channel 16 (0-indexed: 15)
+                                cc_status = 0xB0 + cc_channel
+                                midi_hex = f'{cc_status:02X} {cc_control:02X} {new_volume:02X}'
+                                put_key_press(self.key_no, key_name, midi_hex)
+                    except Exception:
+                        pass  # GUI not available, continue normally
             return
         
         elif key_name.upper() == "MUTE":
@@ -564,6 +604,26 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self.__logger.info(f"Mute: muted volume (set to {new_volume})")
                 else:
                     self.__logger.info(f"Mute: unmuted volume (restored to {new_volume})")
+                # Notify GUI of key press with MIDI hex
+                if _GUI_AVAILABLE and put_key_press:
+                    try:
+                        # Get the last pressed volume key to determine CC control
+                        last_key = self.volume_manager.last_pressed_key_name
+                        if last_key:
+                            # Case-insensitive lookup in cc_midis
+                            cc_control = None
+                            for cc_key in self.ketron_midi.cc_midis.keys():
+                                if cc_key.upper() == last_key.upper():
+                                    cc_control = self.ketron_midi.cc_midis[cc_key]
+                                    break
+                            if cc_control is not None:
+                                # Format CC message: Bn CC VV where n is channel (15 = channel 16)
+                                cc_channel = 15  # Channel 16 (0-indexed: 15)
+                                cc_status = 0xB0 + cc_channel
+                                midi_hex = f'{cc_status:02X} {cc_control:02X} {new_volume:02X}'
+                                put_key_press(self.key_no, key_name, midi_hex)
+                    except Exception:
+                        pass  # GUI not available, continue normally
             return
         
         try:
