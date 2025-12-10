@@ -101,7 +101,7 @@ class DevDeckControlPanel:
     def _build_ui(self):
         """Build the user interface"""
         # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame = ttk.Frame(self.root, padding="5")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
@@ -109,12 +109,12 @@ class DevDeckControlPanel:
         
         # Title
         title_label = ttk.Label(main_frame, text="EVMDeck Control Panel", 
-                                font=("Arial", 16, "bold"))
-        title_label.grid(row=0, column=0, pady=(0, 20))
+                                font=("Arial", 14, "bold"))
+        title_label.grid(row=0, column=0, pady=(0, 5))
         
         # Application Control Section
-        control_frame = ttk.LabelFrame(main_frame, text="Application Control", padding="10")
-        control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        control_frame = ttk.LabelFrame(main_frame, text="Application Control", padding="5")
+        control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         control_frame.columnconfigure(0, weight=1)
         
         # Control buttons and status on same line
@@ -136,32 +136,32 @@ class DevDeckControlPanel:
         self.status_label.grid(row=0, column=2, padx=(20, 0), sticky=tk.W)
         
         # USB Devices Section
-        devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="10")
-        devices_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        devices_frame = ttk.LabelFrame(main_frame, text="USB Devices", padding="5")
+        devices_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         devices_frame.columnconfigure(1, weight=1)
         
         # USB Input Device (Elgato Stream Deck)
-        ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 10, "bold")).grid(
+        ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 9, "bold")).grid(
             row=0, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_input_label = ttk.Label(devices_frame, text="None", 
-                                          foreground="gray")
-        self.usb_input_label.grid(row=0, column=1, sticky=tk.W, pady=(0, 10))
+                                          foreground="gray", font=("Arial", 9))
+        self.usb_input_label.grid(row=0, column=1, sticky=tk.W, pady=(0, 3))
         
         # USB Output Device (MIDI output)
-        ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 10, "bold")).grid(
+        ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 9, "bold")).grid(
             row=1, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_output_label = ttk.Label(devices_frame, text="None", 
-                                           foreground="gray")
+                                           foreground="gray", font=("Arial", 9))
         self.usb_output_label.grid(row=1, column=1, sticky=tk.W)
         
         # Refresh button
         refresh_button = ttk.Button(devices_frame, text="Refresh Devices", 
                                     command=self._update_usb_devices)
-        refresh_button.grid(row=2, column=0, columnspan=2, pady=(10, 0))
+        refresh_button.grid(row=2, column=0, columnspan=2, pady=(5, 0))
         
-        # MIDI Key Monitor Section
-        monitor_frame = ttk.LabelFrame(main_frame, text="Keys Monitor", padding="10")
-        monitor_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        # MIDI Key Monitor Section (no title)
+        monitor_frame = ttk.Frame(main_frame, padding="5")
+        monitor_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 5))
         monitor_frame.columnconfigure(0, weight=1)
         monitor_frame.rowconfigure(0, weight=1)
         main_frame.rowconfigure(3, weight=1)
