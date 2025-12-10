@@ -611,7 +611,14 @@ class DevDeckControlPanel:
             # Process Stream Deck key presses
             while True:
                 try:
-                    key_no, key_name = self.streamdeck_key_queue.get_nowait()
+                    # Handle both old format (key_no, key_name) and new format (key_no, key_name, midi_hex)
+                    item = self.streamdeck_key_queue.get_nowait()
+                    if len(item) == 2:
+                        key_no, key_name = item
+                        midi_hex = None
+                    else:
+                        key_no, key_name, midi_hex = item
+                    
                     timestamp = datetime.now().strftime("%H:%M:%S")
                     
                     # Use provided key_name or look it up
@@ -620,7 +627,11 @@ class DevDeckControlPanel:
                     else:
                         display_name = self._get_key_name(key_no)
                     
-                    key_info = f"[{timestamp}] Pressed {display_name}"
+                    # Format message with MIDI hex if available
+                    if midi_hex:
+                        key_info = f"[{timestamp}] Pressed {display_name} {midi_hex}"
+                    else:
+                        key_info = f"[{timestamp}] Pressed {display_name}"
                     self._add_midi_message(key_info)
                 except queue.Empty:
                     break

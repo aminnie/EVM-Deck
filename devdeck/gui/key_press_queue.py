@@ -18,16 +18,17 @@ def get_queue() -> queue.Queue:
     return _key_press_queue
 
 
-def put_key_press(key_no: int, key_name: str = None):
+def put_key_press(key_no: int, key_name: str = None, midi_hex: str = None):
     """
     Put a key press event in the queue.
     
     Args:
         key_no: Stream Deck key number (0-14 or higher)
         key_name: Optional key name (e.g., "Fill", "Break")
+        midi_hex: Optional MIDI message as hex string (e.g., "F0 26 79 03 15 7F F7")
     """
     try:
-        _key_press_queue.put_nowait((key_no, key_name))
+        _key_press_queue.put_nowait((key_no, key_name, midi_hex))
     except queue.Full:
         # Queue is full, skip this event
         pass

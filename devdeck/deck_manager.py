@@ -138,9 +138,10 @@ class DeckManager:
                 pass
             
             # Notify GUI of key press (if GUI is available)
+            # Note: MIDI hex will be added by the control itself if it's a KetronKeyMappingControl
             if _GUI_AVAILABLE and put_key_press:
                 try:
-                    put_key_press(key, key_name)
+                    put_key_press(key, key_name, None)  # midi_hex=None, will be set by control if available
                 except Exception:
                     # GUI not available or error, continue normally
                     pass

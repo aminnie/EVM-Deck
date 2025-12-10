@@ -16,6 +16,14 @@ from devdeck_core.controls.deck_control import DeckControl
 from devdeck.controls.base_control import BaseDeckControl
 from devdeck.ketron import KetronMidi, COLOR_MAP, KetronVolumeManager
 from devdeck.midi import MidiManager
+
+# Try to import key press queue for GUI integration
+try:
+    from devdeck.gui.key_press_queue import put_key_press
+    _GUI_AVAILABLE = True
+except ImportError:
+    _GUI_AVAILABLE = False
+    put_key_press = None
 from devdeck.controls.text_control import wrap_text_to_lines
 
 
@@ -567,6 +575,10 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self._render_error("INVALID\nKEY")
                     return
                 
+                # Format SysEx message as hex for GUI display (ON message)
+                sysex_data = self.ketron_midi.format_pedal_sysex(matched_key, on_state=True)
+                midi_hex = ' '.join([f'F0'] + [f'{b:02X}' for b in sysex_data] + [f'F7'])
+                
                 # Send pedal command
                 success = self.ketron_midi.send_pedal_command(matched_key, port_name)
                 if not success:
@@ -577,6 +589,12 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self.__logger.info(f"Sent pedal command '{matched_key}' for key {self.key_no}")
                     # Flash with white background for success
                     self._flash_key('white')
+                    # Notify GUI of key press with MIDI hex
+                    if _GUI_AVAILABLE and put_key_press:
+                        try:
+                            put_key_press(self.key_no, key_name, midi_hex)
+                        except Exception:
+                            pass  # GUI not available, continue normally
             
             elif source_list_name == 'tab_midis':
                 # Find the matching key (case-insensitive)
@@ -585,6 +603,10 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self.__logger.error(f"Key name '{key_name}' not found in tab_midis for key {self.key_no}")
                     self._render_error("INVALID\nKEY")
                     return
+                
+                # Format SysEx message as hex for GUI display (ON message)
+                sysex_data = self.ketron_midi.format_tab_sysex(matched_key, on_state=True)
+                midi_hex = ' '.join([f'F0'] + [f'{b:02X}' for b in sysex_data] + [f'F7'])
                 
                 # Send tab command
                 success = self.ketron_midi.send_tab_command(matched_key, port_name)
@@ -596,6 +618,12 @@ class KetronKeyMappingControl(BaseDeckControl):
                     self.__logger.info(f"Sent tab command '{matched_key}' for key {self.key_no}")
                     # Flash with white background for success
                     self._flash_key('white')
+                    # Notify GUI of key press with MIDI hex
+                    if _GUI_AVAILABLE and put_key_press:
+                        try:
+                            put_key_press(self.key_no, key_name, midi_hex)
+                        except Exception:
+                            pass  # GUI not available, continue normally
             
             elif source_list_name == 'cc_midis':
                 # For CC buttons, find the matching key (case-insensitive)
@@ -627,6 +655,11 @@ class KetronKeyMappingControl(BaseDeckControl):
                     cc_value = self.settings.get('cc_value', 64)  # Default to middle value
                     cc_channel = self.settings.get('cc_channel', 0)
                 
+                # Format CC message as hex for GUI display
+                # CC message format: Bn CC VV where n is channel (0-F), CC is control, VV is value
+                cc_status = 0xB0 + cc_channel  # CC status byte for channel
+                midi_hex = f'{cc_status:02X} {cc_control:02X} {cc_value:02X}'
+                
                 success = self.midi_manager.send_cc(cc_control, cc_value, cc_channel, port_name)
                 if not success:
                     self.__logger.error(f"Failed to send CC message: control={cc_control}, value={cc_value}, channel={cc_channel}")
@@ -639,6 +672,12 @@ class KetronKeyMappingControl(BaseDeckControl):
                         self.__logger.info(f"Sent CC message: control={cc_control}, value={cc_value}, channel={cc_channel} for key {self.key_no}")
                     # Flash with white background for success
                     self._flash_key('white')
+                    # Notify GUI of key press with MIDI hex
+                    if _GUI_AVAILABLE and put_key_press:
+                        try:
+                            put_key_press(self.key_no, key_name, midi_hex)
+                        except Exception:
+                            pass  # GUI not available, continue normally
             
             else:
                 self.__logger.error(f"Invalid source_list_name '{source_list_name}' for key {self.key_no}")
