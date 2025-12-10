@@ -25,6 +25,8 @@ except ImportError:
 from devdeck.midi import MidiManager
 from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
 from devdeck.gui.key_press_queue import get_queue
+from devdeck.deck_context import DeckContext
+from StreamDeck.DeviceManager import DeviceManager
 
 
 class DevDeckControlPanel:
@@ -661,7 +663,78 @@ class DevDeckControlPanel:
         """Handle window close event"""
         self._stop_midi_monitoring()
         self._stop_application()
+        
+        # Clear Stream Deck screen after stopping application (deck is now closed)
+        self._clear_stream_deck_screen()
+        
         self.root.destroy()
+    
+    def _clear_stream_deck_screen(self):
+        """
+        Clear the Stream Deck screen by setting all keys to black.
+        
+        This is called when the GUI exits to provide a clean shutdown.
+        """
+        try:
+            self.logger.info("Clearing Stream Deck screen on exit...")
+            
+            # Access Stream Deck using DeviceManager (similar to main())
+            streamdecks = DeviceManager().enumerate()
+            
+            if not streamdecks:
+                self.logger.debug("No Stream Deck detected for screen clear")
+                return
+            
+            # Clear each detected deck
+            for deck in streamdecks:
+                deck_opened = False
+                try:
+                    # Try to open the deck (it might already be open if app is running)
+                    try:
+                        deck.open()
+                        deck_opened = True
+                    except Exception:
+                        # Deck might already be open, try to use it anyway
+                        self.logger.debug("Deck might already be open, attempting to clear anyway")
+                    
+                    # Create a minimal deck manager-like object for DeckContext
+                    # We only need the deck reference, not a full DeckManager
+                    class MinimalDeckManager:
+                        def __init__(self, deck):
+                            self.decks = []
+                            self._deck = deck
+                    
+                    minimal_manager = MinimalDeckManager(deck)
+                    context = DeckContext(minimal_manager, deck)
+                    
+                    # Clear all keys to black
+                    keys = deck.key_count()
+                    for key_no in range(keys):
+                        with context.renderer(key_no) as r:
+                            r.background_color('black')
+                            r.text('')\
+                                .font_size(100)\
+                                .color('black')\
+                                .center_vertically()\
+                                .center_horizontally()\
+                                .end()
+                    
+                    self.logger.info("Stream Deck screen cleared successfully")
+                    
+                    # Close the deck only if we opened it
+                    if deck_opened:
+                        deck.close()
+                except Exception as ex:
+                    self.logger.warning("Error clearing Stream Deck screen: %s", ex, exc_info=True)
+                    # Try to close the deck even if clearing failed (only if we opened it)
+                    if deck_opened:
+                        try:
+                            deck.close()
+                        except Exception:
+                            pass  # Ignore errors when closing
+        except Exception as ex:
+            # Don't block GUI exit if screen clearing fails
+            self.logger.warning("Failed to clear Stream Deck screen: %s", ex, exc_info=True)
 
 
 def run_gui():

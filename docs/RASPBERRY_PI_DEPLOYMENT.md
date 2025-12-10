@@ -11,13 +11,14 @@
 7. [USB Permissions Configuration](#usb-permissions-configuration)
 8. [MIDI Setup](#midi-setup)
 9. [Application Configuration](#application-configuration)
-10. [Samba Configuration (Windows Network Access)](#samba-configuration-windows-network-access)
-11. [Running as a Service](#running-as-a-service)
-12. [Auto-Start Configuration](#auto-start-configuration)
-13. [Testing and Verification](#testing-and-verification)
-14. [Troubleshooting](#troubleshooting)
-15. [Maintenance](#maintenance)
-16. [Development on Raspberry Pi 5](#development-on-raspberry-pi-5)
+10. [GUI Control Panel](#gui-control-panel)
+11. [Samba Configuration (Windows Network Access)](#samba-configuration-windows-network-access)
+12. [Running as a Service](#running-as-a-service)
+13. [Auto-Start Configuration](#auto-start-configuration)
+14. [Testing and Verification](#testing-and-verification)
+15. [Troubleshooting](#troubleshooting)
+16. [Maintenance](#maintenance)
+17. [Development on Raspberry Pi 5](#development-on-raspberry-pi-5)
 
 ---
 
@@ -148,6 +149,9 @@ sudo apt install -y alsa-utils
 
 # Install fonts (for text rendering on Stream Deck buttons)
 sudo apt install -y fonts-dejavu fonts-liberation
+
+# Install tkinter (for GUI support)
+sudo apt install -y python3-tk
 
 # Install Pillow build dependencies (required for building from source)
 sudo apt install -y libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev liblcms2-dev libwebp-dev libopenjp2-7-dev libimagequant-dev libraqm-dev
@@ -817,11 +821,16 @@ cat config/key_mappings.json | python3 -m json.tool
 # Activate virtual environment
 source venv/bin/activate
 
-# Test run (will show any errors)
+# Test run with GUI (default)
 python3 -m devdeck.main
+
+# Or test without GUI
+python3 -m devdeck.main --no-gui
 
 # Press Ctrl+C to stop
 ```
+
+**Note**: The GUI will open automatically if you have a display connected. If running headless or via SSH without X11, use the `--no-gui` flag. See the [GUI Control Panel](#gui-control-panel) section for more details.
 
 ### Step 4: Configure Screen Saver (Optional)
 
@@ -890,6 +899,218 @@ settings:
 ```
 
 **Note:** The screen saver helps preserve the Stream Deck display by reducing brightness during periods of inactivity. The system remains fully functional and ready to use - simply press any key to wake the display.
+
+---
+
+## GUI Control Panel
+
+The application includes a graphical user interface (GUI) that provides easy control and monitoring of the EVMDeck application. The GUI is designed to work on Raspberry Pi with a 480x272 pixel display resolution, making it perfect for small touchscreen displays.
+
+### GUI Features
+
+The GUI Control Panel provides:
+
+- **Application Control**: Start and exit the application with button controls
+- **Status Display**: Real-time status indicator showing "Running" or "Stopped"
+- **USB Device Detection**: Shows detected USB input (Elgato Stream Deck) and USB output (MIDI device) with vendor names
+- **Key Press Monitor**: Real-time display of Stream Deck key presses with:
+  - Timestamp for each key press
+  - Key name (e.g., "Fill", "Break", "Start/Stop")
+  - MIDI message in hex format (SysEx or CC messages)
+- **Device Refresh**: Button to refresh USB device detection without restarting
+
+### Prerequisites for GUI
+
+#### 1. Install tkinter
+
+The GUI requires `tkinter`, which may not be installed by default on Raspberry Pi OS Lite:
+
+```bash
+# Install Python tkinter package
+sudo apt-get update
+sudo apt-get install -y python3-tk
+```
+
+#### 2. Verify tkinter Installation
+
+Test that tkinter is available:
+
+```bash
+python3 -c "import tkinter; print('✓ tkinter is available')"
+```
+
+If this command succeeds, tkinter is properly installed. If it fails, install it using the command above.
+
+#### 3. Display Requirements
+
+The GUI requires a graphical display:
+
+- **Direct Display**: Connect a monitor, TV, or touchscreen display directly to the Raspberry Pi
+- **VNC**: Use VNC server for remote desktop access
+- **X11 Forwarding**: If using SSH, enable X11 forwarding (not recommended for production)
+
+**Note**: The GUI window is sized at 480x272 pixels, which matches common small Raspberry Pi touchscreen displays.
+
+### Running the Application with GUI
+
+#### Method 1: Default (GUI Enabled)
+
+The application starts with GUI by default:
+
+```bash
+# Activate virtual environment
+cd ~/devdeck
+source venv/bin/activate
+
+# Run application (GUI starts automatically)
+python3 -m devdeck.main
+```
+
+The GUI window will open automatically when the application starts.
+
+#### Method 2: Without GUI
+
+If you prefer to run without the GUI (e.g., for headless operation or as a service):
+
+```bash
+# Run without GUI
+python3 -m devdeck.main --no-gui
+```
+
+### Using the GUI
+
+#### Application Control Section
+
+1. **Start Button**: Click to start the EVMDeck application
+   - The Stream Deck will initialize and display your configured buttons
+   - Status changes to "Status: Running" (green)
+   - MIDI monitoring starts automatically
+
+2. **Exit Button**: Click to exit the application
+   - Stops the EVMDeck application gracefully
+   - Closes the GUI window
+   - Same as clicking the window's X button
+
+3. **Status Indicator**: Shows current application state
+   - "Status: Running" (green) - Application is active
+   - "Status: Stopped" (red) - Application is not running
+
+#### USB Devices Section
+
+Displays detected USB devices:
+
+- **USB Input Device**: Shows the Elgato Stream Deck with vendor name
+  - Example: "Elgato Stream Deck MK.2"
+  - Shows "None" if not detected
+
+- **USB Output Device**: Shows the MIDI output device with vendor name
+  - Example: "CH345 MIDI 1" or "Ketron MIDI Device"
+  - Shows "None" if not detected
+
+- **Refresh Devices Button**: Click to scan for USB devices again
+  - Useful after connecting/disconnecting devices
+  - Updates the display without restarting the application
+
+#### Keys Monitor Section
+
+Displays real-time Stream Deck key presses:
+
+- **Format**: `[HH:MM:SS] Pressed KeyName [MIDI Hex]`
+- **Example Messages**:
+  - `[14:23:45] Pressed Fill [F0 26 79 03 15 7F F7]` (SysEx message)
+  - `[14:23:46] Pressed Voice1 [BF 72 40]` (CC message)
+  - `[14:23:47] Pressed Volume Up [BF 6C 41]` (Volume CC message)
+
+- **MIDI Message Types**:
+  - **SysEx Messages**: Full hex string including F0 (start) and F7 (end)
+  - **CC Messages**: Format `Bn CC VV` where:
+    - `Bn` = Status byte (B0-BF for channels 1-16)
+    - `CC` = Control change number
+    - `VV` = Value (0-127)
+
+- **Scrolling**: The monitor automatically scrolls to show the most recent key presses
+- **Limited History**: Shows approximately the last 50 key presses
+
+### GUI Troubleshooting
+
+#### Issue: GUI Window Doesn't Appear
+
+**Symptoms**: Application starts but no GUI window opens
+
+**Solutions**:
+
+1. **Check tkinter availability**:
+   ```bash
+   python3 -c "import tkinter; print('tkinter OK')"
+   ```
+   If this fails, install tkinter: `sudo apt-get install python3-tk`
+
+2. **Verify display is available**:
+   ```bash
+   echo $DISPLAY
+   ```
+   Should show something like `:0` or `:0.0`. If empty, you may be in a headless environment.
+
+3. **Check if running via SSH without X11**:
+   - GUI requires a display connection
+   - Use VNC or connect directly to a monitor
+   - Or run with `--no-gui` flag
+
+4. **Verify you're not in a service/daemon context**:
+   - Services typically don't have display access
+   - Run manually from a terminal session to test GUI
+
+#### Issue: "No module named 'tkinter'" Error
+
+**Solution**: Install tkinter package:
+```bash
+sudo apt-get update
+sudo apt-get install -y python3-tk
+```
+
+#### Issue: GUI Window is Too Small or Too Large
+
+**Solution**: The GUI is optimized for 480x272 pixel displays. You can resize the window manually, but the layout is designed for this resolution.
+
+#### Issue: USB Devices Show "None" or "Unknown Device"
+
+**Solutions**:
+
+1. **Click "Refresh Devices"** button to rescan
+2. **Verify devices are connected**:
+   ```bash
+   lsusb | grep -i elgato  # Stream Deck
+   lsusb | grep -i midi   # MIDI device
+   ```
+3. **Check USB permissions** (see [USB Permissions Configuration](#usb-permissions-configuration) section)
+
+#### Issue: Key Presses Not Showing in Monitor
+
+**Solutions**:
+
+1. **Ensure application is started**: Click "Start" button first
+2. **Check that MIDI monitoring started**: Should see "[timestamp] EVM Deck application ready" message
+3. **Verify Stream Deck is working**: Press keys and check if they appear in the monitor
+4. **Check for errors**: Look at terminal output for any error messages
+
+### GUI and Service Mode
+
+**Important**: The GUI is designed for interactive use. When running as a systemd service (see [Running as a Service](#running-as-a-service) section), you should use the `--no-gui` flag:
+
+```bash
+# In systemd service file
+ExecStart=/home/admin/devdeck/venv/bin/python3 -m devdeck.main --no-gui
+```
+
+Services typically don't have display access, so the GUI won't work in service mode. Use the GUI when running manually for testing, configuration, or monitoring.
+
+### GUI Best Practices
+
+1. **For Development/Testing**: Use GUI mode for easy monitoring and control
+2. **For Production/Service**: Use `--no-gui` mode when running as a service
+3. **Display Setup**: Use a small touchscreen (480x272) for the best experience
+4. **Remote Access**: Use VNC if you need GUI access remotely
+5. **Performance**: GUI adds minimal overhead; suitable for Raspberry Pi 5
 
 ---
 

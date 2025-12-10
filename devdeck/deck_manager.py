@@ -181,6 +181,33 @@ class DeckManager:
         if active_deck is not None:
             active_deck.render(DeckContext(self, self.__deck))
     
+    def clear_screen(self) -> None:
+        """
+        Clear the screen by setting all keys to black background and black text.
+        
+        Similar to screen saver but uses black colors instead of dimming brightness.
+        """
+        try:
+            self.__logger.info("Clearing Stream Deck screen (setting all keys to black)")
+            
+            keys = self.__deck.key_count()
+            context = DeckContext(self, self.__deck)
+            
+            # Set each key to black background and black text
+            for key_no in range(keys):
+                with context.renderer(key_no) as r:
+                    r.background_color('black')
+                    r.text('')\
+                        .font_size(100)\
+                        .color('black')\
+                        .center_vertically()\
+                        .center_horizontally()\
+                        .end()
+            
+            self.__logger.info("Stream Deck screen cleared")
+        except Exception as ex:
+            self.__logger.error("Error clearing Stream Deck screen: %s", ex, exc_info=True)
+    
     def close(self) -> None:
         """
         Close the deck manager and clean up resources.
