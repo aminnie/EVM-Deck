@@ -192,6 +192,14 @@ def main() -> None:
         screen_saver_timeout = deck_settings_dict.get('screen_saver_timeout')
         
         deck_manager = DeckManager(deck, screen_saver_timeout=screen_saver_timeout)
+        
+        # Register deck manager for GUI access (if GUI is available)
+        try:
+            from devdeck.gui.deck_manager_registry import register_deck_manager, unregister_deck_manager
+            register_deck_manager(deck_manager)
+        except ImportError:
+            # GUI not available, continue without registration
+            pass
 
         # Instantiate deck
         main_deck = deck_settings.deck_class()(None, **deck_settings.settings())
@@ -205,8 +213,21 @@ def main() -> None:
                 try:
                     t.join()
                 except KeyboardInterrupt as ex:
+                    # Unregister before closing
+                    try:
+                        from devdeck.gui.deck_manager_registry import unregister_deck_manager
+                        unregister_deck_manager()
+                    except ImportError:
+                        pass
                     deck_manager.close()
                     deck.close()
+        
+        # Unregister deck manager when done with this deck
+        try:
+            from devdeck.gui.deck_manager_registry import unregister_deck_manager
+            unregister_deck_manager()
+        except ImportError:
+            pass
 
     if len(streamdecks) == 0:
         root.info("No streamdecks detected, exiting.")

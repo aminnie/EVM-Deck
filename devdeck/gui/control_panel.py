@@ -27,6 +27,14 @@ from devdeck.midi import MidiManager
 from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
 from devdeck.gui.key_press_queue import get_queue
 from devdeck.deck_context import DeckContext
+
+# Try to import deck manager registry for screen clearing
+try:
+    from devdeck.gui.deck_manager_registry import get_deck_manager
+    _DECK_MANAGER_REGISTRY_AVAILABLE = True
+except ImportError:
+    _DECK_MANAGER_REGISTRY_AVAILABLE = False
+    get_deck_manager = None
 from StreamDeck.DeviceManager import DeviceManager
 
 
@@ -664,17 +672,87 @@ class DevDeckControlPanel:
         """Handle window close event"""
         self._stop_midi_monitoring()
         
-        # Stop the application - this will clear the screen via DeckManager.close()
-        # before closing the deck
+        # Clear the screen BEFORE stopping the application (while deck is still open)
+        # This ensures we can clear it even if the app thread doesn't exit cleanly
+        if self.app_running:
+            self.logger.info("Application is running, clearing screen before stopping...")
+            self._clear_stream_deck_screen_while_open()
+        
+        # Stop the application - this will also clear the screen via DeckManager.close()
+        # but we've already cleared it above as a safety measure
         self._stop_application()
         
-        # Note: We don't need to manually clear the screen here because
-        # DeckManager.close() will call clear_screen() before closing the deck.
-        # The manual clear attempt below is kept as a fallback for edge cases.
-        # Try to clear screen as fallback (in case app wasn't running or clear failed)
-        self._clear_stream_deck_screen()
+        # Try to clear screen as final fallback (in case app wasn't running or clear failed)
+        if not self.app_running:
+            self._clear_stream_deck_screen()
         
         self.root.destroy()
+    
+    def _clear_stream_deck_screen_while_open(self):
+        """
+        Clear the Stream Deck screen while the application is still running.
+        
+        This uses the registered DeckManager to clear the screen using the
+        already-open deck.
+        """
+        try:
+            self.logger.info("Attempting to clear Stream Deck screen (deck should be open)...")
+            
+            # Try to get the registered DeckManager
+            if _DECK_MANAGER_REGISTRY_AVAILABLE and get_deck_manager:
+                deck_manager = get_deck_manager()
+                if deck_manager:
+                    try:
+                        deck_manager.clear_screen()
+                        self.logger.info("Stream Deck screen cleared successfully via DeckManager")
+                        return
+                    except Exception as ex:
+                        self.logger.warning("Error clearing screen via DeckManager: %s", ex)
+            
+            # Fallback: try to access deck directly via DeviceManager
+            self.logger.debug("DeckManager not available, trying direct access...")
+            streamdecks = DeviceManager().enumerate()
+            
+            if not streamdecks:
+                self.logger.debug("No Stream Deck detected for screen clear")
+                return
+            
+            # Try to clear each detected deck
+            for deck in streamdecks:
+                try:
+                    # Try to use the deck directly (it should be open)
+                    try:
+                        keys = deck.key_count()
+                        
+                        # Create a minimal deck manager-like object for DeckContext
+                        class MinimalDeckManager:
+                            def __init__(self, deck):
+                                self.decks = []
+                                self._deck = deck
+                        
+                        minimal_manager = MinimalDeckManager(deck)
+                        context = DeckContext(minimal_manager, deck)
+                        
+                        # Clear all keys to black
+                        for key_no in range(keys):
+                            with context.renderer(key_no) as r:
+                                r.background_color('black')
+                                r.text('')\
+                                    .font_size(100)\
+                                    .color('black')\
+                                    .center_vertically()\
+                                    .center_horizontally()\
+                                    .end()
+                        
+                        self.logger.info("Stream Deck screen cleared successfully (direct access)")
+                        return
+                    except Exception as ex:
+                        self.logger.debug(f"Could not access deck directly: {ex}")
+                        # Can't access the open deck, that's okay - DeckManager.close() will handle it
+                except Exception as ex:
+                    self.logger.warning("Error clearing Stream Deck screen while open: %s", ex)
+        except Exception as ex:
+            self.logger.warning("Failed to clear Stream Deck screen while open: %s", ex)
     
     def _clear_stream_deck_screen(self):
         """
