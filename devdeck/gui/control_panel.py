@@ -49,16 +49,26 @@ class DevDeckControlPanel:
         # MIDI manager - lazy initialization to avoid GIL issues
         self._midi_manager = None
         
+        # Flag to prevent MIDI operations during initialization
+        self._midi_ready = False
+        
         # Build UI
         self._build_ui()
         
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
         
-        # Defer MIDI device monitoring until after GUI is fully initialized
-        # This avoids GIL/threading issues with rtmidi backend
-        # Use a small delay to ensure GUI main loop is running
-        self.root.after(100, self._update_midi_devices)
+        # Don't auto-update MIDI devices on startup to avoid GIL/threading issues
+        # User can click "Refresh Devices" button to manually update
+        # Set initial placeholder text
+        self.midi_input_label.config(text="Click 'Refresh Devices' to scan", 
+                                    foreground="gray")
+        self.midi_output_label.config(text="Click 'Refresh Devices' to scan", 
+                                     foreground="gray")
+        
+        # Mark MIDI as ready after GUI is fully initialized
+        # Use a longer delay to ensure Python runtime is fully ready
+        self.root.after(500, lambda: setattr(self, '_midi_ready', True))
         
         # Start MIDI message processing
         self._process_midi_messages()
@@ -236,6 +246,9 @@ class DevDeckControlPanel:
         """
         Safely execute a MIDI-related function, handling GIL/threading issues.
         
+        This method attempts to catch fatal errors from the rtmidi C extension
+        which can cause Python to abort on macOS.
+        
         Args:
             func: Callable that performs MIDI operation
             default: Default value to return if operation fails
@@ -244,21 +257,28 @@ class DevDeckControlPanel:
             Result of func() or default if operation fails
         """
         try:
+            # Try to execute the function
             return func()
-        except RuntimeError as e:
-            if "GIL" in str(e) or "thread" in str(e).lower():
-                self.logger.warning(f"MIDI operation failed due to threading issue: {e}")
-                # Retry after a short delay on the main thread
-                self.root.after(100, lambda: self._update_midi_devices())
+        except (RuntimeError, SystemError) as e:
+            error_msg = str(e).lower()
+            if "gil" in error_msg or "thread" in error_msg or "null" in error_msg:
+                self.logger.warning(f"MIDI operation failed due to threading/GIL issue: {e}")
             else:
                 self.logger.error(f"MIDI operation failed: {e}")
             return default
         except Exception as e:
+            # Catch any other exceptions
             self.logger.error(f"MIDI operation error: {e}")
             return default
     
     def _update_midi_devices(self):
         """Update the displayed MIDI input and output devices"""
+        # Safety check: Don't attempt MIDI operations until system is ready
+        if not self._midi_ready:
+            self.logger.debug("MIDI not ready yet, deferring device update")
+            self.root.after(500, self._update_midi_devices)
+            return
+        
         if mido is None:
             self.midi_input_label.config(text="MIDI library not available", 
                                         foreground="red")
@@ -266,8 +286,14 @@ class DevDeckControlPanel:
                                          foreground="red")
             return
         
+        # Update UI to show we're scanning
+        self.midi_input_label.config(text="Scanning...", foreground="gray")
+        self.midi_output_label.config(text="Scanning...", foreground="gray")
+        self.root.update_idletasks()  # Force UI update
+        
         try:
             # Get MIDI input ports - use safe wrapper for GIL safety
+            # Note: On macOS, rtmidi can have fatal GIL issues, so we wrap carefully
             input_ports = self._safe_midi_call(lambda: mido.get_input_names(), default=[])
             
             if input_ports:
@@ -308,11 +334,15 @@ class DevDeckControlPanel:
             else:
                 self.midi_output_label.config(text="No MIDI output devices", 
                                              foreground="gray")
+        except SystemExit:
+            # Re-raise SystemExit to allow normal shutdown
+            raise
         except Exception as e:
+            # Catch any other exceptions (including fatal errors from C extensions)
             self.logger.error(f"Error updating MIDI devices: {e}", exc_info=True)
-            self.midi_input_label.config(text="Error reading devices", 
+            self.midi_input_label.config(text="Error: Click to retry", 
                                        foreground="red")
-            self.midi_output_label.config(text="Error reading devices", 
+            self.midi_output_label.config(text="Error: Click to retry", 
                                          foreground="red")
     
     def _toggle_midi_monitoring(self):
