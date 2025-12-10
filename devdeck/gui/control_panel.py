@@ -27,6 +27,7 @@ from devdeck.midi import MidiManager
 from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
 from devdeck.gui.key_press_queue import get_queue
 from devdeck.deck_context import DeckContext
+from devdeck.settings.devdeck_settings import DevDeckSettings
 
 # Try to import deck manager registry for screen clearing
 try:
@@ -428,12 +429,37 @@ class DevDeckControlPanel:
         return f"{vendor_name} - {device_desc}"
     
     def _update_usb_devices(self):
-        """Update the displayed USB input and output devices"""
+        """Update the displayed USB input and output devices, and refresh key mappings"""
         # Update UI to show we're scanning
         self.usb_input_label.config(text="Scanning...", foreground="gray")
         self.usb_output_label.config(text="Scanning...", foreground="gray")
         self.root.update_idletasks()  # Force UI update
         
+        # First, refresh key mappings from key_mappings.json (same as on startup)
+        try:
+            # Find settings.yml file path (same logic as main())
+            # control_panel.py is at: devdeck/gui/control_panel.py
+            # Project root is 3 levels up: gui -> devdeck -> project_root
+            project_root = Path(__file__).parent.parent.parent
+            config_dir = project_root / 'config'
+            settings_filename = config_dir / 'settings.yml'
+            
+            if settings_filename.exists():
+                # Update settings.yml from key_mappings.json
+                updated = DevDeckSettings.update_from_key_mappings(str(settings_filename))
+                if updated:
+                    self.logger.info("Key mappings updated successfully from key_mappings.json")
+                    # Reload key mappings in GUI for display
+                    self._load_key_mappings()
+                else:
+                    self.logger.debug("Key mappings file not found or empty, skipping update")
+            else:
+                self.logger.warning(f"Settings file not found: {settings_filename}, skipping key mappings update")
+        except Exception as e:
+            # Log error but don't fail - continue with USB device refresh
+            self.logger.warning(f"Error updating key mappings: {e}", exc_info=True)
+        
+        # Now refresh USB devices (existing functionality)
         try:
             # Check for Elgato Stream Deck (USB Input Device)
             elgato_connected, elgato_device = check_elgato_stream_deck()
