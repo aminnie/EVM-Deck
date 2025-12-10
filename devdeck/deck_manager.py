@@ -115,36 +115,9 @@ class DeckManager:
                 if self._screen_saver_active:
                     self._wake_from_screen_saver()
             
-            # Try to get key name from active deck control for GUI display
-            key_name = None
-            try:
-                active_deck = self.get_active_deck()
-                if active_deck:
-                    # Try to get the control for this key
-                    controls = getattr(active_deck, 'controls', {})
-                    if key in controls:
-                        control = controls[key]
-                        # Try to get key_name from control's key_mapping
-                        # This works for KetronKeyMappingControl which has a key_mapping attribute
-                        if hasattr(control, 'key_mapping'):
-                            key_mapping = getattr(control, 'key_mapping', None)
-                            if key_mapping and isinstance(key_mapping, dict):
-                                key_name = key_mapping.get('key_name', '').strip()
-                        # Also try to get it directly if the control has it as an attribute
-                        elif hasattr(control, 'key_name'):
-                            key_name = getattr(control, 'key_name', '').strip()
-            except Exception:
-                # If we can't get the key name, continue without it
-                pass
-            
-            # Notify GUI of key press (if GUI is available)
-            # Note: MIDI hex will be added by the control itself if it's a KetronKeyMappingControl
-            if _GUI_AVAILABLE and put_key_press:
-                try:
-                    put_key_press(key, key_name, None)  # midi_hex=None, will be set by control if available
-                except Exception:
-                    # GUI not available or error, continue normally
-                    pass
+            # Note: Key press notifications with MIDI hex are handled by the controls themselves
+            # (e.g., KetronKeyMappingControl.pressed() will call put_key_press with MIDI hex)
+            # We don't send a notification here to avoid duplicate messages
             
             # Proceed with normal key handling
             self.get_active_deck().pressed(key)
