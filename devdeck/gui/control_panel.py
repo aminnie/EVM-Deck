@@ -125,8 +125,8 @@ class DevDeckControlPanel:
         ttk.Label(title_frame, text="Application Control", font=("Arial", 12, "bold")).grid(
             row=0, column=0, sticky=tk.W)
         self.status_label = ttk.Label(title_frame, text="Status: Stopped", 
-                                      foreground="red", font=("Arial", 9))
-        self.status_label.grid(row=0, column=1, padx=(20, 0), sticky=tk.W)
+                                      foreground="red", font=("Arial", 11, "bold"))
+        self.status_label.grid(row=0, column=1, padx=(20, 0), sticky=tk.E)
         
         # Control buttons and refresh button on same line
         button_frame = ttk.Frame(control_frame)
@@ -155,18 +155,18 @@ class DevDeckControlPanel:
         ttk.Label(devices_frame, text="USB Input Device:", font=("Arial", 11, "bold")).grid(
             row=0, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_input_label = ttk.Label(devices_frame, text="None", 
-                                          foreground="gray", font=("Arial", 10))
+                                          foreground="gray", font=("Arial", 11))
         self.usb_input_label.grid(row=0, column=1, sticky=tk.W, pady=(0, 3))
         
         # USB Output Device (MIDI output)
         ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 11, "bold")).grid(
             row=1, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_output_label = ttk.Label(devices_frame, text="None", 
-                                           foreground="gray", font=("Arial", 10))
+                                           foreground="gray", font=("Arial", 11))
         self.usb_output_label.grid(row=1, column=1, sticky=tk.W)
         
-        # MIDI Key Monitor Section (no title)
-        monitor_frame = ttk.Frame(main_frame, padding="5")
+        # MIDI Key Monitor Section with border (no title)
+        monitor_frame = ttk.LabelFrame(main_frame, padding="5")
         monitor_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 5))
         monitor_frame.columnconfigure(0, weight=1)
         monitor_frame.rowconfigure(0, weight=1)
