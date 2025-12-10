@@ -231,6 +231,12 @@ class DeckManager:
         if was_screen_saver_active:
             self.__deck.set_brightness(self._original_brightness)
         
+        # Clear the screen to black before closing (for clean shutdown)
+        try:
+            self.clear_screen()
+        except Exception as ex:
+            self.__logger.warning("Error clearing screen during close: %s", ex)
+        
         # Clean up decks
         keys = self.__deck.key_count()
         for deck in self.decks:

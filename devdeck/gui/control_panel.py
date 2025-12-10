@@ -663,9 +663,15 @@ class DevDeckControlPanel:
     def _on_closing(self):
         """Handle window close event"""
         self._stop_midi_monitoring()
+        
+        # Stop the application - this will clear the screen via DeckManager.close()
+        # before closing the deck
         self._stop_application()
         
-        # Clear Stream Deck screen after stopping application (deck is now closed)
+        # Note: We don't need to manually clear the screen here because
+        # DeckManager.close() will call clear_screen() before closing the deck.
+        # The manual clear attempt below is kept as a fallback for edge cases.
+        # Try to clear screen as fallback (in case app wasn't running or clear failed)
         self._clear_stream_deck_screen()
         
         self.root.destroy()
