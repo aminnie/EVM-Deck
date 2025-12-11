@@ -53,6 +53,7 @@ class DeckManager:
         self._screen_saver_lock = threading.Lock()
         self._idle_check_thread: Optional[threading.Thread] = None
         self._stop_threads = False
+        self._device_unavailable = False  # Flag to track if device is unavailable (e.g., power saving mode)
         
         # Start idle check thread
         self._idle_check_thread = threading.Thread(target=self._check_idle_time, daemon=True)
@@ -110,6 +111,8 @@ class DeckManager:
         if state:
             with self._screen_saver_lock:
                 self._last_activity_time = time.time()
+                # Reset device unavailable flag on successful key press (device is available)
+                self._device_unavailable = False
                 
                 # Wake from screen saver if active
                 if self._screen_saver_active:
@@ -136,6 +139,10 @@ class DeckManager:
                     if self._stop_threads:
                         break
                     
+                    # Skip screen saver activation if device is unavailable
+                    if self._device_unavailable:
+                        continue
+                    
                     if not self._screen_saver_active:
                         idle_time = time.time() - self._last_activity_time
                         if idle_time >= self._screen_saver_timeout:
@@ -155,11 +162,38 @@ class DeckManager:
         # Save current brightness
         self._original_brightness = DEFAULT_DECK_BRIGHTNESS  # Could get current brightness if API supports it
         
-        # Dim brightness
-        self.__deck.set_brightness(SCREEN_SAVER_BRIGHTNESS)
-        
-        # Set screen saver active flag
-        self._screen_saver_active = True
+        # Dim brightness - handle device unavailable errors
+        try:
+            self.__deck.set_brightness(SCREEN_SAVER_BRIGHTNESS)
+            # Set screen saver active flag only if brightness was set successfully
+            self._screen_saver_active = True
+        except Exception as ex:
+            error_msg = str(ex).lower()
+            error_type = type(ex).__name__
+            
+            # Check for TransportError or "No HID Device" errors
+            is_transport_error = (
+                "TransportError" in error_type or
+                "transport" in error_type.lower() or
+                "no hid device" in error_msg or
+                "hid device" in error_msg or
+                "could not open" in error_msg
+            )
+            
+            if is_transport_error:
+                # Device is unavailable (e.g., Mac power saving mode)
+                self.__logger.warning(
+                    "Cannot activate screen saver: Device unavailable (likely due to power saving mode). "
+                    "Error: %s", ex
+                )
+                # Mark device as unavailable to skip future screen saver attempts
+                self._device_unavailable = True
+                # Don't set screen saver active flag - abort activation
+                return
+            else:
+                # Unexpected error - re-raise it
+                self.__logger.error("Unexpected error activating screen saver: %s", ex, exc_info=True)
+                raise
     
     def _wake_from_screen_saver(self) -> None:
         """
@@ -173,13 +207,42 @@ class DeckManager:
         # Set screen saver inactive
         self._screen_saver_active = False
         
-        # Restore brightness
-        self.__deck.set_brightness(self._original_brightness)
+        # Restore brightness - handle device unavailable errors
+        try:
+            self.__deck.set_brightness(self._original_brightness)
+            # Reset device unavailable flag on successful brightness change
+            self._device_unavailable = False
+        except Exception as ex:
+            error_msg = str(ex).lower()
+            error_type = type(ex).__name__
+            
+            # Check for TransportError or "No HID Device" errors
+            is_transport_error = (
+                "TransportError" in error_type or
+                "transport" in error_type.lower() or
+                "no hid device" in error_msg or
+                "hid device" in error_msg or
+                "could not open" in error_msg
+            )
+            
+            if is_transport_error:
+                # Device is unavailable
+                self.__logger.warning(
+                    "Cannot restore brightness: Device unavailable. Error: %s", ex
+                )
+                # Mark device as unavailable
+                self._device_unavailable = True
+            else:
+                # Unexpected error - log but continue
+                self.__logger.error("Unexpected error restoring brightness: %s", ex, exc_info=True)
         
-        # Re-render active deck
-        active_deck = self.get_active_deck()
-        if active_deck is not None:
-            active_deck.render(DeckContext(self, self.__deck))
+        # Re-render active deck (even if brightness restore failed)
+        try:
+            active_deck = self.get_active_deck()
+            if active_deck is not None:
+                active_deck.render(DeckContext(self, self.__deck))
+        except Exception as ex:
+            self.__logger.warning("Error re-rendering deck after wake: %s", ex)
     
     def clear_screen(self) -> None:
         """
