@@ -28,6 +28,7 @@ from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_outp
 from devdeck.gui.key_press_queue import get_queue
 from devdeck.deck_context import DeckContext
 from devdeck.settings.devdeck_settings import DevDeckSettings
+from devdeck.ketron.ketron import KetronMidi
 
 # Try to import deck manager registry for screen clearing
 try:
@@ -178,12 +179,17 @@ class DevDeckControlPanel:
                                           foreground="gray", font=("Arial", 11))
         self.usb_input_label.grid(row=0, column=1, sticky=tk.W, pady=(0, 3))
         
-        # USB Output Device (MIDI output)
+        # USB Output Device (MIDI output) with Start/Stop button
         ttk.Label(devices_frame, text="USB Output Device:", font=("Arial", 11, "bold")).grid(
             row=1, column=0, sticky=tk.W, padx=(0, 5))
         self.usb_output_label = ttk.Label(devices_frame, text="None", 
                                            foreground="gray", font=("Arial", 11))
         self.usb_output_label.grid(row=1, column=1, sticky=tk.W)
+        
+        # Start/Stop button next to USB output device
+        self.start_stop_button = ttk.Button(devices_frame, text="Start/Stop",
+                                            command=self._send_start_stop, width=12)
+        self.start_stop_button.grid(row=1, column=2, padx=(10, 0), sticky=tk.W)
         
         # MIDI Key Monitor Section with border (no title)
         monitor_frame = ttk.LabelFrame(main_frame, padding="5")
@@ -779,6 +785,53 @@ class DevDeckControlPanel:
                     self.logger.warning("Error clearing Stream Deck screen while open: %s", ex)
         except Exception as ex:
             self.logger.warning("Failed to clear Stream Deck screen while open: %s", ex)
+    
+    def _send_start_stop(self):
+        """
+        Send Start/Stop MIDI SysEx message to the USB output device.
+        
+        Reuses the same logic as the Elgato Start/Stop button.
+        """
+        try:
+            self.logger.info("Start/Stop button pressed in GUI")
+            
+            # Get MIDI port name from MidiManager
+            port_name = None
+            try:
+                # Use lazy-initialized midi_manager
+                midi_mgr = self.midi_manager
+                
+                # Get open ports
+                open_ports = midi_mgr.get_open_ports()
+                if open_ports:
+                    port_name = open_ports[0]
+                    self.logger.info(f"Using open MIDI port: {port_name}")
+                else:
+                    # Try to auto-connect to hardware port
+                    self.logger.debug("No open ports, attempting to auto-connect...")
+                    if midi_mgr.auto_connect_hardware_port():
+                        open_ports = midi_mgr.get_open_ports()
+                        if open_ports:
+                            port_name = open_ports[0]
+                            self.logger.info(f"Auto-connected to MIDI port: {port_name}")
+                        else:
+                            self.logger.warning("Auto-connect reported success but no ports are open")
+                    else:
+                        self.logger.warning("Failed to auto-connect to MIDI hardware port")
+            except Exception as e:
+                self.logger.warning(f"Error getting MIDI port: {e}", exc_info=True)
+            
+            # Create KetronMidi instance and send Start/Stop command
+            ketron_midi = KetronMidi()
+            success = ketron_midi.send_pedal_command("Start/Stop", port_name)
+            
+            if success:
+                self.logger.info("Start/Stop MIDI command sent successfully")
+            else:
+                self.logger.error("Failed to send Start/Stop MIDI command")
+                
+        except Exception as e:
+            self.logger.error(f"Error sending Start/Stop command: {e}", exc_info=True)
     
     def _clear_stream_deck_screen(self):
         """
