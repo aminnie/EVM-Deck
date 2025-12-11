@@ -54,7 +54,7 @@ class DevDeckControlPanel:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("EVMDeck Control Panel")
-        self.root.geometry("480x272")
+        self.root.geometry("480x320")
         self.root.resizable(True, True)
         
         self.logger = logging.getLogger('devdeck')
