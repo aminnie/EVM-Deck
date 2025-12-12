@@ -72,7 +72,24 @@ class DeckManager:
         for deck_itr in self.decks:
             deck_itr.clear_deck_context()
         self.decks.append(deck)
-        self.get_active_deck().render(DeckContext(self, self.__deck))
+        
+        # Ensure deck is ready before rendering
+        try:
+            # Reset deck to clear any previous state
+            self.__deck.reset()
+            self.__logger.debug("Deck reset completed")
+            
+            # Render the active deck
+            active_deck = self.get_active_deck()
+            if active_deck:
+                self.__logger.info("Rendering active deck...")
+                active_deck.render(DeckContext(self, self.__deck))
+                self.__logger.info("Deck rendering completed")
+            else:
+                self.__logger.error("No active deck to render")
+        except Exception as e:
+            self.__logger.error(f"Error setting active deck: {e}", exc_info=True)
+            raise
 
     def get_active_deck(self) -> Optional['DeckController']:
         """

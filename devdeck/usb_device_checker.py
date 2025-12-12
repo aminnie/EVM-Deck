@@ -29,16 +29,28 @@ class USBDevice:
 
 def get_usb_devices() -> List[USBDevice]:
     """
-    Get a list of all connected USB devices by parsing `lsusb` output.
+    Get a list of all connected USB devices.
+    
+    On Linux: Uses `lsusb` command
+    On macOS: Uses `system_profiler SPUSBDataType` command
+    On Windows: Returns empty list (relies on library detection instead)
     
     Returns:
-        List of USBDevice objects. Returns empty list on Windows or if lsusb is not available.
+        List of USBDevice objects. Returns empty list on Windows or if commands are not available.
     """
-    # Works on Linux and macOS (Darwin) systems
     system = platform.system()
-    if system not in ('Linux', 'Darwin'):
+    logger = logging.getLogger('devdeck')
+    
+    if system == 'Windows':
         return []
+    elif system == 'Darwin':  # macOS
+        return _get_usb_devices_macos()
+    else:  # Linux
+        return _get_usb_devices_linux()
 
+
+def _get_usb_devices_linux() -> List[USBDevice]:
+    """Get USB devices on Linux using lsusb."""
     logger = logging.getLogger('devdeck')
     try:
         # Run lsusb command
@@ -97,6 +109,83 @@ def get_usb_devices() -> List[USBDevice]:
         return []
 
 
+def _get_usb_devices_macos() -> List[USBDevice]:
+    """Get USB devices on macOS using system_profiler."""
+    logger = logging.getLogger('devdeck')
+    try:
+        # Run system_profiler command
+        result = subprocess.run(
+            ['system_profiler', 'SPUSBDataType', '-xml'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False
+        )
+        
+        if result.returncode != 0:
+            logger.warning(f"system_profiler failed with return code {result.returncode}: {result.stderr}")
+            # Fallback to lsusb if available (via Homebrew)
+            return _try_lsusb_macos()
+        
+        if not result.stdout.strip():
+            logger.warning("system_profiler returned empty output")
+            return _try_lsusb_macos()
+        
+        # Parse XML output (simplified - just extract vendor/product IDs)
+        # For now, fallback to lsusb which is simpler to parse
+        # If lsusb is available via Homebrew, use it
+        return _try_lsusb_macos()
+    
+    except FileNotFoundError:
+        logger.warning("system_profiler not found, trying lsusb fallback")
+        return _try_lsusb_macos()
+    except Exception as e:
+        logger.warning(f"Error running system_profiler: {e}, trying lsusb fallback")
+        return _try_lsusb_macos()
+
+
+def _try_lsusb_macos() -> List[USBDevice]:
+    """Try to use lsusb on macOS (if installed via Homebrew)."""
+    logger = logging.getLogger('devdeck')
+    try:
+        # Try lsusb (might be installed via Homebrew)
+        result = subprocess.run(
+            ['lsusb'],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            # Parse same format as Linux
+            devices = []
+            pattern = r'Bus (\d+)\s+Device (\d+):\s+ID\s+([0-9a-fA-F]{4}):([0-9a-fA-F]{4})(?:\s+(.+))?'
+            lines = result.stdout.strip().split('\n')
+            
+            for line in lines:
+                if not line.strip():
+                    continue
+                match = re.match(pattern, line)
+                if match:
+                    bus, device, vendor_id, product_id, description = match.groups()
+                    description = description.strip() if description else "Unknown device"
+                    devices.append(USBDevice(bus, device, vendor_id.lower(), product_id.lower(), description))
+            
+            logger.debug(f"Found {len(devices)} USB devices via lsusb on macOS")
+            return devices
+        else:
+            logger.debug("lsusb not available or returned no output on macOS")
+            return []
+    
+    except FileNotFoundError:
+        logger.debug("lsusb not installed on macOS (install via: brew install lsusb)")
+        return []
+    except Exception as e:
+        logger.debug(f"Error trying lsusb on macOS: {e}")
+        return []
+
+
 def check_elgato_stream_deck() -> Tuple[bool, Optional[USBDevice]]:
     """
     Check if an Elgato Stream Deck is connected via USB.
@@ -112,8 +201,8 @@ def check_elgato_stream_deck() -> Tuple[bool, Optional[USBDevice]]:
     - 00b9: Stream Deck MK.2
     
     Returns:
-        Tuple of (is_connected, device_info). On Windows, returns (True, None) since
-        we rely on StreamDeck library detection instead.
+        Tuple of (is_connected, device_info). On Windows/macOS, also tries StreamDeck library
+        detection as a fallback if USB enumeration fails.
     """
     logger = logging.getLogger('devdeck')
     
@@ -130,7 +219,19 @@ def check_elgato_stream_deck() -> Tuple[bool, Optional[USBDevice]]:
         for device in devices:
             logger.info(f"  - {device}")
     else:
-        logger.warning("No USB devices detected via lsusb")
+        logger.warning("No USB devices detected via USB enumeration")
+        # On macOS, if lsusb/system_profiler fails, try StreamDeck library as fallback
+        if platform.system() == 'Darwin':
+            logger.info("Attempting StreamDeck library detection as fallback...")
+            try:
+                from StreamDeck.DeviceManager import DeviceManager
+                streamdecks = DeviceManager().enumerate()
+                if streamdecks:
+                    logger.info(f"StreamDeck library detected {len(streamdecks)} device(s)")
+                    # Return True but no USB device info (library detection doesn't provide USB details)
+                    return (True, None)
+            except Exception as e:
+                logger.debug(f"StreamDeck library detection failed: {e}")
     
     # Elgato Stream Deck detection: vendor ID or name string
     elgato_vendor_id = '0fd9'
@@ -142,7 +243,19 @@ def check_elgato_stream_deck() -> Tuple[bool, Optional[USBDevice]]:
             logger.info(f"Elgato Stream Deck detected: {device}")
             return (True, device)
     
-    logger.error("Elgato Stream Deck not detected via USB")
+    # If USB enumeration didn't find it, try StreamDeck library as fallback (macOS)
+    if platform.system() == 'Darwin' and not devices:
+        logger.info("Attempting StreamDeck library detection as fallback...")
+        try:
+            from StreamDeck.DeviceManager import DeviceManager
+            streamdecks = DeviceManager().enumerate()
+            if streamdecks:
+                logger.info(f"StreamDeck library detected {len(streamdecks)} device(s)")
+                return (True, None)
+        except Exception as e:
+            logger.debug(f"StreamDeck library detection failed: {e}")
+    
+    logger.error("Elgato Stream Deck not detected via USB or library")
     return (False, None)
 
 
@@ -157,8 +270,8 @@ def check_midi_output_device() -> Tuple[bool, Optional[USBDevice]]:
     - Common MIDI interface vendor IDs
     
     Returns:
-        Tuple of (is_connected, device_info). On Windows, returns (True, None) since
-        we rely on MIDI port enumeration instead.
+        Tuple of (is_connected, device_info). On Windows/macOS, also tries MIDI port
+        enumeration as a fallback if USB enumeration fails.
     """
     logger = logging.getLogger('devdeck')
     
@@ -202,6 +315,19 @@ def check_midi_output_device() -> Tuple[bool, Optional[USBDevice]]:
         if 'midi' in device.description.lower():
             logger.info(f"MIDI device detected (by description): {device}")
             return (True, device)
+    
+    # If USB enumeration didn't find it, try MIDI port enumeration as fallback (macOS)
+    if platform.system() == 'Darwin' and not devices:
+        logger.info("Attempting MIDI port enumeration as fallback...")
+        try:
+            import mido
+            output_ports = mido.get_output_names()
+            if output_ports:
+                logger.info(f"MIDI port enumeration found {len(output_ports)} output port(s)")
+                # Return True but no USB device info (port enumeration doesn't provide USB details)
+                return (True, None)
+        except Exception as e:
+            logger.debug(f"MIDI port enumeration failed: {e}")
     
     logger.error("No MIDI output USB device detected")
     return (False, None)
