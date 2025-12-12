@@ -89,6 +89,28 @@ if [ ! -f "$HIDAPI_PATH" ]; then
 fi
 echo -e "${GREEN}System libraries found${NC}"
 
+# Check for application icon
+ICON_FILE="$PROJECT_ROOT/devdeck/assets/icon.icns"
+if [ ! -f "$ICON_FILE" ]; then
+    echo -e "${YELLOW}Icon file not found. Generating icon...${NC}"
+    ICON_SCRIPT="$PROJECT_ROOT/scripts/build/generate-icon.py"
+    if [ ! -f "$ICON_SCRIPT" ]; then
+        echo -e "${RED}Error: Icon generation script not found at $ICON_SCRIPT${NC}"
+        exit 1
+    fi
+    if ! python3 "$ICON_SCRIPT"; then
+        echo -e "${RED}Error: Icon generation failed${NC}"
+        exit 1
+    fi
+    if [ ! -f "$ICON_FILE" ]; then
+        echo -e "${RED}Error: Icon file was not created at $ICON_FILE${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Icon generated successfully${NC}"
+else
+    echo -e "${GREEN}Icon file found${NC}"
+fi
+
 # Clean previous builds
 echo -e "${YELLOW}Cleaning previous builds...${NC}"
 rm -rf "$BUILD_DIR"

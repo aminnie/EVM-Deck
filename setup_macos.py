@@ -28,6 +28,14 @@ DATA_FILES = []
 if os.path.exists('config/settings.yml.template'):
     DATA_FILES.append(('config', ['config/settings.yml.template']))
 
+# Check for icon file
+ICON_FILE = 'devdeck/assets/icon.icns'
+if not os.path.exists(ICON_FILE):
+    print(f"Warning: Icon file not found: {ICON_FILE}")
+    print("  Run 'python3 scripts/build/generate-icon.py' to generate the icon.")
+    print("  Continuing without icon...")
+    ICON_FILE = None
+
 OPTIONS = {
     'argv_emulation': False,  # Don't use argv emulation (we handle sys.argv ourselves)
     'semi_standalone': False,  # Fully standalone bundle
@@ -66,7 +74,7 @@ OPTIONS = {
         'unittest',
         'distutils',
     ],
-    'iconfile': None,  # Can specify .icns file path if you have one
+    'iconfile': ICON_FILE,  # Path to .icns file
     'plist': {
         'CFBundleName': 'DevDeck',
         'CFBundleDisplayName': 'DevDeck',
