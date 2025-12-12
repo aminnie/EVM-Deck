@@ -25,7 +25,7 @@ except ImportError:
 
 from devdeck.midi import MidiManager
 from devdeck.path_utils import get_project_root, get_config_dir
-from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
+from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device, get_usb_devices
 from devdeck.gui.key_press_queue import get_queue
 from devdeck.deck_context import DeckContext
 from devdeck.settings.devdeck_settings import DevDeckSettings
@@ -55,7 +55,7 @@ class DevDeckControlPanel:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("EVMDeck Control Panel")
-        self.root.geometry("480x320")
+        self.root.geometry("600x450")  # Increased height to accommodate USB devices list
         self.root.resizable(True, True)
         
         self.logger = logging.getLogger('devdeck')
@@ -97,6 +97,10 @@ class DevDeckControlPanel:
                                     foreground="gray")
         self.usb_output_label.config(text="Click 'Refresh Devices' to scan", 
                                      foreground="gray")
+        # Initialize all USB devices text
+        self.all_usb_devices_text.config(state=tk.NORMAL)
+        self.all_usb_devices_text.insert(1.0, "Click 'Refresh Devices' to scan for all USB devices")
+        self.all_usb_devices_text.config(state=tk.DISABLED)
         
         # Mark MIDI as ready after GUI is fully initialized
         # Use a longer delay to ensure Python runtime is fully ready
@@ -191,6 +195,20 @@ class DevDeckControlPanel:
         self.start_stop_button = ttk.Button(devices_frame, text="Start/Stop",
                                             command=self._send_start_stop, width=12)
         self.start_stop_button.grid(row=1, column=2, padx=(10, 0), sticky=tk.W)
+        
+        # All USB Devices section (expandable)
+        ttk.Label(devices_frame, text="All USB Devices:", font=("Arial", 10, "bold")).grid(
+            row=2, column=0, sticky=tk.W, padx=(0, 5), pady=(5, 0))
+        
+        # Scrollable text area for all USB devices
+        all_devices_frame = ttk.Frame(devices_frame)
+        all_devices_frame.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0))
+        all_devices_frame.columnconfigure(0, weight=1)
+        
+        self.all_usb_devices_text = scrolledtext.ScrolledText(all_devices_frame, height=4, 
+                                                              wrap=tk.WORD, state=tk.DISABLED,
+                                                              font=("Courier", 9))
+        self.all_usb_devices_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
         
         # MIDI Key Monitor Section with border (no title)
         monitor_frame = ttk.LabelFrame(main_frame, padding="5")
@@ -466,6 +484,29 @@ class DevDeckControlPanel:
         
         # Now refresh USB devices (existing functionality)
         try:
+            # Get all USB devices first
+            all_devices = get_usb_devices()
+            
+            # Update the "All USB Devices" display
+            self.all_usb_devices_text.config(state=tk.NORMAL)
+            self.all_usb_devices_text.delete(1.0, tk.END)
+            
+            if all_devices:
+                device_lines = []
+                for device in all_devices:
+                    vendor_name = self._get_vendor_name(device.vendor_id)
+                    device_line = f"Bus {device.bus:>3} Device {device.device:>3}: {vendor_name} - {device.description} (ID: {device.vendor_id}:{device.product_id})"
+                    device_lines.append(device_line)
+                
+                devices_text = "\n".join(device_lines)
+                self.all_usb_devices_text.insert(1.0, devices_text)
+                self.logger.info(f"Found {len(all_devices)} USB device(s)")
+            else:
+                self.all_usb_devices_text.insert(1.0, "No USB devices detected via USB enumeration.\n(Devices may still be detected via library/port enumeration)")
+                self.logger.warning("No USB devices found via USB enumeration")
+            
+            self.all_usb_devices_text.config(state=tk.DISABLED)
+            
             # Check for Elgato Stream Deck (USB Input Device)
             elgato_connected, elgato_device = check_elgato_stream_deck()
             
@@ -475,7 +516,7 @@ class DevDeckControlPanel:
                     device_text = self._format_device_display(elgato_device)
                     self.usb_input_label.config(text=device_text, foreground="green")
                 else:
-                    # Windows - device detected but no USB info available
+                    # Windows/macOS - device detected but no USB info available
                     # Use vendor lookup for Elgato (0fd9)
                     vendor_name = self._get_vendor_name('0fd9')
                     self.usb_input_label.config(text=f"{vendor_name} - Stream Deck (detected)", 
@@ -493,7 +534,7 @@ class DevDeckControlPanel:
                     device_text = self._format_device_display(midi_device)
                     self.usb_output_label.config(text=device_text, foreground="green")
                 else:
-                    # Windows - device detected but no USB info available
+                    # Windows/macOS - device detected but no USB info available
                     self.usb_output_label.config(text="MIDI Output Device (detected)", 
                                                 foreground="green")
             else:
@@ -507,6 +548,11 @@ class DevDeckControlPanel:
                                        foreground="red")
             self.usb_output_label.config(text="Error: Click to retry", 
                                          foreground="red")
+            # Update all devices text with error
+            self.all_usb_devices_text.config(state=tk.NORMAL)
+            self.all_usb_devices_text.delete(1.0, tk.END)
+            self.all_usb_devices_text.insert(1.0, f"Error scanning USB devices: {e}")
+            self.all_usb_devices_text.config(state=tk.DISABLED)
     
     def _start_midi_monitoring(self):
         """Start monitoring MIDI input"""
