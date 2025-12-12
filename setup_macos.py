@@ -7,10 +7,20 @@ with bundled Python runtime, dependencies, and system libraries.
 
 from setuptools import setup
 import sys
+import os
 
 # Ensure we're on macOS
 if sys.platform != 'darwin':
     raise RuntimeError("This setup script is only for macOS")
+
+# Temporarily rename pyproject.toml to prevent setuptools from reading it
+# This avoids conflicts between py2app setup and pyproject.toml configuration
+_pyproject_backup = None
+if os.path.exists('pyproject.toml'):
+    _pyproject_backup = 'pyproject.toml.backup'
+    if os.path.exists(_pyproject_backup):
+        os.remove(_pyproject_backup)
+    os.rename('pyproject.toml', _pyproject_backup)
 
 APP = ['devdeck/main.py']
 # Include config directory if it has template files
@@ -79,11 +89,18 @@ OPTIONS = {
     'optimize': 0,  # Don't optimize bytecode (helps with debugging)
 }
 
-setup(
-    app=APP,
-    name='DevDeck',
-    data_files=DATA_FILES,
-    options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-)
+try:
+    setup(
+        app=APP,
+        name='DevDeck',
+        data_files=DATA_FILES,
+        options={'py2app': OPTIONS},
+        setup_requires=['py2app'],
+    )
+finally:
+    # Restore pyproject.toml if we renamed it
+    if _pyproject_backup and os.path.exists(_pyproject_backup):
+        if os.path.exists('pyproject.toml'):
+            os.remove('pyproject.toml')
+        os.rename(_pyproject_backup, 'pyproject.toml')
 

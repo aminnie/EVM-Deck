@@ -13,10 +13,9 @@ authors = [
     {name = "James Ridgway"},
     {name = "Anton Minnie"}
 ]
-urls = {
-    Homepage = "https://github.com/jamesridgway/devdeck",
-    Fork = "https://github.com/aminnie/EVM-MIDI_DECK/network/dependencies"
-}
+[project.urls]
+Homepage = "https://github.com/jamesridgway/devdeck"
+Fork = "https://github.com/aminnie/EVM-MIDI_DECK/network/dependencies"
 dependencies = [
     "assertpy",
     "cerberus",
