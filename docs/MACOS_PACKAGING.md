@@ -135,9 +135,14 @@ The `.dmg` file contains:
 When users first run the application:
 - macOS may show a security warning (since the app is not code-signed)
 - Users need to:
-  1. Right-click the app and select "Open"
+  1. **Right-click the app and select "Open"** (first time only)
   2. Click "Open" in the security dialog
   3. Or go to System Preferences > Security & Privacy and click "Open Anyway"
+
+**Alternative**: Remove quarantine attributes via Terminal:
+```bash
+xattr -dr com.apple.quarantine /path/to/DevDeck.app
+```
 
 **Note**: For distribution outside the App Store, code signing and notarization are recommended but not implemented in this build (as per plan requirements).
 
@@ -178,6 +183,30 @@ The build script should handle library paths automatically. If you see library l
 - The application requires USB access for Stream Deck and MIDI devices
 - macOS may prompt for USB permissions on first run
 - If devices aren't detected, check System Preferences > Security & Privacy > Privacy > USB
+
+#### Code Signing / Security Errors
+
+If the app crashes immediately with "Code Signature Invalid" or security errors:
+
+1. **Remove quarantine attributes**:
+   ```bash
+   xattr -dr com.apple.quarantine dist/DevDeck.app
+   ```
+
+2. **Right-click and Open** (first time only):
+   - Right-click `DevDeck.app`
+   - Select "Open"
+   - Click "Open" in the security dialog
+
+3. **Check executable exists**:
+   ```bash
+   ls -la dist/DevDeck.app/Contents/MacOS/DevDeck
+   ```
+
+4. **Verify executable permissions**:
+   ```bash
+   chmod +x dist/DevDeck.app/Contents/MacOS/DevDeck
+   ```
 
 #### Path Resolution Issues
 - The application uses `devdeck/path_utils.py` to handle paths in both development and bundled modes

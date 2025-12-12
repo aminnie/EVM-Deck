@@ -151,6 +151,21 @@ fi
 
 echo -e "${GREEN}Library paths fixed${NC}"
 
+# Remove quarantine attributes (allows unsigned apps to run)
+echo -e "${YELLOW}Removing quarantine attributes...${NC}"
+xattr -dr com.apple.quarantine "$APP_BUNDLE" 2>/dev/null || true
+echo -e "${GREEN}Quarantine attributes removed${NC}"
+
+# Verify executable exists and is valid
+EXECUTABLE="$APP_BUNDLE/Contents/MacOS/${APP_NAME}"
+if [ ! -f "$EXECUTABLE" ]; then
+    echo -e "${RED}Error: Executable not found at $EXECUTABLE${NC}"
+    exit 1
+fi
+
+# Make executable... executable (just in case)
+chmod +x "$EXECUTABLE"
+
 # Create .dmg
 echo -e "${YELLOW}Creating .dmg disk image...${NC}"
 
@@ -199,7 +214,12 @@ echo ""
 echo "To test the application:"
 echo "  open \"$APP_BUNDLE\""
 echo ""
+echo "If you get a security error, try:"
+echo "  1. Right-click the app and select 'Open' (first time only)"
+echo "  2. Or run: xattr -dr com.apple.quarantine \"$APP_BUNDLE\""
+echo ""
 echo "To distribute:"
 echo "  Share the .dmg file: $DMG_PATH"
 echo "  Users can drag ${APP_NAME}.app to their Applications folder"
+echo "  Note: Users will need to right-click and 'Open' the first time"
 
