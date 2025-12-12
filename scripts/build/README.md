@@ -15,7 +15,14 @@ Creates a self-contained macOS .app bundle and .dmg disk image.
 
 **Usage:**
 ```bash
+# Make executable (first time only, if you get permissions denied)
+chmod +x scripts/build/build-macos.sh
+
+# Run the build
 ./scripts/build/build-macos.sh
+
+# Or run directly with bash (no chmod needed)
+bash scripts/build/build-macos.sh
 ```
 
 **Output:**

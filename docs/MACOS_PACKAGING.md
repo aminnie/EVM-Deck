@@ -55,11 +55,23 @@ The packaged application is self-contained and does not require Python, Homebrew
    pip3 install -r requirements.txt
    ```
 
-### Step 2: Run the Build Script
+### Step 2: Make Script Executable (First Time Only)
+
+If you get a "permissions denied" error, make the script executable:
+```bash
+chmod +x scripts/build/build-macos.sh
+```
+
+### Step 3: Run the Build Script
 
 Execute the build script:
 ```bash
 ./scripts/build/build-macos.sh
+```
+
+**Alternative**: If you prefer not to make it executable, you can run it with bash:
+```bash
+bash scripts/build/build-macos.sh
 ```
 
 The script will:

@@ -54,9 +54,19 @@ Before building, ensure you have:
    pip3 install py2app
    ```
 
-3. **Run the build script**:
+3. **Make script executable** (first time only, if needed):
+   ```bash
+   chmod +x scripts/build/build-macos.sh
+   ```
+
+4. **Run the build script**:
    ```bash
    ./scripts/build/build-macos.sh
+   ```
+   
+   **Or run with bash** (no chmod needed):
+   ```bash
+   bash scripts/build/build-macos.sh
    ```
 
 4. **Output**:
