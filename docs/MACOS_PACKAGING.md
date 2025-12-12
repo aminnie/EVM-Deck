@@ -188,24 +188,41 @@ The build script should handle library paths automatically. If you see library l
 
 If the app crashes immediately with "Code Signature Invalid" or security errors:
 
-1. **Remove quarantine attributes**:
+The build script now automatically:
+1. Removes quarantine attributes
+2. Performs ad-hoc code signing (allows unsigned apps to run)
+
+If you still get errors:
+
+1. **Manually ad-hoc sign the app**:
+   ```bash
+   codesign --force --deep --sign - dist/DevDeck.app
+   ```
+
+2. **Remove quarantine attributes**:
    ```bash
    xattr -dr com.apple.quarantine dist/DevDeck.app
    ```
 
-2. **Right-click and Open** (first time only):
+3. **Right-click and Open** (first time only):
    - Right-click `DevDeck.app`
    - Select "Open"
    - Click "Open" in the security dialog
 
-3. **Check executable exists**:
+4. **Check executable exists and is valid**:
    ```bash
+   file dist/DevDeck.app/Contents/MacOS/DevDeck
    ls -la dist/DevDeck.app/Contents/MacOS/DevDeck
    ```
 
-4. **Verify executable permissions**:
+5. **Verify executable permissions**:
    ```bash
    chmod +x dist/DevDeck.app/Contents/MacOS/DevDeck
+   ```
+
+6. **Try running from Terminal to see actual errors**:
+   ```bash
+   ./dist/DevDeck.app/Contents/MacOS/DevDeck
    ```
 
 #### Path Resolution Issues

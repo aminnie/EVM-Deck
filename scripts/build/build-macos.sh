@@ -160,11 +160,35 @@ echo -e "${GREEN}Quarantine attributes removed${NC}"
 EXECUTABLE="$APP_BUNDLE/Contents/MacOS/${APP_NAME}"
 if [ ! -f "$EXECUTABLE" ]; then
     echo -e "${RED}Error: Executable not found at $EXECUTABLE${NC}"
+    echo -e "${RED}Build may have failed. Check py2app output above.${NC}"
     exit 1
 fi
 
+# Verify it's a valid file (not empty, has content)
+if [ ! -s "$EXECUTABLE" ]; then
+    echo -e "${RED}Error: Executable is empty or invalid${NC}"
+    exit 1
+fi
+
+# Check file type
+FILE_TYPE=$(file "$EXECUTABLE" 2>/dev/null || echo "unknown")
+echo -e "${GREEN}Executable type: $FILE_TYPE${NC}"
+
 # Make executable... executable (just in case)
 chmod +x "$EXECUTABLE"
+
+# Ad-hoc code sign the app (allows unsigned apps to run)
+# This doesn't require a certificate, just makes macOS accept the binary
+echo -e "${YELLOW}Ad-hoc code signing the application...${NC}"
+codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null || {
+    echo -e "${YELLOW}Warning: Ad-hoc code signing failed, but continuing...${NC}"
+    echo -e "${YELLOW}You may need to right-click and 'Open' the app the first time${NC}"
+}
+
+# Verify the signature (or lack thereof)
+codesign --verify --verbose "$APP_BUNDLE" 2>/dev/null || echo -e "${YELLOW}App is not signed (expected for unsigned builds)${NC}"
+
+echo -e "${GREEN}Code signing complete${NC}"
 
 # Create .dmg
 echo -e "${YELLOW}Creating .dmg disk image...${NC}"
