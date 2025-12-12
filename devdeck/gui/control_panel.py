@@ -55,7 +55,7 @@ class DevDeckControlPanel:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("EVMDeck Control Panel")
-        self.root.geometry("600x450")  # Increased height to accommodate USB devices list
+        self.root.geometry("480x320")  # Window size
         self.root.resizable(True, True)
         
         self.logger = logging.getLogger('devdeck')
@@ -97,10 +97,6 @@ class DevDeckControlPanel:
                                     foreground="gray")
         self.usb_output_label.config(text="Click 'Refresh Devices' to scan", 
                                      foreground="gray")
-        # Initialize all USB devices text
-        self.all_usb_devices_text.config(state=tk.NORMAL)
-        self.all_usb_devices_text.insert(1.0, "Click 'Refresh Devices' to scan for all USB devices")
-        self.all_usb_devices_text.config(state=tk.DISABLED)
         
         # Mark MIDI as ready after GUI is fully initialized
         # Use a longer delay to ensure Python runtime is fully ready
@@ -195,20 +191,6 @@ class DevDeckControlPanel:
         self.start_stop_button = ttk.Button(devices_frame, text="Start/Stop",
                                             command=self._send_start_stop, width=12)
         self.start_stop_button.grid(row=1, column=2, padx=(10, 0), sticky=tk.W)
-        
-        # All USB Devices section (expandable)
-        ttk.Label(devices_frame, text="All USB Devices:", font=("Arial", 10, "bold")).grid(
-            row=2, column=0, sticky=tk.W, padx=(0, 5), pady=(5, 0))
-        
-        # Scrollable text area for all USB devices
-        all_devices_frame = ttk.Frame(devices_frame)
-        all_devices_frame.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0))
-        all_devices_frame.columnconfigure(0, weight=1)
-        
-        self.all_usb_devices_text = scrolledtext.ScrolledText(all_devices_frame, height=4, 
-                                                              wrap=tk.WORD, state=tk.DISABLED,
-                                                              font=("Courier", 9))
-        self.all_usb_devices_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
         
         # MIDI Key Monitor Section with border (no title)
         monitor_frame = ttk.LabelFrame(main_frame, padding="5")
@@ -460,6 +442,10 @@ class DevDeckControlPanel:
         self.usb_output_label.config(text="Scanning...", foreground="gray")
         self.root.update_idletasks()  # Force UI update
         
+        # Add scanning message to monitor
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.midi_message_queue.put(f"[{timestamp}] Scanning for USB devices...")
+        
         # First, refresh key mappings from key_mappings.json (same as on startup)
         try:
             # Find settings.yml file path (same logic as main())
@@ -495,47 +481,43 @@ class DevDeckControlPanel:
                     self.logger.warning(f"USB enumeration failed (may be due to active Stream Deck): {usb_error}")
                     # Continue with library-based detection
                 
-                # Update the "All USB Devices" display on main thread
-                def update_all_devices_display():
-                    self.all_usb_devices_text.config(state=tk.NORMAL)
-                    self.all_usb_devices_text.delete(1.0, tk.END)
-                    
+                # Log all USB devices to monitor
+                def log_usb_devices_to_monitor():
+                    timestamp = datetime.now().strftime("%H:%M:%S")
                     if all_devices:
-                        device_lines = []
+                        self.midi_message_queue.put(f"[{timestamp}] Found {len(all_devices)} USB device(s):")
                         for device in all_devices:
                             vendor_name = self._get_vendor_name(device.vendor_id)
-                            device_line = f"Bus {device.bus:>3} Device {device.device:>3}: {vendor_name} - {device.description} (ID: {device.vendor_id}:{device.product_id})"
-                            device_lines.append(device_line)
-                        
-                        devices_text = "\n".join(device_lines)
-                        self.all_usb_devices_text.insert(1.0, devices_text)
+                            device_line = f"  - {vendor_name} - {device.description} (ID: {device.vendor_id}:{device.product_id})"
+                            self.midi_message_queue.put(f"[{timestamp}] {device_line}")
                         self.logger.info(f"Found {len(all_devices)} USB device(s)")
                     else:
-                        self.all_usb_devices_text.insert(1.0, "No USB devices detected via USB enumeration.\n(Devices may still be detected via library/port enumeration)")
+                        self.midi_message_queue.put(f"[{timestamp}] No USB devices detected via USB enumeration (devices may still be detected via library/port enumeration)")
                         self.logger.warning("No USB devices found via USB enumeration")
-                    
-                    self.all_usb_devices_text.config(state=tk.DISABLED)
                 
-                self.root.after(0, update_all_devices_display)
+                self.root.after(0, log_usb_devices_to_monitor)
                 
                 # Check for Elgato Stream Deck (USB Input Device)
                 elgato_connected, elgato_device = check_elgato_stream_deck()
                 
                 def update_elgato_display():
+                    timestamp = datetime.now().strftime("%H:%M:%S")
                     if elgato_connected:
                         if elgato_device:
                             # Show vendor name and device description
                             device_text = self._format_device_display(elgato_device)
                             self.usb_input_label.config(text=device_text, foreground="green")
+                            self.midi_message_queue.put(f"[{timestamp}] USB Input: {device_text} (detected)")
                         else:
                             # Windows/macOS - device detected but no USB info available
                             # Use vendor lookup for Elgato (0fd9)
                             vendor_name = self._get_vendor_name('0fd9')
-                            self.usb_input_label.config(text=f"{vendor_name} - Stream Deck (detected)", 
-                                                       foreground="green")
+                            display_text = f"{vendor_name} - Stream Deck (detected)"
+                            self.usb_input_label.config(text=display_text, foreground="green")
+                            self.midi_message_queue.put(f"[{timestamp}] USB Input: {display_text}")
                     else:
-                        self.usb_input_label.config(text="Not detected", 
-                                                   foreground="red")
+                        self.usb_input_label.config(text="Not detected", foreground="red")
+                        self.midi_message_queue.put(f"[{timestamp}] USB Input: Not detected")
                 
                 self.root.after(0, update_elgato_display)
                 
@@ -543,18 +525,21 @@ class DevDeckControlPanel:
                 midi_connected, midi_device = check_midi_output_device()
                 
                 def update_midi_display():
+                    timestamp = datetime.now().strftime("%H:%M:%S")
                     if midi_connected:
                         if midi_device:
                             # Show vendor name and device description
                             device_text = self._format_device_display(midi_device)
                             self.usb_output_label.config(text=device_text, foreground="green")
+                            self.midi_message_queue.put(f"[{timestamp}] USB Output: {device_text} (detected)")
                         else:
                             # Windows/macOS - device detected but no USB info available
-                            self.usb_output_label.config(text="MIDI Output Device (detected)", 
-                                                        foreground="green")
+                            display_text = "MIDI Output Device (detected)"
+                            self.usb_output_label.config(text=display_text, foreground="green")
+                            self.midi_message_queue.put(f"[{timestamp}] USB Output: {display_text}")
                     else:
-                        self.usb_output_label.config(text="Not detected", 
-                                                    foreground="red")
+                        self.usb_output_label.config(text="Not detected", foreground="red")
+                        self.midi_message_queue.put(f"[{timestamp}] USB Output: Not detected")
                 
                 self.root.after(0, update_midi_display)
                 
@@ -563,18 +548,13 @@ class DevDeckControlPanel:
                 self.logger.error(f"Error updating USB devices: {e}", exc_info=True)
                 
                 def show_error():
-                    self.usb_input_label.config(text="Error: Click to retry", 
-                                               foreground="red")
-                    self.usb_output_label.config(text="Error: Click to retry", 
-                                                 foreground="red")
-                    # Update all devices text with error
-                    self.all_usb_devices_text.config(state=tk.NORMAL)
-                    self.all_usb_devices_text.delete(1.0, tk.END)
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    self.usb_input_label.config(text="Error: Click to retry", foreground="red")
+                    self.usb_output_label.config(text="Error: Click to retry", foreground="red")
                     error_msg = str(e)
                     if "HID" in error_msg or "hid" in error_msg:
                         error_msg = "USB enumeration conflict (Stream Deck may be active). Try stopping the app first."
-                    self.all_usb_devices_text.insert(1.0, f"Error scanning USB devices: {error_msg}")
-                    self.all_usb_devices_text.config(state=tk.DISABLED)
+                    self.midi_message_queue.put(f"[{timestamp}] Error scanning USB devices: {error_msg}")
                 
                 self.root.after(0, show_error)
         
