@@ -114,7 +114,23 @@ def _get_usb_devices_macos() -> List[USBDevice]:
     """Get USB devices on macOS using system_profiler with XML parsing."""
     logger = logging.getLogger('devdeck')
     try:
-        # Use system_profiler with XML output for reliable parsing
+        # First try system_profiler with text output (simpler to parse)
+        result = subprocess.run(
+            ['system_profiler', 'SPUSBDataType'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            # Try parsing text output first (more reliable)
+            devices = _parse_system_profiler_text(result.stdout, logger)
+            if devices:
+                logger.info(f"Found {len(devices)} USB device(s) via system_profiler text on macOS")
+                return devices
+        
+        # Fallback to XML parsing
         result = subprocess.run(
             ['system_profiler', 'SPUSBDataType', '-xml'],
             capture_output=True,
@@ -125,11 +141,11 @@ def _get_usb_devices_macos() -> List[USBDevice]:
         
         if result.returncode != 0:
             logger.warning(f"system_profiler failed with return code {result.returncode}: {result.stderr}")
-            return _try_lsusb_macos()
+            return _try_ioreg_macos() or _try_lsusb_macos()
         
         if not result.stdout.strip():
             logger.warning("system_profiler returned empty output")
-            return _try_lsusb_macos()
+            return _try_ioreg_macos() or _try_lsusb_macos()
         
         try:
             # Parse XML output
@@ -201,10 +217,10 @@ def _get_usb_devices_macos() -> List[USBDevice]:
             extract_devices(root)
             
             if devices:
-                logger.info(f"Found {len(devices)} USB device(s) via system_profiler on macOS")
+                logger.info(f"Found {len(devices)} USB device(s) via system_profiler XML on macOS")
                 return devices
             else:
-                logger.debug("system_profiler found no USB devices, trying ioreg fallback")
+                logger.debug("system_profiler XML found no USB devices, trying ioreg fallback")
                 # Try ioreg as intermediate fallback before lsusb
                 return _try_ioreg_macos() or _try_lsusb_macos()
         
@@ -213,91 +229,184 @@ def _get_usb_devices_macos() -> List[USBDevice]:
             return _try_ioreg_macos() or _try_lsusb_macos()
     
     except FileNotFoundError:
-        logger.warning("system_profiler not found, trying lsusb fallback")
-        return _try_lsusb_macos()
+        logger.warning("system_profiler not found, trying ioreg fallback")
+        return _try_ioreg_macos() or _try_lsusb_macos()
     except Exception as e:
-        logger.warning(f"Error running system_profiler: {e}, trying lsusb fallback")
+        logger.warning(f"Error running system_profiler: {e}, trying ioreg fallback")
         import traceback
         logger.debug(traceback.format_exc())
-        return _try_lsusb_macos()
+        return _try_ioreg_macos() or _try_lsusb_macos()
+
+
+def _parse_system_profiler_text(output: str, logger) -> List[USBDevice]:
+    """Parse system_profiler text output to extract USB devices."""
+    devices = []
+    bus_num = "0"
+    device_num = 0
+    
+    # Look for vendor ID and product ID patterns in the text output
+    # Format example:
+    #     Product ID: 0x0060
+    #     Vendor ID: 0x0fd9
+    #     Product Name: Stream Deck
+    
+    lines = output.split('\n')
+    current_device = {}
+    in_device_section = False
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Detect start of a device section (usually starts with device name or "USB Device")
+        if ':' in stripped and not in_device_section:
+            # Check if this looks like a device header
+            if any(keyword in stripped.lower() for keyword in ['usb device', 'product id', 'vendor id']):
+                in_device_section = True
+                current_device = {}
+        
+        # Extract Vendor ID
+        vendor_match = re.search(r'Vendor ID:\s*(?:0x)?([0-9a-fA-F]{4})', stripped, re.IGNORECASE)
+        if vendor_match:
+            try:
+                vendor_val = vendor_match.group(1)
+                vendor_int = int(vendor_val, 16) if vendor_val.startswith('0x') else int(vendor_val)
+                current_device['vendor_id'] = f"{vendor_int:04x}".lower()
+            except ValueError:
+                pass
+        
+        # Extract Product ID
+        product_match = re.search(r'Product ID:\s*(?:0x)?([0-9a-fA-F]{4})', stripped, re.IGNORECASE)
+        if product_match:
+            try:
+                product_val = product_match.group(1)
+                product_int = int(product_val, 16) if product_val.startswith('0x') else int(product_val)
+                current_device['product_id'] = f"{product_int:04x}".lower()
+            except ValueError:
+                pass
+        
+        # Extract Product Name
+        name_match = re.search(r'Product Name:\s*(.+)', stripped, re.IGNORECASE)
+        if name_match:
+            current_device['description'] = name_match.group(1).strip()
+        
+        # When we have both IDs, create device and reset
+        if 'vendor_id' in current_device and 'product_id' in current_device:
+            device_num += 1
+            description = current_device.get('description', 'Unknown device')
+            devices.append(USBDevice(
+                bus_num,
+                str(device_num),
+                current_device['vendor_id'],
+                current_device['product_id'],
+                description
+            ))
+            logger.debug(f"Found USB device from text: {current_device['vendor_id']}:{current_device['product_id']} - {description}")
+            current_device = {}
+            in_device_section = False
+    
+    return devices
 
 
 def _try_ioreg_macos() -> List[USBDevice]:
     """Try to use ioreg on macOS as a fallback method."""
     logger = logging.getLogger('devdeck')
     try:
-        # Use ioreg with a simpler output format
-        result = subprocess.run(
+        # Use ioreg to get USB device information
+        # Try multiple ioreg command variations for better compatibility
+        ioreg_commands = [
+            ['ioreg', '-p', 'IOUSB', '-w0', '-l'],
+            ['ioreg', '-p', 'IOUSB', '-r'],
             ['ioreg', '-p', 'IOUSB', '-r', '-n', 'IOUSBDevice'],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False
-        )
+        ]
         
-        if result.returncode == 0 and result.stdout.strip():
-            # Try a simpler regex-based approach
-            devices = []
-            bus_num = "0"
-            device_num = 0
-            
-            # Look for vendor and product IDs in the output
-            # Format: "idVendor" = 0x0fd9
-            vendor_pattern = r'"idVendor"\s*=\s*(?:0x)?([0-9a-fA-F]+)'
-            product_pattern = r'"idProduct"\s*=\s*(?:0x)?([0-9a-fA-F]+)'
-            name_pattern = r'"USB Product Name"\s*=\s*"([^"]+)"'
-            
-            lines = result.stdout.split('\n')
-            current_device = {}
-            
-            for line in lines:
-                # Extract vendor ID
-                vendor_match = re.search(vendor_pattern, line, re.IGNORECASE)
-                if vendor_match:
-                    try:
-                        vendor_val = vendor_match.group(1)
-                        vendor_int = int(vendor_val, 16) if vendor_val.startswith('0x') else int(vendor_val)
-                        current_device['vendor_id'] = f"{vendor_int:04x}".lower()
-                    except ValueError:
-                        pass
+        for cmd in ioreg_commands:
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False
+                )
                 
-                # Extract product ID
-                product_match = re.search(product_pattern, line, re.IGNORECASE)
-                if product_match:
-                    try:
-                        product_val = product_match.group(1)
-                        product_int = int(product_val, 16) if product_val.startswith('0x') else int(product_val)
-                        current_device['product_id'] = f"{product_int:04x}".lower()
-                    except ValueError:
-                        pass
-                
-                # Extract device name
-                name_match = re.search(name_pattern, line)
-                if name_match:
-                    current_device['description'] = name_match.group(1)
-                
-                # When we have both IDs, create device
-                if 'vendor_id' in current_device and 'product_id' in current_device:
-                    device_num += 1
-                    description = current_device.get('description', 'Unknown device')
-                    devices.append(USBDevice(
-                        bus_num,
-                        str(device_num),
-                        current_device['vendor_id'],
-                        current_device['product_id'],
-                        description
-                    ))
-                    logger.debug(f"Found USB device via ioreg: {current_device['vendor_id']}:{current_device['product_id']} - {description}")
-                    current_device = {}
-            
-            if devices:
-                logger.info(f"Found {len(devices)} USB device(s) via ioreg on macOS")
-                return devices
+                if result.returncode == 0 and result.stdout.strip():
+                    devices = _parse_ioreg_output(result.stdout, logger)
+                    if devices:
+                        logger.info(f"Found {len(devices)} USB device(s) via ioreg on macOS")
+                        return devices
+            except Exception as e:
+                logger.debug(f"ioreg command {cmd} failed: {e}")
+                continue
         
         return []
     except Exception as e:
         logger.debug(f"Error trying ioreg on macOS: {e}")
         return []
+
+
+def _parse_ioreg_output(output: str, logger) -> List[USBDevice]:
+    """Parse ioreg output to extract USB devices."""
+    devices = []
+    bus_num = "0"
+    device_num = 0
+    
+    # Look for vendor and product IDs in the output
+    # Format: "idVendor" = 0x0fd9 or "idVendor" = 4057 (decimal)
+    vendor_pattern = r'"idVendor"\s*=\s*(?:0x)?([0-9a-fA-F]+)'
+    product_pattern = r'"idProduct"\s*=\s*(?:0x)?([0-9a-fA-F]+)'
+    name_patterns = [
+        r'"USB Product Name"\s*=\s*"([^"]+)"',
+        r'"Product Name"\s*=\s*"([^"]+)"',
+        r'"_name"\s*=\s*"([^"]+)"',
+        r'"IOName"\s*=\s*"([^"]+)"',
+    ]
+    
+    lines = output.split('\n')
+    current_device = {}
+    
+    for line in lines:
+        # Extract vendor ID
+        vendor_match = re.search(vendor_pattern, line, re.IGNORECASE)
+        if vendor_match:
+            try:
+                vendor_val = vendor_match.group(1)
+                vendor_int = int(vendor_val, 16) if '0x' in line.lower() else int(vendor_val)
+                current_device['vendor_id'] = f"{vendor_int:04x}".lower()
+            except ValueError:
+                pass
+        
+        # Extract product ID
+        product_match = re.search(product_pattern, line, re.IGNORECASE)
+        if product_match:
+            try:
+                product_val = product_match.group(1)
+                product_int = int(product_val, 16) if '0x' in line.lower() else int(product_val)
+                current_device['product_id'] = f"{product_int:04x}".lower()
+            except ValueError:
+                pass
+        
+        # Extract device name (try multiple patterns)
+        for name_pattern in name_patterns:
+            name_match = re.search(name_pattern, line)
+            if name_match:
+                current_device['description'] = name_match.group(1)
+                break
+        
+        # When we have both IDs, create device and reset
+        if 'vendor_id' in current_device and 'product_id' in current_device:
+            device_num += 1
+            description = current_device.get('description', 'Unknown device')
+            devices.append(USBDevice(
+                bus_num,
+                str(device_num),
+                current_device['vendor_id'],
+                current_device['product_id'],
+                description
+            ))
+            logger.debug(f"Found USB device via ioreg: {current_device['vendor_id']}:{current_device['product_id']} - {description}")
+            current_device = {}
+    
+    return devices
 
 
 def _try_lsusb_macos() -> List[USBDevice]:
