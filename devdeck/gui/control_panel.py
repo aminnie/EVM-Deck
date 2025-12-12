@@ -24,6 +24,7 @@ except ImportError:
     mido = None
 
 from devdeck.midi import MidiManager
+from devdeck.path_utils import get_project_root, get_config_dir
 from devdeck.usb_device_checker import check_elgato_stream_deck, check_midi_output_device
 from devdeck.gui.key_press_queue import get_queue
 from devdeck.deck_context import DeckContext
@@ -444,10 +445,8 @@ class DevDeckControlPanel:
         # First, refresh key mappings from key_mappings.json (same as on startup)
         try:
             # Find settings.yml file path (same logic as main())
-            # control_panel.py is at: devdeck/gui/control_panel.py
-            # Project root is 3 levels up: gui -> devdeck -> project_root
-            project_root = Path(__file__).parent.parent.parent
-            config_dir = project_root / 'config'
+            project_root = get_project_root()
+            config_dir = get_config_dir()
             settings_filename = config_dir / 'settings.yml'
             
             if settings_filename.exists():
@@ -598,8 +597,9 @@ class DevDeckControlPanel:
         """Load key mappings from key_mappings.json"""
         try:
             # Try to find key_mappings.json in config directory
-            project_root = Path(__file__).parent.parent.parent
-            key_mappings_file = project_root / 'config' / 'key_mappings.json'
+            project_root = get_project_root()
+            config_dir = get_config_dir()
+            key_mappings_file = config_dir / 'key_mappings.json'
             
             if not key_mappings_file.exists():
                 key_mappings_file = project_root / 'key_mappings.json'

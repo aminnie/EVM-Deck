@@ -7,6 +7,7 @@ from time import sleep
 from typing import Optional, Any
 
 from devdeck_core.controls.deck_control import DeckControl
+from devdeck.path_utils import get_assets_dir
 
 # Constants
 THREAD_JOIN_TIMEOUT = 5.0  # Timeout in seconds for thread join operations
@@ -26,7 +27,8 @@ class TimerControl(DeckControl):
         with self.deck_context() as context:
             with context.renderer() as r:
                 # Use pathlib for path handling
-                icon_path = Path(__file__).parent.parent / 'assets' / 'font-awesome' / 'stopwatch.png'
+                assets_dir = get_assets_dir()
+                icon_path = assets_dir / 'font-awesome' / 'stopwatch.png'
                 r.image(str(icon_path)).end()
 
     def pressed(self) -> None:
@@ -53,7 +55,8 @@ class TimerControl(DeckControl):
             with self.deck_context() as context:
                 with context.renderer() as r:
                     # Use pathlib for path handling
-                    icon_path = Path(__file__).parent.parent / 'assets' / 'font-awesome' / 'stopwatch.png'
+                    assets_dir = get_assets_dir()
+                    icon_path = assets_dir / 'font-awesome' / 'stopwatch.png'
                     r.image(str(icon_path)).end()
 
     def _update_display(self) -> None:

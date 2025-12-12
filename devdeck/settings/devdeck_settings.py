@@ -5,6 +5,7 @@ from cerberus import Validator
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
+from devdeck.path_utils import get_project_root, get_config_dir
 from devdeck.settings.deck_settings import DeckSettings
 from devdeck.settings.validation_error import ValidationError
 
@@ -242,8 +243,8 @@ class DevDeckSettings:
         """
         if key_mappings_filename is None:
             # Try to find key_mappings.json in config directory (preferred location)
-            project_root = Path(__file__).parent.parent.parent
-            key_mappings_filename = project_root / 'config' / 'key_mappings.json'
+            config_dir = get_config_dir()
+            key_mappings_filename = config_dir / 'key_mappings.json'
             
             # If not found in config, try project root (backward compatibility)
             if not key_mappings_filename.exists() or key_mappings_filename.stat().st_size == 0:

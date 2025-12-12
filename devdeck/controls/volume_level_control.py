@@ -6,6 +6,7 @@ from typing import Optional, Any
 from pulsectl import pulsectl
 
 from devdeck_core.controls.deck_control import DeckControl
+from devdeck.path_utils import get_assets_dir
 
 
 class VolumeLevelControl(DeckControl):
@@ -60,7 +61,8 @@ class VolumeLevelControl(DeckControl):
                         .center_horizontally() \
                         .end()
                 # Use pathlib for path handling
-                icon_path = Path(__file__).parent.parent / 'assets' / 'font-awesome' / 'volume-up-solid.png'
+                assets_dir = get_assets_dir()
+                icon_path = assets_dir / 'font-awesome' / 'volume-up-solid.png'
                 r.image(str(icon_path))\
                     .width(380)\
                     .height(380) \

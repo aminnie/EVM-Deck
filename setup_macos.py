@@ -1,0 +1,89 @@
+"""
+macOS packaging setup for DevDeck using py2app.
+
+This script configures py2app to create a self-contained .app bundle
+with bundled Python runtime, dependencies, and system libraries.
+"""
+
+from setuptools import setup
+import sys
+
+# Ensure we're on macOS
+if sys.platform != 'darwin':
+    raise RuntimeError("This setup script is only for macOS")
+
+APP = ['devdeck/main.py']
+# Include config directory if it has template files
+DATA_FILES = []
+import os
+if os.path.exists('config/settings.yml.template'):
+    DATA_FILES.append(('config', ['config/settings.yml.template']))
+
+OPTIONS = {
+    'argv_emulation': False,  # Don't use argv emulation (we handle sys.argv ourselves)
+    'packages': [
+        'devdeck',
+        'devdeck_core',
+        'StreamDeck',
+        'mido',
+        'rtmidi',
+        'PIL',
+        'yaml',
+        'cerberus',
+        'jsonschema',
+        'requests',
+        'emoji',
+        'pulsectl',
+        'assertpy',
+    ],
+    'includes': [
+        'tkinter',
+        'tkinter.ttk',
+        'tkinter.scrolledtext',
+        'logging',
+        'logging.handlers',
+        'threading',
+        'queue',
+        'pathlib',
+        'json',
+        'datetime',
+    ],
+    'excludes': [
+        'pytest',
+        'test',
+        'tests',
+        'unittest',
+        'distutils',
+    ],
+    'iconfile': None,  # Can specify .icns file path if you have one
+    'plist': {
+        'CFBundleName': 'DevDeck',
+        'CFBundleDisplayName': 'DevDeck',
+        'CFBundleGetInfoString': 'DevDeck - Stream Deck MIDI Controller',
+        'CFBundleIdentifier': 'com.devdeck.app',
+        'CFBundleVersion': '1.0.0',
+        'CFBundleShortVersionString': '1.0.0',
+        'NSHumanReadableCopyright': 'MIT License',
+        'LSMinimumSystemVersion': '10.13',  # macOS High Sierra minimum
+        'NSHighResolutionCapable': True,
+        'NSRequiresAquaSystemAppearance': False,
+        # USB device access (may need user permission)
+        'NSUSBUsageDescription': 'DevDeck requires USB access to communicate with Elgato Stream Deck and MIDI devices.',
+    },
+    'resources': [
+        'devdeck/assets',
+        'config',
+    ],
+    'frameworks': [],  # System frameworks will be handled by build script
+    'site_packages': True,  # Include site-packages
+    'optimize': 0,  # Don't optimize bytecode (helps with debugging)
+}
+
+setup(
+    app=APP,
+    name='DevDeck',
+    data_files=DATA_FILES,
+    options={'py2app': OPTIONS},
+    setup_requires=['py2app'],
+)
+

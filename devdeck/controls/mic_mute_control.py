@@ -6,6 +6,7 @@ from typing import Optional, Any
 from pulsectl import pulsectl
 
 from devdeck_core.controls.deck_control import DeckControl
+from devdeck.path_utils import get_assets_dir
 
 
 class MicMuteControl(DeckControl):
@@ -55,7 +56,7 @@ class MicMuteControl(DeckControl):
                         .end()
                 return
             # Use pathlib for path handling
-            assets_dir = Path(__file__).parent.parent / 'assets' / 'font-awesome'
+            assets_dir = get_assets_dir() / 'font-awesome'
             if mic.mute == 0:
                 with context.renderer() as r:
                     r.image(str(assets_dir / 'microphone.png')).end()

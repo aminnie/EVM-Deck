@@ -16,6 +16,7 @@ from devdeck_core.controls.deck_control import DeckControl
 from devdeck.controls.base_control import BaseDeckControl
 from devdeck.ketron import KetronMidi, COLOR_MAP, KetronVolumeManager
 from devdeck.midi import MidiManager
+from devdeck.path_utils import get_project_root, get_config_dir
 
 # Try to import key press queue for GUI integration
 try:
@@ -104,10 +105,9 @@ class KetronKeyMappingControl(BaseDeckControl):
         
         if key_mappings_file is None:
             # Try to find key_mappings.json in config directory (preferred location)
-            # Path is now: devdeck/ketron/controls/ketron_key_mapping_control.py
-            # Need to go up 4 levels to get to project root
-            project_root = Path(__file__).parent.parent.parent.parent
-            key_mappings_file = project_root / 'config' / 'key_mappings.json'
+            project_root = get_project_root()
+            config_dir = get_config_dir()
+            key_mappings_file = config_dir / 'key_mappings.json'
             
             # Fallback to project root
             if not key_mappings_file.exists():

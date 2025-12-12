@@ -10,6 +10,7 @@ from StreamDeck.DeviceManager import DeviceManager
 from devdeck.deck_manager import DeckManager
 from devdeck.filters import InfoFilter
 from devdeck.midi import MidiManager
+from devdeck.path_utils import get_project_root, get_config_dir, get_logs_dir
 from devdeck.settings.devdeck_settings import DevDeckSettings
 from devdeck.settings.migration import SettingsMigrator
 from devdeck.settings.validation_error import ValidationError
@@ -39,9 +40,8 @@ def main() -> None:
     root.addHandler(error_handler)
 
     # Get project root and create logs directory
-    project_root = Path(__file__).parent.parent
-    logs_dir = project_root / 'logs'
-    logs_dir.mkdir(exist_ok=True)
+    project_root = get_project_root()
+    logs_dir = get_logs_dir()
     log_file = logs_dir / 'devdeck.log'
     fileHandler = RotatingFileHandler(str(log_file), maxBytes=100000, backupCount=5)
     fileHandler.setFormatter(formatter)
@@ -142,9 +142,9 @@ def main() -> None:
 
     streamdecks = DeviceManager().enumerate()
 
-    # Get project root (parent of devdeck directory)
-    project_root = Path(__file__).parent.parent
-    config_dir = project_root / 'config'
+    # Get project root and config directory
+    project_root = get_project_root()
+    config_dir = get_config_dir()
     settings_filename = config_dir / 'settings.yml'
     
     # Migrate settings from old locations if needed
