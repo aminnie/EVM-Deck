@@ -25,7 +25,6 @@ if os.path.exists('pyproject.toml'):
 APP = ['devdeck/main.py']
 # Include config directory if it has template files
 DATA_FILES = []
-import os
 if os.path.exists('config/settings.yml.template'):
     DATA_FILES.append(('config', ['config/settings.yml.template']))
 
