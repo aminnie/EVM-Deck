@@ -129,6 +129,10 @@ def _get_usb_devices_macos() -> List[USBDevice]:
             if devices:
                 logger.info(f"Found {len(devices)} USB device(s) via system_profiler text on macOS")
                 return devices
+            else:
+                # Log a sample of the output for debugging
+                sample_lines = result.stdout.split('\n')[:20]
+                logger.debug(f"system_profiler text output (first 20 lines):\n{chr(10).join(sample_lines)}")
         
         # Fallback to XML parsing
         result = subprocess.run(
