@@ -220,10 +220,18 @@ If you still get errors:
    chmod +x dist/DevDeck.app/Contents/MacOS/DevDeck
    ```
 
-6. **Try running from Terminal to see actual errors**:
+6. **Run diagnostic script** (if available):
+   ```bash
+   chmod +x scripts/build/diagnose-app.sh
+   ./scripts/build/diagnose-app.sh dist/DevDeck.app
+   ```
+
+7. **Try running from Terminal to see actual errors**:
    ```bash
    ./dist/DevDeck.app/Contents/MacOS/DevDeck
    ```
+   
+   This will show Python errors instead of crash reports, which is more helpful for debugging.
 
 #### Path Resolution Issues
 - The application uses `devdeck/path_utils.py` to handle paths in both development and bundled modes

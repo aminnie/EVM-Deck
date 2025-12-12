@@ -30,6 +30,8 @@ if os.path.exists('config/settings.yml.template'):
 
 OPTIONS = {
     'argv_emulation': False,  # Don't use argv emulation (we handle sys.argv ourselves)
+    'semi_standalone': False,  # Fully standalone bundle
+    'alias': False,  # Create a full application, not an alias
     'packages': [
         'devdeck',
         'devdeck_core',
