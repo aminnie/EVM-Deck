@@ -58,8 +58,15 @@ def get_font(size):
     try:
         return ImageFont.truetype("arial.ttf", size)
     except Exception:
-        # Last resort: use default font
-        return ImageFont.load_default()
+        # Last resort: use default font (but it doesn't scale, so try to get a reasonable size)
+        # For default font, we need to use a different approach
+        try:
+            # Try to use a built-in font that can scale
+            return ImageFont.load_default()
+        except Exception:
+            # If all else fails, create a basic font
+            # Note: default font size is fixed, so this is not ideal
+            return ImageFont.load_default()
 
 
 def create_rounded_rectangle_mask(width, height, radius):
@@ -97,9 +104,13 @@ def create_icon_image(width, height, text="EVM"):
     output.paste(img, (0, 0), mask)
     draw = ImageDraw.Draw(output)
     
-    # Calculate font size (approximately 40% of icon height - 2/3 of original 60%)
-    font_size = int(height * 0.4)
+    # Calculate font size (40% of icon height - reduced from original 60%)
+    font_size = max(8, int(height * 0.4))  # Ensure minimum size of 8 pixels
     font = get_font(font_size)
+    
+    # Debug: print font size for verification (can be removed later)
+    if width == 1024:  # Only print for largest size to avoid spam
+        print(f"  Using font size: {font_size} pixels for {width}x{height} icon")
     
     # Get text bounding box to center it
     try:
