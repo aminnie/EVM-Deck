@@ -129,14 +129,9 @@ class DevDeckControlPanel:
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
         
-        # Title
-        title_label = ttk.Label(main_frame, text="EVMDeck Control Panel", 
-                                font=("Arial", 14, "bold"))
-        title_label.grid(row=0, column=0, pady=(0, 2))
-        
         # Application Control Section with status on title line
         control_frame = ttk.LabelFrame(main_frame, padding="5")
-        control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        control_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         control_frame.columnconfigure(1, weight=1)
         
         # Title and status on same line
@@ -170,7 +165,7 @@ class DevDeckControlPanel:
         
         # USB Devices Section (no title)
         devices_frame = ttk.Frame(main_frame, padding="5")
-        devices_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        devices_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         devices_frame.columnconfigure(1, weight=1)
         
         # USB Input Device (Elgato Stream Deck)
@@ -194,10 +189,10 @@ class DevDeckControlPanel:
         
         # MIDI Key Monitor Section with border (no title)
         monitor_frame = ttk.LabelFrame(main_frame, padding="5")
-        monitor_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 5))
+        monitor_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 5))
         monitor_frame.columnconfigure(0, weight=1)
         monitor_frame.rowconfigure(0, weight=1)
-        main_frame.rowconfigure(3, weight=1)
+        main_frame.rowconfigure(2, weight=1)
         
         # Scrolled text for MIDI messages (3 rows visible)
         self.midi_text = scrolledtext.ScrolledText(monitor_frame, height=3, 
