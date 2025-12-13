@@ -97,8 +97,8 @@ def create_icon_image(width, height, text="EVM"):
     output.paste(img, (0, 0), mask)
     draw = ImageDraw.Draw(output)
     
-    # Calculate font size (approximately 60% of icon height)
-    font_size = int(height * 0.6)
+    # Calculate font size (approximately 40% of icon height - 2/3 of original 60%)
+    font_size = int(height * 0.4)
     font = get_font(font_size)
     
     # Get text bounding box to center it
