@@ -872,10 +872,26 @@ class DevDeckControlPanel:
             
             # Create KetronMidi instance and send Start/Stop command
             ketron_midi = KetronMidi()
+            
+            # Format SysEx message as hex for GUI display (same format as Stream Deck button)
+            try:
+                sysex_data = ketron_midi.format_pedal_sysex("Start/Stop", on_state=True)
+                midi_hex = ' '.join([f'F0'] + [f'{b:02X}' for b in sysex_data] + [f'F7'])
+            except Exception as e:
+                self.logger.warning(f"Failed to format MIDI hex: {e}")
+                midi_hex = None
+            
             success = ketron_midi.send_pedal_command("Start/Stop", port_name)
             
             if success:
                 self.logger.info("Start/Stop MIDI command sent successfully")
+                # Log to monitor in same format as Stream Deck button press
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                if midi_hex:
+                    message = f"[{timestamp}] Pressed Start/Stop [{midi_hex}]"
+                else:
+                    message = f"[{timestamp}] Pressed Start/Stop"
+                self.midi_message_queue.put(message)
             else:
                 self.logger.error("Failed to send Start/Stop MIDI command")
                 
